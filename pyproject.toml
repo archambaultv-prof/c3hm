@@ -1,0 +1,50 @@
+[project]
+name = "c3hm"
+version = "0.1.0"
+description = "Corriger à 3 heures du matin"
+readme = "README.md"
+authors = [
+    { name = "Vincent Archambault-Bouffard", email = "varchambaultbouffard@cmaisonneuve.qc.ca" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "pywin32>=310",
+    "typer>=0.15.2",
+]
+
+[project.scripts]
+c3hm = "c3hm.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "nox>=2025.2.9",
+    "pytest>=8.3.5",
+    "ruff>=0.11.4",
+]
+
+[tool.ruff]
+# Set line length
+line-length = 99
+
+[tool.ruff.lint]
+select = [
+    "F",     # Pyflakes (includes unused imports, undefined names, etc.)
+    "E",     # pycodestyle (errors)
+    "W",     # pycodestyle (warnings)
+    "I",     # isort (import sorting)
+    "UP",    # pyupgrade (upgrade syntax)
+    "B",     # flake8-bugbear (common bugs and anti-patterns)
+    "ARG",   # flake8-unused-arguments
+    "N",     # pep8-naming
+    "SIM",   # flake8-simplify
+    "ERA",   # eradicate (commented-out code)
+]
+
+[tool.pytest.ini_options]
+addopts = [
+    "--import-mode=importlib",
+]

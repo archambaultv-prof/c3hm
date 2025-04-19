@@ -1,0 +1,40 @@
+barème:
+  - Excellent
+  - Très bien
+  - Bien
+  - Passable
+  - Insuffisant
+
+seuil: [100, 85, 70, 60, 30]
+
+cours: 420-C3HM-MA
+evaluation: Travail pratique 1
+
+grille:
+  - critère: Rédiger un rapport
+    pondération: 20
+    indicateurs:
+    - nom: Consignes respectées
+      poids_relatif: 2
+      descripteur:
+        - "Toutes les consignes sont respectées."
+        - "Presque toutes les consignes sont respectées."
+        - "La majorité des consignes sont respectées."
+        - "Une partie des consignes sont respectées."
+        - "Une minorité des consignes sont respectées."
+    - nom: Lecture fluide
+      descripteur:
+        - "Parfaitement clair, lecture aisée."
+        - "Très clair, lecture assez fluide."
+        - "Globalement clair, lecture parfois hachée."
+        - "Partiellement clair, lecture difficile."
+        - "Confus, lecture laborieuse."
+    - nom: Présentation soignée
+      descripteur:
+        - "Présentation impeccable."
+        - "Présentation soignée, coquilles mineures."
+        - "Présentation convenable, quelques erreurs de forme."
+        - "Présentation brouillonne par endroits."
+        - "Présentation négligée."
+
+étudiants: 420-TEST-MA Élèves.csv
