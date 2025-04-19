@@ -29,7 +29,6 @@ dev = [
 ]
 
 [tool.ruff]
-# Set line length
 line-length = 99
 
 [tool.ruff.lint]
