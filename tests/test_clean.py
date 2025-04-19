@@ -98,12 +98,18 @@ def test_remove_unwanted_dirs(temp_dir: Path, students_paths: list[dict]):
         dryrun=False
     )
 
-    files_to_delete = [
+    paths_to_delete = [
         "xyz_314159/__pycache__",
         "xyz_314159/.DS_Store",
         "abc_271828/__pycache__",
-        "abc_271828/.DS_Store"
+        "abc_271828/.DS_Store",
+        "abc_271828/sub_folder/.git"
     ]
-    for entry in files_to_delete:
+    for entry in paths_to_delete:
         full_path: Path = temp_dir / entry
         assert not full_path.exists(), f"{entry['path']} should be deleted."
+
+    for entry in students_paths:
+        if entry["path"] not in paths_to_delete:
+            full_path = temp_dir / entry["path"]
+            assert full_path.exists(), f"{entry['path']} should not be deleted."
