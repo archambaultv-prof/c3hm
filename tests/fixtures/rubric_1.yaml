@@ -1,0 +1,82 @@
+cours: 420-TEST-MA
+
+evaluation: TP1
+
+grille:
+  barème:
+    - A
+    - B
+    - C
+    - D
+    - E
+  seuil: [100, 85, 70, 60, 0]
+  critères:
+    - critère: C1
+      indicateurs:
+      - nom: C1_I1
+        descripteurs:
+          - C1_I1_D1
+          - C1_I1_D2
+          - C1_I1_D3
+          - C1_I1_D4
+          - C1_I1_D5
+      - nom: C1_I2
+        descripteurs:
+          - C1_I2_D1
+          - C1_I2_D2
+          - C1_I2_D3
+          - C1_I2_D4
+          - C1_I2_D5
+      - nom: C1_I3
+        descripteurs:
+          - C1_I3_D1
+          - C1_I3_D2
+          - C1_I3_D3
+          - C1_I3_D4
+          - C1_I3_D5
+    - critère: C2
+      indicateurs:
+      - nom: C2_I1
+        descripteurs:
+          - C2_I1_D1
+          - C2_I1_D2
+          - C2_I1_D3
+          - C2_I1_D4
+          - C2_I1_D5
+      - nom: C2_I2
+        descripteurs:
+          - C2_I2_D1
+          - C2_I2_D2
+          - C2_I2_D3
+          - C2_I2_D4
+          - C2_I2_D5
+      - nom: C2_I3
+        descripteurs:
+          - C2_I3_D1
+          - C2_I3_D2
+          - C2_I3_D3
+          - C2_I3_D4
+          - C2_I3_D5
+    - critère: C3
+      indicateurs:
+      - nom: C3_I1
+        descripteurs:
+          - C3_I1_D1
+          - C3_I1_D2
+          - C3_I1_D3
+          - C3_I1_D4
+          - C3_I1_D5
+      - nom: C3_I2
+        descripteurs:
+          - C3_I2_D1
+          - C3_I2_D2
+          - C3_I2_D3
+          - C3_I2_D4
+          - C3_I2_D5
+      - nom: C3_I3
+        descripteurs:
+          - C3_I3_D1
+          - C3_I3_D2
+          - C3_I3_D3
+          - C3_I3_D4
+          - C3_I3_D5
