@@ -5,6 +5,7 @@ from win32com.client import constants
 
 from c3hm.core.rubric import Rubric
 
+INCHES_TO_POINTS = 72
 
 def generate_word_from_rubric(rubric: Rubric, output_path: Path | str) -> None:
     """
@@ -27,57 +28,70 @@ def generate_word_from_rubric(rubric: Rubric, output_path: Path | str) -> None:
     word.Visible = False
     doc = word.Documents.Add()
 
+    # format lettre (8.5 x 11 pouces)
+    doc.PageSetup.PaperSize = constants.wdPaperLetter
+
     # orientation paysage
     doc.PageSetup.Orientation = constants.wdOrientLandscape
 
+    # marges moyennes selon Word
+
+    doc.PageSetup.TopMargin = 1 * INCHES_TO_POINTS
+    doc.PageSetup.BottomMargin = 1 * INCHES_TO_POINTS
+    doc.PageSetup.LeftMargin = 0.75 * INCHES_TO_POINTS
+    doc.PageSetup.RightMargin = 0.75 * INCHES_TO_POINTS
+
+    # insérer numéro de page dans le pied de page
+    # ajouter un pied de page
+    footer = doc.Sections(1).Footers(constants.wdHeaderFooterPrimary)
+    # ajouter un champ de numéro de page
+    footer.PageNumbers.Add(
+        constants.wdAlignPageNumberCenter, True
+    )
+
     # insérer le titre
-    emdash = "\u2014"
-    title = rubric.course
-    if not title:
-        title = rubric.evaluation
-    elif rubric.evaluation:
-        title += f" {emdash} {rubric.evaluation}"
-    if not title:
-        title = "Grille d'évaluation"
+    endash = "\u2013"
+    title = title = "Grille d'évaluation"
+    if rubric.evaluation:
+        title += f" {endash} {rubric.evaluation}"
+    if rubric.course:
+        title += f" {endash} {rubric.course}"
     p = doc.Paragraphs.Add()
     p.Range.Text = title
     p.Range.Style = constants.wdStyleHeading1
+    p.Range.ParagraphFormat.Alignment = constants.wdAlignParagraphCenter
     p.Range.InsertParagraphAfter()
 
-    # numéroter les pages
-    for section in doc.Sections:
-        footer = section.Footers(constants.wdHeaderFooterPrimary)
-        footer.PageNumbers.Add(
-            PageNumberAlignment=constants.wdAlignPageNumberCenter
-        )
+    # insérer la grille
+    grid = rubric.grid
+    nb_rows = grid.nb_rows()
+    nb_columns = len(grid.scale) + 1  # +1 pour le critère
+    table = doc.Tables.Add(
+        doc.Range(doc.Content.End - 1),
+        nb_rows,
+        nb_columns,
+        constants.wdWord8TableBehavior,
+        constants.wdWord8TableBehavior,
+    )
 
-    # préparer les données du tableau
-    scale = rubric.grid.scale
-    criteria = rubric.grid.criteria
-
-    # nombre total de lignes = 1 ligne d'en‑tête + total des indicateurs
-    total_rows = 1 + sum(len(crit.indicators) for crit in criteria)
-    num_cols = len(scale)
-
-    # insérer le tableau
-    insert_range = doc.Range(doc.Content.End - 1, doc.Content.End - 1)
-    table = doc.Tables.Add(insert_range, total_rows, num_cols)
-    table.Borders.Enable = True
-
-    # remplir la ligne d'en‑tête avec les labels du barème
-    for col_idx, label in enumerate(scale, start=1):
-        cell = table.Cell(1, col_idx)
-        cell.Range.Text = label
-        cell.Range.Bold = True
-        cell.Shading.BackgroundPatternColor = constants.wdColorGray15
-
-    # remplir les lignes suivantes : un rang par indicateur
-    current_row = 2
-    for crit in criteria:
-        for ind in crit.indicators:
-            for col_idx, descriptor in enumerate(ind.descriptors, start=1):
-                table.Cell(current_row, col_idx).Range.Text = descriptor
-            current_row += 1
+    # Remplir la première ligne avec le barème
+    for i, scale in enumerate(grid.scale):
+        table.Cell(1, i + 2).Range.Text = scale
+        table.Cell(1, i + 2).Range.ParagraphFormat.Alignment = constants.wdAlignParagraphCenter
+        table.Cell(1, i + 2).Range.Style = constants.wdStyleHeading3
+    # Remplir le reste avec Critères et indicateurs dans l'ordre
+    row = 2
+    for criterion in grid.criteria:
+        # Critère
+        table.Cell(row, 1).Range.Text = criterion.name
+        table.Cell(row, 1).Range.ParagraphFormat.Alignment = constants.wdAlignParagraphLeft
+        table.Cell(row, 1).Range.Style = constants.wdStyleHeading3
+        row += 1
+        # Indicateurs
+        for indicator in criterion.indicators:
+            table.Cell(row, 1).Range.Text = indicator.name
+            table.Cell(row, 1).Range.ParagraphFormat.Alignment = constants.wdAlignParagraphLeft
+            row += 1
 
     # enregistrer et fermer
     doc.SaveAs(str(output_path))
