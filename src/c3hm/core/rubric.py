@@ -82,6 +82,20 @@ class Rubric(BaseModel):
         )
     grid: RubricGrid
 
+    def title(self) -> str:
+        """
+        Retourne le titre de la grille d'évaluation.
+
+        Le titre est formé du nom du cours et de l'évaluation, séparés par un tiret.
+        """
+        endash = "\u2013"
+        title = "Grille d'évaluation"
+        if self.evaluation:
+            title += f" {endash} {self.evaluation}"
+        if self.course:
+            title += f" {endash} {self.course}"
+        return title
+
 
 def load_rubric_from_yaml(filepath: str | Path) -> Rubric:
     """

@@ -72,14 +72,8 @@ def generate_word_from_rubric(rubric: Rubric, output_path: Path | str) -> None:
     )
 
     # insérer le titre
-    endash = "\u2013"
-    title = title = "Grille d'évaluation"
-    if rubric.evaluation:
-        title += f" {endash} {rubric.evaluation}"
-    if rubric.course:
-        title += f" {endash} {rubric.course}"
     p = doc.Paragraphs.Add()
-    p.Range.Text = title
+    p.Range.Text = rubric.title()
     p.Range.Style = constants.wdStyleHeading1
     p.Range.ParagraphFormat.Alignment = constants.wdAlignParagraphCenter
     p.Range.InsertParagraphAfter()
