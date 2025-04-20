@@ -58,7 +58,14 @@ class RubricGrid(BaseModel):
             criterion.nb_indicators() for criterion in self.criteria
         )
 
+    def nb_columns(self) -> int:
+        """
+        Retourne le nombre total de colonnes dans la grille.
 
+        Cela inclut une colonne pour les critères/descripteurs et une colonne
+        pour chaque niveau de barème.
+        """
+        return 1 + len(self.scale)
 
 
 class Rubric(BaseModel):

@@ -4,8 +4,26 @@ from c3hm.core.rubric import load_rubric_from_yaml
 from c3hm.core.word.generate import generate_word_from_rubric
 
 
-def test_generate_word_from_rubric(
+def test_generate_word_from_rubric_1(
         rubric_1_path: Path,
+        tmp_path: Path,
+        output_dir: Path):
+    _test_generate_word_from_rubric(
+        rubric_1_path,
+        tmp_path,
+        output_dir)
+
+def test_generate_word_from_rubric_template_5(
+        rubric_template_5_path: Path,
+        tmp_path: Path,
+        output_dir: Path):
+    _test_generate_word_from_rubric(
+        rubric_template_5_path,
+        tmp_path,
+        output_dir)
+
+def _test_generate_word_from_rubric(
+        rubric_path: Path,
         tmp_path: Path,
         output_dir: Path):
     """
@@ -15,8 +33,8 @@ def test_generate_word_from_rubric(
     Recopie le fichier créé dans le répertoire tests/output pour inspection
     manuelle si nécessaire.
     """
-    r = load_rubric_from_yaml(rubric_1_path)
-    doc_file = tmp_path / rubric_1_path.with_suffix(".docx")
+    r = load_rubric_from_yaml(rubric_path)
+    doc_file = tmp_path / rubric_path.with_suffix(".docx")
     generate_word_from_rubric(r, doc_file)
     assert doc_file.exists()
 
