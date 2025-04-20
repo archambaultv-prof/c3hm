@@ -1,7 +1,7 @@
 from pathlib import Path
 
+from c3hm.core.generate.generate_word import generate_word_from_rubric
 from c3hm.core.rubric import load_rubric_from_yaml
-from c3hm.core.word.generate import generate_word_from_rubric
 
 
 def test_generate_word_from_rubric_1(
