@@ -21,6 +21,12 @@ class Criterion(BaseModel):
         min_length=1
     )
 
+    def nb_indicators(self) -> int:
+        """
+        Retourne le nombre d'indicateurs dans le critère.
+        """
+        return len(self.indicators)
+
 
 class RubricGrid(BaseModel):
     """
@@ -34,6 +40,25 @@ class RubricGrid(BaseModel):
     thresholds: list[int] | None = Field(
         default=None
     )
+
+    def nb_criteria(self) -> int:
+        """
+        Retourne le nombre de critères dans la grille.
+        """
+        return len(self.criteria)
+
+    def nb_rows(self) -> int:
+        """
+        Retourne le nombre total de lignes dans la grille.
+
+        Cela inclut une ligne pour le barème, une ligne pour chaque critère
+        et une ligne pour chaque indicateur de chaque critère.
+        """
+        return 1 + self.nb_criteria() + sum(
+            criterion.nb_indicators() for criterion in self.criteria
+        )
+
+
 
 
 class Rubric(BaseModel):
