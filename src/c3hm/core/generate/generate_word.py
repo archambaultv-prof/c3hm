@@ -30,6 +30,15 @@ def scale_color_schemes(size: int) -> list[str] | None:
     }
     return color_schemes.get(size)
 
+def repeat_table_header(header):
+    """Set a table row to repeat on every page (Word header row)"""
+    tr = header._tr
+    tr_pr = tr.get_or_add_trPr()
+
+    tbl_header = OxmlElement('w:tblHeader')
+    tbl_header.set(qn('w:val'), 'true')
+    tr_pr.append(tbl_header)
+
 def set_cell_background(cell, color_hex: str):
     """
     Définit la couleur de fond d'une cellule dans un document Word.
@@ -46,6 +55,32 @@ def set_cell_background(cell, color_hex: str):
     for old in tc_pr.findall(qn('w:shd')):
         tc_pr.remove(old)
     tc_pr.append(shd)
+
+def set_row_borders(row, top=0.5, bottom=0.5):
+    """
+    Définit les bordures hautes et basses d'une ligne dans un tableau Word.
+    """
+    def set_border(tc_borders, side, width_pt):
+        border = tc_borders.find(qn(f'w:{side}'))
+        if border is None:
+            border = OxmlElement(f'w:{side}')
+            tc_borders.append(border)
+        border.set(qn('w:val'), 'single')
+        border.set(qn('w:sz'), str(int(width_pt * 8)))  # Word uses 1/8 pt units
+        border.set(qn('w:space'), "0")
+
+    for cell in row.cells:
+        tc = cell._tc
+        tc_pr = tc.get_or_add_tcPr()
+        tc_borders = tc_pr.find(qn('w:tcBorders'))
+        if tc_borders is None:
+            tc_borders = OxmlElement('w:tcBorders')
+            tc_pr.append(tc_borders)
+
+        if top:
+            set_border(tc_borders, 'top', top)
+        if bottom:
+            set_border(tc_borders, 'bottom', bottom)
 
 def generate_word_from_rubric(rubric: Rubric, output_path: Path | str) -> None:
     """
@@ -78,6 +113,8 @@ def generate_word_from_rubric(rubric: Rubric, output_path: Path | str) -> None:
     table = doc.add_table(rows=1, cols=grid.nb_columns(), style="Normal Table")
 
     # Remplir la première ligne avec le barème
+    repeat_table_header(table.rows[0])
+    set_row_borders(table.rows[0])
     color_schemes = scale_color_schemes(len(grid.scale))
     hdr_cells = table.rows[0].cells
     for i, label in enumerate(grid.scale):
@@ -87,18 +124,6 @@ def generate_word_from_rubric(rubric: Rubric, output_path: Path | str) -> None:
         p = cell.paragraphs[0]
         p.text = label
         p.style = "Heading 3"
-
-    # Ajouter une bordure 1.5 de points en haut de la première ligne
-    # top_border = table.Rows(1).Borders(constants.wdBorderTop)
-    # top_border.LineStyle = constants.wdLineStyleSingle
-    # top_border.LineWidth = constants.wdLineWidth150pt
-
-    # bottom_border = table.Rows(1).Borders(constants.wdBorderBottom)
-    # bottom_border.LineStyle = constants.wdLineStyleSingle
-    # bottom_border.LineWidth = constants.wdLineWidth050pt
-
-    # Répéter la première ligne en haut de chaque page
-    # table.Rows(1).HeadingFormat = True
 
     # Remplir le reste avec Critères et indicateurs dans l'ordre
     for criterion in grid.criteria:
@@ -119,11 +144,9 @@ def generate_word_from_rubric(rubric: Rubric, output_path: Path | str) -> None:
             for i, descriptor in enumerate(indicator.descriptors):
                 row.cells[i + 1].text = descriptor
 
-    # # Ajouter une bordure 1.5 de points en bas de la dernière ligne
-    # bottom_border = table.Rows(row_idx - 1).Borders(constants.wdBorderBottom)
-    # bottom_border.LineStyle = constants.wdLineStyleSingle
-    # bottom_border.LineWidth = constants.wdLineWidth150pt
-
+    # Ajouter une bordure en bas de la dernière ligne
+    last_row = table.rows[-1]
+    set_row_borders(last_row, top=None, bottom=1.0)
 
     # enregistrer le fichier
     doc.save(output_path)
