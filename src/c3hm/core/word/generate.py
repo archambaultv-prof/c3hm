@@ -31,7 +31,14 @@ def generate_word_from_rubric(rubric: Rubric, output_path: Path | str) -> None:
     doc.PageSetup.Orientation = constants.wdOrientLandscape
 
     # insérer le titre
-    title = f"{rubric.course or ''} - {rubric.evaluation or ''}"
+    emdash = "\u2014"
+    title = rubric.course
+    if not title:
+        title = rubric.evaluation
+    elif rubric.evaluation:
+        title += f" {emdash} {rubric.evaluation}"
+    if not title:
+        title = "Grille d'évaluation"
     p = doc.Paragraphs.Add()
     p.Range.Text = title
     p.Range.Style = constants.wdStyleHeading1
