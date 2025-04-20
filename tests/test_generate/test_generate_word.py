@@ -1,6 +1,7 @@
 from pathlib import Path
+import sys
 
-from c3hm.core.generate.generate_word import generate_word_from_rubric
+from c3hm.core.generate.generate_word import generate_word_from_rubric, word_to_pdf
 from c3hm.core.rubric import load_rubric_from_yaml
 
 
@@ -42,3 +43,7 @@ def _test_generate_word_from_rubric(
     output_path = output_dir_ / doc_file.name
     output_path.parent.mkdir(parents=True, exist_ok=True)
     doc_file.replace(output_path)
+
+    # Sur windows, on test aussi la convertion en PDF
+    if sys.platform == "win32":
+        word_to_pdf(output_path, output_path.with_suffix(".pdf"))

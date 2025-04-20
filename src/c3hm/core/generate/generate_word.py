@@ -1,5 +1,6 @@
 from importlib import resources
 from pathlib import Path
+import sys
 
 import docx
 import docx.enum.text
@@ -31,7 +32,9 @@ def scale_color_schemes(size: int) -> list[str] | None:
     return color_schemes.get(size)
 
 def repeat_table_header(header):
-    """Set a table row to repeat on every page (Word header row)"""
+    """
+    Définit la première ligne d'un tableau Word comme en-tête répétée sur chaque page.
+    """
     tr = header._tr
     tr_pr = tr.get_or_add_trPr()
 
@@ -41,7 +44,7 @@ def repeat_table_header(header):
 
 def set_cell_background(cell, color_hex: str):
     """
-    Définit la couleur de fond d'une cellule dans un document Word.
+    Définit la couleur de fond d'une cellule dans un tableau Word.
     """
     tc = cell._tc
     tc_pr = tc.get_or_add_tcPr()
@@ -84,13 +87,7 @@ def set_row_borders(row, top=0.5, bottom=0.5):
 
 def generate_word_from_rubric(rubric: Rubric, output_path: Path | str) -> None:
     """
-    Génère un document Word à partir d’une Rubric :
-      - Orientation paysage
-      - Numérotation des pages au centre du pied de page
-      - Titre "{course} - {evaluation}"
-      - Tableau : première ligne = barème (scale), puis une ligne par indicateur
-        (les descriptors alignés avec les niveaux de barème)
-
+    Génère un document Word pour les étudiants à partir d’un grille d’évaluation (Rubric).
     """
     output_path = Path(output_path)
 
@@ -150,3 +147,42 @@ def generate_word_from_rubric(rubric: Rubric, output_path: Path | str) -> None:
 
     # enregistrer le fichier
     doc.save(output_path)
+
+
+def word_to_pdf(docx_path: Path, pdf_path: Path):
+    """
+    Convertit un document Word (.docx) en PDF sur Windows.
+    Utilise l'API COM de Word pour effectuer la conversion.
+    """
+    if sys.platform != "win32":
+        raise NotImplementedError("Word to PDF conversion is only available on Windows.")
+
+    import win32com.client
+
+    # Launch Word
+    try:
+        # Try to connect to an already running Word instance
+        word = win32com.client.GetActiveObject("Word.Application")
+        created = False
+    except Exception:
+        # Start a new one if not found
+        word = win32com.client.Dispatch("Word.Application")
+        created = True
+
+    word.Visible = False
+
+    try:
+        doc = word.Documents.Open(str(docx_path))
+        # ExportAsFixedFormat: https://learn.microsoft.com/en-us/office/vba/api/word.document.exportasfixedformat
+        doc.ExportAsFixedFormat(
+            OutputFileName=str(pdf_path),
+            ExportFormat=17,  # wdExportFormatPDF
+            OpenAfterExport=False,
+            OptimizeFor=0,    # wdExportOptimizeForPrint
+            CreateBookmarks=1 # wdExportCreateHeadingBookmarks
+        )
+        doc.Close(False)
+    finally:
+        if created:
+            # Quitter Word seulement si on l'a créé
+            word.Quit()

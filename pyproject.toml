@@ -14,6 +14,9 @@ dependencies = [
     "typer>=0.15.2",
 ]
 
+[project.optional-dependencies]
+windows-export = ["pywin32>=310"]
+
 [project.scripts]
 c3hm = "c3hm.cli:main"
 
