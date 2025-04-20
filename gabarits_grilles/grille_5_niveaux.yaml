@@ -42,7 +42,7 @@ grille:
           - "Presque toutes des définitions et blocs complexes sont commentés."
           - "Commentaires présents sur certaines définitions et blocs complexes, mais absents sur d’autres."
           - "Commentaires parcellaires, couvrant peu de parties complexes du code."
-          - "Absence de commentaires aux endroits attendus, rendant la lecture difficile."
+          - "Absence de commentaires aux endroits attendus."
       - nom: Commentaires pertinents
         descripteurs:
           - "Commentaires clairs et précis, sans redondance avec le code."
