@@ -16,3 +16,6 @@ wheels/
 
 # Test output folder
 tests/output
+
+# Miscellaneous
+~$*
