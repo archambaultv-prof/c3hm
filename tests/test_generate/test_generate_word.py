@@ -1,5 +1,5 @@
-from pathlib import Path
 import sys
+from pathlib import Path
 
 from c3hm.core.generate.generate_word import generate_word_from_rubric, word_to_pdf
 from c3hm.core.rubric import load_rubric_from_yaml
