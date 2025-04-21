@@ -40,6 +40,7 @@ def generate_excel_from_rubric(rubric: Rubric, output_path: Path | str) -> None:
     total_cell = 2
     cell = ws.cell(row=ws.max_row, column=2)
     cell.style = "Calculation"
+    cell.number_format = "0.0"
 
     # Grille
     grid = rubric.grid
@@ -83,13 +84,18 @@ def generate_excel_from_rubric(rubric: Rubric, output_path: Path | str) -> None:
 
         # note calculée
         cell = ws.cell(row=ws.max_row, column= computed_col)
-        cell.value = (f"=sum({computed_letter}{cr+1}:"
-                      f"{computed_letter}{cr+len(criterion.indicators)})")
+        computed_range = (f"{computed_letter}{cr+1}:"
+                          f"{computed_letter}{cr+len(criterion.indicators)}")
+        weight_range = (f"{pts_letter}{cr+1}:"
+                        f"{pts_letter}{cr+len(criterion.indicators)}")
+        cell.value = (f"=sumproduct({computed_range},{weight_range}) / sum({weight_range})")
         cell.style = "Calculation"
+        cell.number_format = "0.0"
 
         # note manuelle
         cell = ws.cell(row=ws.max_row, column= manual_col)
         cell.style = "Input"
+        cell.number_format = "0.0"
 
         # note en pts
         cell = ws.cell(row=ws.max_row, column= col_before_scale + len(grid.scale) + 3)
@@ -97,6 +103,7 @@ def generate_excel_from_rubric(rubric: Rubric, output_path: Path | str) -> None:
                               f"{manual_letter}{cr})")
         cell.value = f"={computed_or_manual}/{threshold_perfect_cell}*{pts_letter}{cr}"
         cell.style = "Calculation"
+        cell.number_format = "0.0"
 
         # Descripteur
         for indicator in criterion.indicators:
@@ -140,6 +147,7 @@ def generate_excel_from_rubric(rubric: Rubric, output_path: Path | str) -> None:
             cell = ws.cell(row=ws.max_row, column=computed_col)
             cell.value = (f"=IF({one_cell},{val},NA())")
             cell.style = "Output"
+            cell.number_format = "0.0"
 
 
     # Formule pour le total
