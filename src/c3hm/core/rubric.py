@@ -3,6 +3,8 @@ from pathlib import Path
 import yaml
 from pydantic import BaseModel, Field
 
+from c3hm.core.utils import split_integer
+
 
 class Indicator(BaseModel):
     """
@@ -20,6 +22,10 @@ class Criterion(BaseModel):
     indicators: list[Indicator] = Field(
         min_length=1
     )
+    weight: int | None = Field(
+        default=None,
+        ge=0
+    )
 
     def nb_indicators(self) -> int:
         """
@@ -35,10 +41,19 @@ class RubricGrid(BaseModel):
     Une grille est formée d'une barème (Excellent, Très bien, ...) et d'une liste de critères.
     Il est possible d'ajouter des seuils pour chaque critère.
     """
-    scale: list[str] = Field(..., min_length=2)
+    scale: list[str] = Field(
+        default=["Excellent", "Très bien", "Bien", "Passable", "Insuffisant"],
+        min_length=2
+        )
     criteria: list[Criterion] = Field(..., min_length=1)
+    total_score: int = Field(
+        default=100,
+        ge=0,
+        le=100
+    )
     thresholds: list[int] | None = Field(
-        default=None
+        default=[100, 85, 70, 60, 0],
+        min_length=2,
     )
 
     def nb_criteria(self) -> int:
@@ -96,69 +111,123 @@ class Rubric(BaseModel):
             title += f" {endash} {self.course}"
         return title
 
+    def validate_rubric(self) -> None:
+        """
+        Valide la grille d'évaluation.
+
+        Vérifie que
+         - le nombre de seuils correspond au nombre de niveaux du barème
+         - les poids ne dépassent pas le total
+
+        Remplit les valeurs implicites, comme des critères sans poids
+        """
+        # Vérification du nombre de seuils
+        if len(self.grid.scale) != len(self.grid.thresholds):
+            raise ValueError("Le nombre de seuils doit correspondre "
+                             "au nombre de niveaux du barème.")
+
+        # Vérification des poids
+        weight_total = 0
+        nb_without_weight = 0
+        for criterion in self.grid.criteria:
+            if criterion.weight is None:
+                nb_without_weight += 1
+            elif isinstance(criterion.weight, int):
+                weight_total += criterion.weight
+            else:
+                raise ValueError(f"Le poids du critère '{criterion.name}' "
+                                 f"doit être un entier positif.")
+        unallocated_weight = self.grid.total_score - weight_total
+        if unallocated_weight < 0:
+            raise ValueError("La somme des poids des critères dépasse le total.")
+        if nb_without_weight > 0:
+            weights = split_integer(unallocated_weight, nb_without_weight)
+            weights.reverse()
+            for criterion in self.grid.criteria:
+                if criterion.weight is None:
+                    criterion.weight = weights.pop()
+
 
 def load_rubric_from_yaml(filepath: str | Path) -> Rubric:
     """
-    Charge une grille d'évaluation à partir d'un fichier YAML.
-
-    Les valeurs optionnelles non spécifiées dans le fichier YAML seront
-    instanciées avec des valeurs par défaut spécifiées dans les modèles Pydantic.
+    Charge et initialise une grille d'évaluation à partir d'un fichier YAML.
     """
     with open(filepath, encoding='utf-8') as file:
         try:
-            data: dict = yaml.safe_load(file)
+            data = yaml.safe_load(file)
         except Exception as e:
             raise ValueError(f"Erreur lors du chargement de la grille "
                              f"d'évaluation {filepath}")  from e
 
-    # Extraction des données de la grille
-    grid_data: dict = data.get('grille')
+    if not isinstance(data, dict):
+        raise ValueError(f"Le fichier {filepath} ne contient pas un dictionnaire.")
+
+    try:
+        rubric = load_rubric_from_dict(data)
+    except Exception as e:
+        raise ValueError(f"Erreur lors de la création de la grille "
+                         f"d'évaluation {filepath}") from e
+
+    return rubric
+
+def load_rubric_from_dict(data: dict) -> Rubric:
+    """
+    Charge et initialise une grille d'évaluation à partir d'un dictionnaire.
+    """
+
+    grid_data = data.get('grille')
     if not grid_data:
-        raise ValueError(f"Aucune grille trouvée dans le fichier {filepath}.")
+        raise ValueError("Aucune grille.")
+    grid_data: dict = data.get('grille')
     scale = grid_data.get('barème')
-    if not scale:
-        raise ValueError(f"Aucun barème trouvé dans le fichier {filepath}.")
     thresholds = grid_data.get('seuil')
+    total = grid_data.get('total')
 
     # Construction des critères
     criteria = []
     if not grid_data.get('critères'):
-        raise ValueError(f"Aucun critère trouvé dans le fichier {filepath}.")
+        raise ValueError("Aucun critère.")
 
     for idx, crit in enumerate(grid_data.get('critères')):
         if not isinstance(crit, dict):
-            raise ValueError(f"Critère {idx + 1} doit être un dictionnaire. Fichier {filepath}")
+            raise ValueError(f"Critère {idx + 1} doit être un dictionnaire.")
         if not crit.get('critère'):
-            raise ValueError(f"Critère {idx + 1} sans nom ('critère:'). Fichier {filepath}.")
+            raise ValueError(f"Critère {idx + 1} sans nom ('critère:').")
         crit_name = crit['critère']
+        weight = crit.get('poids')
         indicators = []
         if not crit.get('indicateurs'):
-            raise ValueError(f"Aucun indicateur trouvé dans le fichier {filepath} "
+            raise ValueError("Aucun indicateur trouvé "
                              f"pour le critère {crit_name}.")
         for idx, ind in enumerate(crit.get('indicateurs')):
             if not isinstance(ind, dict):
                 raise ValueError(f"Indicateur {idx + 1} doit être un dictionnaire. "
-                                 f"Critère {crit_name}. Fichier {filepath}")
+                                 f"Critère {crit_name}.")
             indicators.append(Indicator(
                 name=ind.get('nom'),
                 descriptors=ind.get('descripteurs')
             ))
         criteria.append(Criterion(
             name=crit.get('critère', 'Critère sans nom'),
-            indicators=indicators
+            indicators=indicators,
+            weight=weight
         ))
 
     # Création de la grille
     rubric_grid = RubricGrid(
         scale=scale,
         criteria=criteria,
-        thresholds=thresholds
+        thresholds=thresholds,
+        total_score=total
     )
 
     # Création de l'objet Rubric
-    return Rubric(
+    rubric= Rubric(
         course=data.get('cours'),
         evaluation=data.get('evaluation'),
         grid=rubric_grid
     )
+
+    rubric.validate_rubric()
+    return rubric
 

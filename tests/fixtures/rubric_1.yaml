@@ -10,8 +10,10 @@ grille:
     - D
     - E
   seuil: [100, 85, 70, 60, 0]
+  total: 10
   critères:
     - critère: C1
+      poids: 5
       indicateurs:
       - nom: C1_I1
         descripteurs:
@@ -35,6 +37,7 @@ grille:
           - C1_I3_D4
           - C1_I3_D5
     - critère: C2
+      poids: 3
       indicateurs:
       - nom: C2_I1
         descripteurs:

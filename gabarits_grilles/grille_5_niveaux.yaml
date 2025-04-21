@@ -10,6 +10,7 @@ grille:
     - Passable
     - Insuffisant
   seuil: [100, 85, 70, 60, 30]
+  total: 100
   critères:
     - critère: Rédiger un rapport
       indicateurs:
