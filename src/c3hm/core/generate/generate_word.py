@@ -1,6 +1,6 @@
+import sys
 from importlib import resources
 from pathlib import Path
-import sys
 
 import docx
 import docx.enum.text

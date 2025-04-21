@@ -47,3 +47,4 @@ def _test_generate_word_from_rubric(
     # Sur windows, on test aussi la convertion en PDF
     if sys.platform == "win32":
         word_to_pdf(output_path, output_path.with_suffix(".pdf"))
+        assert output_path.with_suffix(".pdf").exists()
