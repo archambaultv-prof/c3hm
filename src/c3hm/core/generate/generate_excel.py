@@ -36,6 +36,8 @@ def generate_excel_from_rubric(rubric: Rubric, output_path: Path | str) -> None:
     cell = ws.cell(row=ws.max_row, column=1)
     cell.style = "Headline 2"
 
+    total_row = 3
+    total_cell = 2
     cell = ws.cell(row=ws.max_row, column=2)
     cell.style = "Calculation"
 
@@ -46,6 +48,8 @@ def generate_excel_from_rubric(rubric: Rubric, output_path: Path | str) -> None:
     # En-tête - seuils
     col_before_scale = 2
     ws.append([''] * col_before_scale + grid.thresholds)
+    threshold_perfect_cell = "$C$4"
+    threshold_row = ws.max_row
     for i in range(col_before_scale + 1, len(grid.thresholds) + col_before_scale + 1):
         cell = ws.cell(row=ws.max_row, column=i)
         cell.style = "Explanatory Text"
@@ -61,27 +65,46 @@ def generate_excel_from_rubric(rubric: Rubric, output_path: Path | str) -> None:
             cell.fill = PatternFill(start_color=color, end_color=color, fill_type="solid")
 
 
+    pts_letter = "B"
+    criterion_rows = []
+    computed_col = col_before_scale + len(grid.scale) + 1
+    computed_letter = pyxl_utils.get_column_letter(computed_col)
+    manual_col = col_before_scale + len(grid.scale) + 2
+    manual_letter = pyxl_utils.get_column_letter(manual_col)
+    final_col = col_before_scale + len(grid.scale) + 3
+    final_letter = pyxl_utils.get_column_letter(final_col)
     for criterion in grid.criteria:
         # Critère
         ws.append([criterion.name, criterion.weight])
+        cr = ws.max_row
+        criterion_rows.append(cr)
         cell = ws.cell(row=ws.max_row, column=1)
         cell.style = "Headline 3"
 
-        cell = ws.cell(row=ws.max_row, column= col_before_scale + len(grid.scale) + 1)
+        # note calculée
+        cell = ws.cell(row=ws.max_row, column= computed_col)
+        cell.value = (f"=sum({computed_letter}{cr+1}:"
+                      f"{computed_letter}{cr+len(criterion.indicators)})")
         cell.style = "Calculation"
 
-        cell = ws.cell(row=ws.max_row, column= col_before_scale + len(grid.scale) + 2)
+        # note manuelle
+        cell = ws.cell(row=ws.max_row, column= manual_col)
         cell.style = "Input"
 
+        # note en pts
         cell = ws.cell(row=ws.max_row, column= col_before_scale + len(grid.scale) + 3)
+        computed_or_manual = (f"IF(ISBLANK({manual_letter}{cr}),{computed_letter}{cr},"
+                              f"{manual_letter}{cr})")
+        cell.value = f"={computed_or_manual}/{threshold_perfect_cell}*{pts_letter}{cr}"
         cell.style = "Calculation"
 
         # Descripteur
         for indicator in criterion.indicators:
             ws.append([indicator.name, 1])
             for i in range(2):
-                cell = ws.cell(row=ws.max_row, column=i+2)
+                cell = ws.cell(row=ws.max_row, column=i+1)
                 cell.style = "Explanatory Text"
+            # Affichage conditionnel pour les descripteurs
             for i in range(len(indicator.descriptors)):
                 color = "D3D3D3"  # Gris clair
                 if scale_colors:
@@ -96,5 +119,26 @@ def generate_excel_from_rubric(rubric: Rubric, output_path: Path | str) -> None:
                     f'{col_letter}{ws.max_row}',
                     rule
                 )
+
+            # Calcul de la note pour l'indicateur
+            desc_1 = pyxl_utils.get_column_letter(col_before_scale + 1)
+            desc_n = pyxl_utils.get_column_letter(col_before_scale + len(grid.scale))
+            desc_range = f"{desc_1}{ws.max_row}:{desc_n}{ws.max_row}"
+            thr_range = f"{desc_1}{threshold_row}:{desc_n}{threshold_row}"
+            index = f'INDEX({desc_range},MATCH(1,IF({desc_range}<>"",1,0),0))'
+            index_threshold = f'INDEX({thr_range},MATCH(1,IF({desc_range}<>"",1,0),0))'
+            cell = ws.cell(row=ws.max_row, column=computed_col)
+            cell.value = (f"=IF(COUNTA({desc_range})=1,"
+                          f"IF(ISNUMBER({index}),{index},{index_threshold}),"
+                          "NA())")
+            cell.data_type = "f"
+            cell.style = "Output"
+
+
+    # Formule pour le total
+    f = "=sum("
+    f += ",".join([f"{final_letter}{r}" for r in criterion_rows])
+    f += ")"
+    ws.cell(row=total_row, column=total_cell).value = f
 
     wb.save(output_path)
