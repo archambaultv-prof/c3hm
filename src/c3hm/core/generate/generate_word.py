@@ -112,14 +112,25 @@ def generate_word_from_rubric(rubric: Rubric, output_path: Path | str) -> None:
     # Remplir la première ligne avec le barème
     repeat_table_header(table.rows[0])
     set_row_borders(table.rows[0])
-    color_schemes = scale_color_schemes(len(grid.scale))
+    # Première cellule : Total sur X pts
     hdr_cells = table.rows[0].cells
+    total_cell = hdr_cells[0]
+    p = total_cell.paragraphs[0]
+    pts = "pt" if grid.total_score == 1 else "pts"
+    p.text = f"Total sur {grid.total_score} {pts}"
+    p.style = "Heading 3"
+    # Barème et seuils
+    color_schemes = scale_color_schemes(len(grid.scale))
     for i, label in enumerate(grid.scale):
         cell = hdr_cells[i + 1]
         if color_schemes:
             set_cell_background(cell, color_schemes[i])
         p = cell.paragraphs[0]
-        p.text = label
+        if i == 0:
+            threshold_str = str(grid.thresholds[i])
+        else:
+            threshold_str = f"{grid.thresholds[i-1] - 1}-{grid.thresholds[i]}"
+        p.text = f"{label} [{threshold_str}]"
         p.style = "Heading 3"
 
     # Remplir le reste avec Critères et indicateurs dans l'ordre
@@ -127,7 +138,8 @@ def generate_word_from_rubric(rubric: Rubric, output_path: Path | str) -> None:
         row = table.add_row()
         # Critère
         p = row.cells[0].paragraphs[0]
-        p.text = criterion.name
+        pts = "pt" if criterion.weight == 1 else "pts"
+        p.text = f"{criterion.name} ({criterion.weight} {pts})"
         p.style = "Heading 3"
 
         # Indicateurs

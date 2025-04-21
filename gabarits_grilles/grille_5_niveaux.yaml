@@ -9,7 +9,7 @@ grille:
     - Bien
     - Passable
     - Insuffisant
-  seuil: [100, 85, 70, 60, 30]
+  seuil: [100, 85, 70, 60, 0]
   total: 100
   critères:
     - critère: Rédiger un rapport
