@@ -19,7 +19,7 @@ def generate_excel_from_rubric(rubric: Rubric, output_path: Path | str) -> None:
 
     # Tailles de colonnes
     ws.column_dimensions['A'].width = 50
-    ws.column_dimensions['B'].width = 6
+    ws.column_dimensions['B'].width = 15
     for i in range(3, 11):
         ws.column_dimensions[pyxl_utils.get_column_letter(i)].width = 15
     ws.column_dimensions[pyxl_utils.get_column_letter(11)].width = 60
@@ -120,18 +120,25 @@ def generate_excel_from_rubric(rubric: Rubric, output_path: Path | str) -> None:
                     rule
                 )
 
-            # Calcul de la note pour l'indicateur
-            desc_1 = pyxl_utils.get_column_letter(col_before_scale + 1)
-            desc_n = pyxl_utils.get_column_letter(col_before_scale + len(grid.scale))
-            desc_range = f"{desc_1}{ws.max_row}:{desc_n}{ws.max_row}"
-            thr_range = f"{desc_1}{threshold_row}:{desc_n}{threshold_row}"
-            index = f'INDEX({desc_range},MATCH(1,IF({desc_range}<>"",1,0),0))'
-            index_threshold = f'INDEX({thr_range},MATCH(1,IF({desc_range}<>"",1,0),0))'
+            # Note pour l'indicateur.
+            # Si on utilise une formule trop avancée, Excel
+            # va ajouter un @ sur certains ranges, ce qui va casser la formule.
+            # Donc on utilise des formules simples sans confusion avec les
+            # dynamic arrays.
+            r = ws.max_row
+            def cell_addr(i, r=r):
+                return f"{pyxl_utils.get_column_letter(i + col_before_scale + 1)}{r}"
+            def thr_addr(i):
+                return f"{pyxl_utils.get_column_letter(i + col_before_scale + 1)}{threshold_row}"
+            one_cell = [f"IF(ISBLANK({cell_addr(i)}),0,1)"
+                        for i in range(len(indicator.descriptors))]
+            one_cell = f"{" + ".join(one_cell)} = 1"
+            val = [f"IF(ISBLANK({cell_addr(i)}),0,"
+                   f"IF(ISNUMBER({cell_addr(i)}),{cell_addr(i)},{thr_addr(i)}))"
+                   for i in range(len(indicator.descriptors))]
+            val = f"{" + ".join(val)}"
             cell = ws.cell(row=ws.max_row, column=computed_col)
-            cell.value = (f"=IF(COUNTA({desc_range})=1,"
-                          f"IF(ISNUMBER({index}),{index},{index_threshold}),"
-                          "NA())")
-            cell.data_type = "f"
+            cell.value = (f"=IF({one_cell},{val},NA())")
             cell.style = "Output"
 
 
