@@ -2,15 +2,15 @@ import sys
 from pathlib import Path
 
 from c3hm.core.generate.generate_word import generate_word_from_rubric, word_to_pdf
-from c3hm.core.rubric import load_rubric_from_yaml
+from c3hm.core.rubric import load_rubric_from_xlsx
 
 
 def test_generate_word_from_rubric_1(
-        rubric_1_path: Path,
+        rubric_5_path: Path,
         tmp_path: Path,
         output_dir: Path):
     _test_generate_word_from_rubric(
-        rubric_1_path,
+        rubric_5_path,
         tmp_path,
         output_dir)
 
@@ -34,7 +34,7 @@ def _test_generate_word_from_rubric(
     Recopie le fichier créé dans le répertoire tests/output pour inspection
     manuelle si nécessaire.
     """
-    r = load_rubric_from_yaml(rubric_path_)
+    r = load_rubric_from_xlsx(rubric_path_)
     doc_file = tmp_path_ / rubric_path_.with_suffix(".docx")
     generate_word_from_rubric(r, doc_file)
     assert doc_file.exists()
