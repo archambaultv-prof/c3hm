@@ -11,6 +11,15 @@ def rubric_1_path() -> Path:
     """
     return Path(__file__).parent / "fixtures" / "rubric_1.yaml"
 
+
+@pytest.fixture
+def rubric_minimal_path() -> Path:
+    """
+    Retourne le chemin vers le fichier YAML de la grille d'évaluation 1.
+    """
+    return Path(__file__).parent / "fixtures" / "rubric_minimal.yaml"
+
+
 @pytest.fixture
 def rubric_template_5_path() -> Path:
     """

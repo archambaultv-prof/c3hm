@@ -11,7 +11,9 @@ class Indicator(BaseModel):
     Représente un indicateur d'évaluation pour un critère donné.
     """
     name: str = Field(..., min_length=1)
-    descriptors: list[str]
+    descriptors: list[str] = Field(
+        min_length=1
+    )
 
 
 class Criterion(BaseModel):
@@ -51,7 +53,7 @@ class RubricGrid(BaseModel):
         ge=0,
         le=100
     )
-    thresholds: list[int] | None = Field(
+    thresholds: list[int] = Field(
         default=[100, 85, 70, 60, 0],
         min_length=2,
     )
@@ -178,10 +180,8 @@ def load_rubric_from_dict(data: dict) -> Rubric:
     grid_data = data.get('grille')
     if not grid_data:
         raise ValueError("Aucune grille.")
-    grid_data: dict = data.get('grille')
-    scale = grid_data.get('barème')
-    thresholds = grid_data.get('seuil')
-    total = grid_data.get('total')
+    if not isinstance(grid_data, dict):
+        raise ValueError("La grille doit être un dictionnaire.")
 
     # Construction des critères
     criteria = []
@@ -203,6 +203,12 @@ def load_rubric_from_dict(data: dict) -> Rubric:
             if not isinstance(ind, dict):
                 raise ValueError(f"Indicateur {idx + 1} doit être un dictionnaire. "
                                  f"Critère {crit_name}.")
+            if not ind.get('nom'):
+                raise ValueError(f"Indicateur {idx + 1} sans nom ('nom:'). "
+                                 f"Critère {crit_name}.")
+            if not ind.get('descripteurs'):
+                raise ValueError(f"Aucun descripteur trouvé "
+                                 f"pour l'indicateur {ind['nom']} du critère {crit_name}.")
             indicators.append(Indicator(
                 name=ind.get('nom'),
                 descriptors=ind.get('descripteurs')
@@ -214,18 +220,29 @@ def load_rubric_from_dict(data: dict) -> Rubric:
         ))
 
     # Création de la grille
+    grid_extra_data = dict()
+    if grid_data.get('barème'):
+        grid_extra_data['scale'] = grid_data.get('barème')
+    if grid_data.get('total'):
+        grid_extra_data['total_score'] = grid_data.get('total')
+    if grid_data.get('seuil'):
+        grid_extra_data['thresholds'] = grid_data.get('seuil')
+
     rubric_grid = RubricGrid(
-        scale=scale,
         criteria=criteria,
-        thresholds=thresholds,
-        total_score=total
+        **grid_extra_data
     )
 
     # Création de l'objet Rubric
+    rubric_extra_data = dict()
+    if data.get('cours'):
+        rubric_extra_data['course'] = data.get('cours')
+    if data.get('evaluation'):
+        rubric_extra_data['evaluation'] = data.get('evaluation')
+
     rubric= Rubric(
-        course=data.get('cours'),
-        evaluation=data.get('evaluation'),
-        grid=rubric_grid
+        grid=rubric_grid,
+        **rubric_extra_data
     )
 
     rubric.validate_rubric()
