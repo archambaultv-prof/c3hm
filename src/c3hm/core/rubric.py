@@ -6,7 +6,7 @@ import openpyxl as pyxl
 from openpyxl import Workbook
 from pydantic import BaseModel, Field
 
-from c3hm.core.utils import has_max_decimals, split_decimal, split_integer
+from c3hm.core.utils import has_max_decimals, split_decimal
 
 
 class Indicator(BaseModel):
@@ -146,7 +146,15 @@ class Student(BaseModel):
     first_name: str = Field(..., min_length=1)
     last_name: str = Field(..., min_length=1)
     omnivox_code: str = Field(..., min_length=1)
+    id: str = Field(..., min_length=1)
 
+    def ws_name(self) -> str:
+        """
+        Retourne le nom de la feuille de calcul pour l'étudiant.
+
+        Le nom est formé du prénom et du nom, séparés par un espace.
+        """
+        return self.id
 
 class Rubric(BaseModel):
     """
@@ -182,11 +190,14 @@ class Rubric(BaseModel):
 
     def validate_rubric(self) -> None:
         """
-        Valide la grille d'évaluation.
+        Valide la grille d'évaluation et les étudiants.
 
         Voir la méthode validate de RubricGrid pour les détails de la validation.
         """
         self.grid.validate()
+
+        if len(self.students) != len(set(s.id for s in self.students)):
+            raise ValueError("Les étudiants doivent avoir des identifiants uniques.")
 
 
 def load_rubric_from_xlsx(
@@ -267,6 +278,7 @@ def read_c3hm_students_xl(
         code_cell = ws.cell(row=row, column=cell_col)
         first_name_cell = ws.cell(row=row, column=cell_col + 1)
         last_name_cell = ws.cell(row=row, column=cell_col + 2)
+        id_cell = ws.cell(row=row, column=cell_col + 3)
 
         if code_cell.value is None:
             break
@@ -274,7 +286,8 @@ def read_c3hm_students_xl(
         d = {
             "omnivox_code": str(code_cell.value),
             "first_name": str(first_name_cell.value),
-            "last_name": str(last_name_cell.value)
+            "last_name": str(last_name_cell.value),
+            "id": str(id_cell.value)
         }
         students.append(d)
         row += 1

@@ -4,9 +4,12 @@ import openpyxl as pyxl
 import openpyxl.utils as pyxl_utils
 from openpyxl.formatting.rule import FormulaRule
 from openpyxl.styles import PatternFill
+from openpyxl.utils import absolute_coordinate, quote_sheetname
+from openpyxl.workbook.defined_name import DefinedName
+from openpyxl.worksheet.worksheet import Worksheet
 
 from c3hm.core.generate.generate_word import scale_color_schemes
-from c3hm.core.rubric import Rubric
+from c3hm.core.rubric import Rubric, Student
 
 
 def generate_excel_from_rubric(rubric: Rubric, output_path: Path | str) -> None:
@@ -14,7 +17,16 @@ def generate_excel_from_rubric(rubric: Rubric, output_path: Path | str) -> None:
     Génère un document Excel servant à la correction à partir d’une Rubric
     """
     wb = pyxl.Workbook()
-    ws = wb.active
+    for sheet in wb.worksheets:
+        wb.remove(sheet)
+    for student in rubric.students:
+        # Crée une feuille pour chaque étudiant
+        ws = wb.create_sheet(title=student.id)
+        add_student_sheet(ws, rubric, student)
+
+    wb.save(output_path)
+
+def add_student_sheet(ws: Worksheet, rubric: Rubric, student: Student) -> None:
     ws.sheet_view.showGridLines = False
 
     # Tailles de colonnes
@@ -30,13 +42,24 @@ def generate_excel_from_rubric(rubric: Rubric, output_path: Path | str) -> None:
     cell.style = "Title"
     ws.append([])
 
+    # Info étudiant
+    ws.append(["Étudiant", f"{student.first_name} {student.last_name}"])
+    ws.append(["Code omnivox", f"{student.omnivox_code}"])
+    cell = ws.cell(row=ws.max_row, column=2)
+    dn = DefinedName(
+        name="cthm_code_omnivox",
+        attr_text=f"{quote_sheetname(ws.title)}!{absolute_coordinate(cell.coordinate)}",
+    )
+    ws.defined_names.add(dn)
+    ws.append([])
+
     # Total sur X pts
     pts = "pt" if rubric.grid.total_score == 1 else "pts"
     ws.append([f"Total sur {rubric.grid.total_score} {pts}"])
     cell = ws.cell(row=ws.max_row, column=1)
     cell.style = "Headline 2"
 
-    total_row = 3
+    total_row = ws.max_row
     total_cell = 2
     cell = ws.cell(row=ws.max_row, column=2)
     cell.style = "Calculation"
@@ -49,7 +72,7 @@ def generate_excel_from_rubric(rubric: Rubric, output_path: Path | str) -> None:
     # En-tête - seuils
     col_before_scale = 2
     ws.append([''] * col_before_scale + grid.thresholds)
-    threshold_perfect_cell = "$C$4"
+    threshold_perfect_cell = ws.cell(row=ws.max_row, column=col_before_scale + 1).coordinate
     threshold_row = ws.max_row
     for i in range(col_before_scale + 1, len(grid.thresholds) + col_before_scale + 1):
         cell = ws.cell(row=ws.max_row, column=i)
@@ -74,7 +97,7 @@ def generate_excel_from_rubric(rubric: Rubric, output_path: Path | str) -> None:
     manual_letter = pyxl_utils.get_column_letter(manual_col)
     final_col = col_before_scale + len(grid.scale) + 3
     final_letter = pyxl_utils.get_column_letter(final_col)
-    for criterion in grid.criteria:
+    for cidx, criterion in enumerate(grid.criteria):
         # Critère
         ws.append([criterion.name, criterion.weight])
         cr = ws.max_row
@@ -104,9 +127,14 @@ def generate_excel_from_rubric(rubric: Rubric, output_path: Path | str) -> None:
         cell.value = f"={computed_or_manual}/{threshold_perfect_cell}*{pts_letter}{cr}"
         cell.style = "Calculation"
         cell.number_format = "0.0"
+        dn = DefinedName(
+            name=f"cthm_C{cidx+1}",
+            attr_text=f"{quote_sheetname(ws.title)}!{absolute_coordinate(cell.coordinate)}",
+        )
+        ws.defined_names.add(dn)
 
         # Descripteur
-        for indicator in criterion.indicators:
+        for idix, indicator in enumerate(criterion.indicators):
             ws.append([indicator.name, 1])
             for i in range(2):
                 cell = ws.cell(row=ws.max_row, column=i+1)
@@ -148,12 +176,14 @@ def generate_excel_from_rubric(rubric: Rubric, output_path: Path | str) -> None:
             cell.value = (f"=IF({one_cell},{val},NA())")
             cell.style = "Output"
             cell.number_format = "0.0"
-
+            dn = DefinedName(
+                name=f"cthm_C{cidx+1}_I{idix+1}",
+                attr_text=f"{quote_sheetname(ws.title)}!{absolute_coordinate(cell.coordinate)}",
+            )
+            ws.defined_names.add(dn)
 
     # Formule pour le total
     f = "=sum("
     f += ",".join([f"{final_letter}{r}" for r in criterion_rows])
     f += ")"
     ws.cell(row=total_row, column=total_cell).value = f
-
-    wb.save(output_path)
