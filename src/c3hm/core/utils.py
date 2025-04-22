@@ -1,3 +1,6 @@
+from decimal import ROUND_HALF_UP, Decimal
+
+
 def split_integer(n: int, nb_of_parts: int) -> list[int]:
     """
     Divise un entier n en nb_of_parts parties entières aussi égales que possible.
@@ -19,3 +22,42 @@ def split_integer(n: int, nb_of_parts: int) -> list[int]:
     base = n // nb_of_parts
     remainder = n % nb_of_parts
     return [base + 1] * remainder + [base] * (nb_of_parts - remainder)
+
+
+def has_max_decimals(d: Decimal, max_places: int) -> bool:
+    """
+    Vérifie si le nombre décimal a au plus max_places décimales.
+    """
+    t = d.normalize().as_tuple()
+    places = -t.exponent if t.exponent < 0 else 0
+    return places <= max_places
+
+
+def split_decimal(
+    x: Decimal,
+    nb_of_parts: int,
+    max_places: int
+) -> list[Decimal]:
+    """
+    Fractionne X en N parts qui :
+      - totalisent exactement X,
+      - ont au plus max_places décimales,
+      - diffèrent d’au plus une unité de quantum (10⁻max_places).
+    """
+    # 1) Construire le facteur et le quantum (plus petite unité)
+    factor  = Decimal(10) ** max_places       # ex. max_places=2 → factor=100
+    quantum = Decimal(1) / factor             # ex. Decimal('0.01')
+
+    # 2) Arrondir X à la précision désirée
+    xq = x.quantize(quantum, rounding=ROUND_HALF_UP)
+
+    # 3) Convertir Xq en nombre entier de quanta
+    xq_int = int((xq * factor).to_integral_value())
+
+    # 4) Appeler la fonction split_integer pour diviser l'entier
+    xs = split_integer(xq_int, nb_of_parts)
+
+    # 5) Reconvertir les parties en décimales
+    parts = [Decimal(i) / factor for i in xs]
+
+    return parts

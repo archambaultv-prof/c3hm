@@ -6,7 +6,7 @@ import openpyxl as pyxl
 from openpyxl import Workbook
 from pydantic import BaseModel, Field
 
-from c3hm.core.utils import split_integer
+from c3hm.core.utils import has_max_decimals, split_decimal, split_integer
 
 
 class Indicator(BaseModel):
@@ -14,9 +14,7 @@ class Indicator(BaseModel):
     Représente un indicateur d'évaluation pour un critère donné.
     """
     name: str = Field(..., min_length=1)
-    descriptors: list[str] = Field(
-        min_length=1
-    )
+    descriptors: list[str]
 
 
 class Criterion(BaseModel):
@@ -24,12 +22,10 @@ class Criterion(BaseModel):
     Représente un critère d'évaluation. Ce dernière peut être formée d'une liste d'indicateurs.
     """
     name: str = Field(..., min_length=1)
-    indicators: list[Indicator] = Field(
-        min_length=1
-    )
+    indicators: list[Indicator]
     weight: Decimal | None = Field(
         default=None,
-        ge=0
+        ge=Decimal(0)
     )
 
     def nb_indicators(self) -> int:
@@ -94,34 +90,47 @@ class RubricGrid(BaseModel):
         return 1 + len(self.scale)
 
     def validate(self) -> None:
+        """
+        Valide la grille d'évaluation.
+
+        Vérifie que le nombre de seuils correspond au nombre de niveaux du barème,
+        que les poids des critères sont valides et que les descripteurs et
+        indicateurs sont correctement définis.
+        """
         # Vérification du nombre de seuils
         if len(self.scale) != len(self.thresholds):
             raise ValueError("Le nombre de seuils doit correspondre "
                              "au nombre de niveaux du barème.")
 
         # Vérification des poids
-        weight_total = 0
+        weight_total = Decimal(0)
         nb_without_weight = 0
         for criterion in self.criteria:
             if criterion.weight is None:
                 nb_without_weight += 1
-            elif isinstance(criterion.weight, int):
-                weight_total += criterion.weight
             else:
-                raise ValueError(f"Le poids du critère '{criterion.name}' "
-                                 f"doit être un entier positif.")
+                # Verification si precision est respectée
+
+                if not has_max_decimals(criterion.weight, self.pts_precision):
+                    raise ValueError(
+                        f"Le poids du critère '{criterion.name}' "
+                        f"doit avoir au plus {self.pts_precision} décimales."
+                    )
+                weight_total += criterion.weight
         unallocated_weight = self.total_score - weight_total
         if unallocated_weight < 0:
             raise ValueError("La somme des poids des critères dépasse le total.")
         if nb_without_weight > 0:
-            weights = split_integer(unallocated_weight, nb_without_weight)
+            weights = split_decimal(unallocated_weight, nb_without_weight, self.pts_precision)
             weights.reverse()
             for criterion in self.criteria:
                 if criterion.weight is None:
                     criterion.weight = weights.pop()
 
-        # Vérification des descripteurs
+        # Vérification des descripteurs et indicateurs
         for criterion in self.criteria:
+            if not criterion.indicators:
+                raise ValueError(f"Le critère '{criterion.name}' n'a pas d'indicateurs.")
             for indicator in criterion.indicators:
                 if len(indicator.descriptors) != len(self.scale):
                     raise ValueError(
@@ -175,11 +184,7 @@ class Rubric(BaseModel):
         """
         Valide la grille d'évaluation.
 
-        Vérifie que
-         - le nombre de seuils correspond au nombre de niveaux du barème
-         - les poids ne dépassent pas le total
-
-        Remplit les valeurs implicites, comme des critères sans poids
+        Voir la méthode validate de RubricGrid pour les détails de la validation.
         """
         self.grid.validate()
 
@@ -432,7 +437,7 @@ def get_criteria(c: list[tuple[str, Any]]) -> list[Criterion]:
     criteria: list[Criterion] = []
     current_criterion: Criterion | None = None
     current_ind: Indicator | None = None
-    current_desc_number: int | None = None
+    current_desc_number: int = 0
     seen_weight = False
 
     for key, value in c:
@@ -441,10 +446,11 @@ def get_criteria(c: list[tuple[str, Any]]) -> list[Criterion]:
                 if current_ind is not None:
                     current_criterion.indicators.append(current_ind)
                     current_ind = None
-                    current_desc_number = None
+
                 criteria.append(current_criterion)
             # Nouveau critère
             current_criterion = Criterion(name=value, indicators=[])
+            seen_weight = False
 
         elif key == 'Critère poids':
             if current_criterion:
@@ -452,26 +458,33 @@ def get_criteria(c: list[tuple[str, Any]]) -> list[Criterion]:
                     raise ValueError(
                         f"Critère poids défini plusieurs fois pour {current_criterion.name}."
                     )
-                current_criterion.weight = value
+                if value:
+                    current_criterion.weight = Decimal(str(value))
                 seen_weight = True
             else:
                 raise ValueError("Critère poids sans critère.")
 
-        elif key == "Indicateur ":
+        elif key == "Indicateur":
             if current_criterion is None:
                 raise ValueError("Indicateur sans critère.")
             if current_ind is not None:
                 current_criterion.indicators.append(current_ind)
             current_ind = Indicator(name=value, descriptors=[])
+            current_desc_number = 0
 
         elif key.startswith("Descripteur "):
             if current_ind is None:
                 raise ValueError("Descripteur sans indicateur.")
             n = int(key[12:])
-            if current_desc_number is not None and n != current_desc_number + 1:
+            if n != current_desc_number + 1:
                 raise ValueError(f"Descripteur '{key}' non consécutif.")
             current_desc_number = n
             current_ind.descriptors.append(value)
+
+    if current_criterion:
+        if current_ind is not None:
+            current_criterion.indicators.append(current_ind)
+        criteria.append(current_criterion)
 
     return criteria
 

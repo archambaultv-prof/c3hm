@@ -7,8 +7,8 @@ def test_load_rubric_5(rubric_template_5_path):
     assert isinstance(rubric, Rubric)
 
     # Vérifiez les propriétés principales
-    assert rubric.course == "420-TEST-MA"
-    assert rubric.evaluation == "TP1"
+    assert rubric.course == "420-C3HM-MA"
+    assert rubric.evaluation == "Travail pratique 1"
 
     # Vérifiez barème et seuils
     assert rubric.grid.scale == ["Excellent", "Très bien", "Bien", "Passable", "Insuffisant"]
