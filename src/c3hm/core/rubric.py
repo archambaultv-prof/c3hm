@@ -1,4 +1,3 @@
-import re
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -44,7 +43,7 @@ class RubricGrid(BaseModel):
     """
     Représente la grille d'évaluation.
 
-    Une grille est formée d'une barème (Excellent, Très bien, ...) et d'une liste de critères.
+    Une grille est formée de niveaux (Excellent, Très bien, ...) et d'une liste de critères.
     Il est possible d'ajouter des seuils pour chaque critère.
     """
     scale: list[str] = Field(
@@ -63,8 +62,11 @@ class RubricGrid(BaseModel):
     thresholds: list[int] = Field(
         default=[100, 85, 70, 60, 0],
         min_length=2,
+    ),
+    thresholds_precision: int = Field(
+        default=0,
+        ge=0
     )
-
     def nb_criteria(self) -> int:
         """
         Retourne le nombre de critères dans la grille.
@@ -90,6 +92,42 @@ class RubricGrid(BaseModel):
         pour chaque niveau de barème.
         """
         return 1 + len(self.scale)
+
+    def validate(self) -> None:
+        # Vérification du nombre de seuils
+        if len(self.scale) != len(self.thresholds):
+            raise ValueError("Le nombre de seuils doit correspondre "
+                             "au nombre de niveaux du barème.")
+
+        # Vérification des poids
+        weight_total = 0
+        nb_without_weight = 0
+        for criterion in self.criteria:
+            if criterion.weight is None:
+                nb_without_weight += 1
+            elif isinstance(criterion.weight, int):
+                weight_total += criterion.weight
+            else:
+                raise ValueError(f"Le poids du critère '{criterion.name}' "
+                                 f"doit être un entier positif.")
+        unallocated_weight = self.total_score - weight_total
+        if unallocated_weight < 0:
+            raise ValueError("La somme des poids des critères dépasse le total.")
+        if nb_without_weight > 0:
+            weights = split_integer(unallocated_weight, nb_without_weight)
+            weights.reverse()
+            for criterion in self.criteria:
+                if criterion.weight is None:
+                    criterion.weight = weights.pop()
+
+        # Vérification des descripteurs
+        for criterion in self.criteria:
+            for indicator in criterion.indicators:
+                if len(indicator.descriptors) != len(self.scale):
+                    raise ValueError(
+                        f"Le nombre de descripteurs pour l'indicateur '{indicator.name}' "
+                        f"doit correspondre au nombre de niveaux du barème."
+                    )
 
 
 class Student(BaseModel):
@@ -143,31 +181,7 @@ class Rubric(BaseModel):
 
         Remplit les valeurs implicites, comme des critères sans poids
         """
-        # Vérification du nombre de seuils
-        if len(self.grid.scale) != len(self.grid.thresholds):
-            raise ValueError("Le nombre de seuils doit correspondre "
-                             "au nombre de niveaux du barème.")
-
-        # Vérification des poids
-        weight_total = 0
-        nb_without_weight = 0
-        for criterion in self.grid.criteria:
-            if criterion.weight is None:
-                nb_without_weight += 1
-            elif isinstance(criterion.weight, int):
-                weight_total += criterion.weight
-            else:
-                raise ValueError(f"Le poids du critère '{criterion.name}' "
-                                 f"doit être un entier positif.")
-        unallocated_weight = self.grid.total_score - weight_total
-        if unallocated_weight < 0:
-            raise ValueError("La somme des poids des critères dépasse le total.")
-        if nb_without_weight > 0:
-            weights = split_integer(unallocated_weight, nb_without_weight)
-            weights.reverse()
-            for criterion in self.grid.criteria:
-                if criterion.weight is None:
-                    criterion.weight = weights.pop()
+        self.grid.validate()
 
 
 def load_rubric_from_xlsx(
@@ -185,10 +199,9 @@ def load_rubric_from_xlsx(
     wb = pyxl.load_workbook(filepath, data_only=True)
     config = read_c3hm_config_xl(wb, sheet_name=sheet_name)
     students = read_c3hm_students_xl(wb, sheet_name=sheet_name)
-    config['students'] = students
 
     try:
-        rubric = load_rubric_from_dict(config)
+        rubric = rubric_from_config(config, students)
     except Exception as e:
         raise ValueError(f"Erreur lors du chargement du fichier : {filepath}") from e
 
@@ -201,13 +214,25 @@ def find_named_cell(wb: Workbook,
     Trouve la position d'une cellule nommée dans une feuille de calcul.
     Retourne la ligne et la colonne de la cellule.
     """
+    # Vérifie si la feuille existe
+    if sheet_name not in wb.sheetnames:
+        raise ValueError(f"Feuille '{sheet_name}' non trouvée dans le classeur.")
     ws = wb[sheet_name]
-    for dn in wb.defined_names.definedName:
-        if dn.name == named_cell:
-            for title, coord in dn.destinations:
-                if title == sheet_name:
-                    cell = ws[coord]
-                    return cell.row, cell.column
+
+    # Vérifie si la cellule nommée existe
+    defn = None
+    if named_cell in wb.defined_names:
+        defn = wb.defined_names[named_cell]
+    elif named_cell in ws.defined_names:
+        defn = ws.defined_names[named_cell]
+
+    if defn is None:
+        raise ValueError(f"Cellule nommée '{named_cell}' non trouvée dans le classeur.")
+
+    for title, coord in defn.destinations:
+        if title == sheet_name:
+            cell = ws[coord]
+            return cell.row, cell.column
     raise ValueError(f"Cellule nommée '{named_cell}' non trouvée dans la feuille '{sheet_name}'.")
 
 
@@ -256,14 +281,14 @@ def read_c3hm_config_xl(
         *,
         sheet_name="c3hm",
         named_cell="cthm_config_key"
-        ) -> dict[str, Any]:
+        ) -> list[tuple[str, Any]]:
     """
     Lit la configuration d'une grille d'évaluation à partir d'un fichier Excel.
     Part depuis une cellule nommée et lit vers le bas jusqu'à la première
     cellule vide. Assume que la cellule nommée est dans la première colonne et
     que les valeurs sont dans la deuxième colonne.
     """
-    config = {}
+    config = []
 
     cell_row, cell_col = find_named_cell(wb, sheet_name, named_cell)
 
@@ -280,39 +305,40 @@ def read_c3hm_config_xl(
 
         key = str(key_cell.value)
         value = value_cell.value
-        config[key] = value
+        config.append((key, value))
         row += 1
 
     return config
 
 
-def load_rubric_from_dict(data: dict) -> Rubric:
+def rubric_from_config(config: list[tuple[str, Any]], students: list[dict]) -> Rubric:
     """
-    Charge et initialise une grille d'évaluation à partir d'un dictionnaire.
+    Charge et initialise une grille d'évaluation à partir d'un configuration.
 
     Voir le gabarit grille_5_niveaux.xlsx pour la structure attendue.
     """
 
-    cours = data.get("cours")
-    evaluation = data.get("évaluation")
-    total = data.get("total", 100)
-    pts_precision = data.get("pts_precision", 0)
-    scale = get_scale(data)
-    thresholds = get_thresholds(data)
-    if len(thresholds) != len(scale):
-        raise ValueError("Le nombre de seuils doit correspondre "
-                         "au nombre de niveaux du barème.")
-    criteria = get_criteria(data)
+    check_duplicate_param(config)
+
+    cours = get_param(config, "Cours")
+    evaluation = get_param(config, "Évaluation")
+    total = get_param(config, "Total", 100)
+    pts_precision = get_param(config, "Précision poids", 0)
+    scale = get_scale(config)
+    thresholds = get_thresholds(config)
+    thresholds_precision = get_param(config, "Précision seuil", 0)
+    criteria = get_criteria(config)
     if not criteria:
         raise ValueError("Aucun critère trouvé.")
-    students = get_students(data)
+    students = [Student(**d) for d in students]
 
     grid = RubricGrid(
         scale=scale,
         criteria=criteria,
         total_score=total,
         pts_precision=pts_precision,
-        thresholds=thresholds
+        thresholds=thresholds,
+        thresholds_precision=thresholds_precision
     )
 
     rubric = Rubric(
@@ -325,82 +351,127 @@ def load_rubric_from_dict(data: dict) -> Rubric:
     rubric.validate_rubric()
     return rubric
 
-
-def get_scale(d: dict[str, Any]) -> list[str]:
+def check_duplicate_param(config: list[tuple[str, Any]]):
     """
-    Retourne la liste des niveaux de barème à partir d'un dictionnaire
-    ou la liste par défaut si aucun barème n'est trouvé.
+    Vérifie si un paramètre est défini plusieurs fois dans la configuration.
+
+    Les paramètres Critère, Indicateur et Descripteur sont autorisés à être
+    définis plusieurs fois.
+    """
+    seen = set()
+    ok_duplicate = ["Critère", "Indicateur", "Descripteur"]
+    for k, _ in config:
+        skip = False
+        for x in ok_duplicate:
+            if k.startswith(x):
+                skip = True
+                break
+        if skip:
+            continue
+
+        if k in seen:
+            raise ValueError(f"Le paramètre '{k}' est défini plusieurs fois.")
+        seen.add(k)
+
+
+def get_param(c: list[tuple[str, Any]], param: str, default: Any = None) -> Any:
+    """
+    Retourne la valeur d'un paramètre à partir d'une liste de tuples.
+    """
+    for k, v in c:
+        if k == param:
+            return v
+    return default
+
+
+def get_scale(c: list[tuple[str, Any]]) -> list[str]:
+    """
+    Retourne la liste des niveaux à partir de la configuration
+    ou la liste par défaut si aucun niveau n'est trouvé.
     """
     scale = []
-    for k in d:
-        if k.startswith("B"):
-            scale.append(d[k])
+    current_level = 0
+    for k, v in c:
+        if k.startswith("Niveau "):
+            level = int(k[7:])
+            if level != current_level + 1:
+                raise ValueError(f"Niveau '{level}' non consécutif.")
+            current_level = level
+            scale.append(v)
     if not scale:
-        scale = ["Excellent", "Très bien", "Bien", "Passable", "Insuffisant"]
-    return scale
+        return ["Excellent", "Très bien", "Bien", "Passable", "Insuffisant"]
+    else:
+        return scale
 
 
-def get_thresholds(d: dict[str, Any]) -> list[int]:
+def get_thresholds(c: list[tuple[str, Any]]) -> list[int]:
     """
-    Retourne la liste des seuils à partir d'un dictionnaire
+    Retourne la liste des seuils à partir de la configuration
     ou la liste par défaut si aucun seuil n'est trouvé.
     """
     thresholds = []
-    for k in d:
-        if k.startswith("S"):
-            thresholds.append(d[k])
+    current_level = 0
+    for k, v in c:
+        if k.startswith("Seuil "):
+            level = int(k[6:])
+            if level != current_level + 1:
+                raise ValueError(f"Seuil '{level}' non consécutif.")
+            current_level = level
+            thresholds.append(v)
     if not thresholds:
-        thresholds = [100, 85, 70, 60, 0]
-    return thresholds
+        return [100, 85, 70, 60, 0]
+    else:
+        return thresholds
 
-def get_students(d: dict[str, Any]) -> list[Student]:
+def get_criteria(c: list[tuple[str, Any]]) -> list[Criterion]:
     """
-    Retourne la liste des étudiants à partir d'un dictionnaire.
-    """
-    students = []
-    if "students" in d:
-        for student in d["students"]:
-            students.append(Student(**student))
-    return students
+    Retourne la liste des critères à partir d'une configuration.
 
-def get_criteria(d: dict[str, Any]) -> list[Criterion]:
-    """
-    Retourne la liste des critères à partir d'un dictionnaire.
+    Lit la configuration dans l'ordre.
     """
     criteria: list[Criterion] = []
-    # repérer tous les IDs de critères (C1, C2, ...)
-    cids = []
-    for k in d:
-        m = re.match(r'^(C\d+)', k)
-        if m:
-            cids.append(m.group(1))
+    current_criterion: Criterion | None = None
+    current_ind: Indicator | None = None
+    current_desc_number: int | None = None
+    seen_weight = False
 
-    for cid in cids:
-        name = d[cid]
-        weight = d.get(f"{cid}_pts")
+    for key, value in c:
+        if key == "Critère":
+            if current_criterion:
+                if current_ind is not None:
+                    current_criterion.indicators.append(current_ind)
+                    current_ind = None
+                    current_desc_number = None
+                criteria.append(current_criterion)
+            # Nouveau critère
+            current_criterion = Criterion(name=value, indicators=[])
 
-        # repérer tous les indicateurs pour ce critère
-        iids = []
-        for k in d:
-            m = re.match(rf'^{cid}_(I\d+)', k)
-            if m:
-                iids.append(m.group(1))
+        elif key == 'Critère poids':
+            if current_criterion:
+                if seen_weight:
+                    raise ValueError(
+                        f"Critère poids défini plusieurs fois pour {current_criterion.name}."
+                    )
+                current_criterion.weight = value
+                seen_weight = True
+            else:
+                raise ValueError("Critère poids sans critère.")
 
-        indicators: list[Indicator] = []
-        for iid in iids:
-            ind_key = f"{cid}_{iid}"
-            ind_name = d[ind_key]
+        elif key == "Indicateur ":
+            if current_criterion is None:
+                raise ValueError("Indicateur sans critère.")
+            if current_ind is not None:
+                current_criterion.indicators.append(current_ind)
+            current_ind = Indicator(name=value, descriptors=[])
 
-            # repérer tous les  descripteurs de l'indicateur
-            dids = []
-            for k in d:
-                m = re.match(rf'^{cid}_{iid}_(D\d+)', k)
-                if m:
-                    desc_items.append(m.group(1))
+        elif key.startswith("Descripteur "):
+            if current_ind is None:
+                raise ValueError("Descripteur sans indicateur.")
+            n = int(key[12:])
+            if current_desc_number is not None and n != current_desc_number + 1:
+                raise ValueError(f"Descripteur '{key}' non consécutif.")
+            current_desc_number = n
+            current_ind.descriptors.append(value)
 
-            for
-            descriptors = [v for _, v in desc_items]
-            indicators.append(Indicator(name=ind_name, descriptors=descriptors))
-        criteria.append(Criterion(name=name, indicators=indicators, weight=weight))
     return criteria
 

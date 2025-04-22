@@ -5,17 +5,9 @@ import pytest
 
 
 @pytest.fixture
-def rubric_5_path() -> Path:
-    """
-    Retourne le chemin vers le fichier YAML de la grille d'évaluation 1.
-    """
-    return Path(__file__).parent / "fixtures" / "grille_5_niveaux.xlsx"
-
-
-@pytest.fixture
 def rubric_template_5_path() -> Path:
     """
-    Retourne le chemin vers le fichier YAML de la grille d'évaluation grille_5_niveaux.xlsx.
+    Retourne le chemin vers le fichier de la grille d'évaluation grille_5_niveaux.xlsx.
     """
     return Path(__file__).parent.parent / "gabarits_grilles" / "grille_5_niveaux.xlsx"
 
