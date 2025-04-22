@@ -344,7 +344,7 @@ def rubric_from_config(config: list[tuple[str, Any]], students: list[dict]) -> R
     pts_precision = get_param(config, "Précision poids", 0)
     scale = get_scale(config)
     thresholds = get_thresholds(config)
-    thresholds_precision = get_param(config, "Précision seuil", 0)
+    thresholds_precision = get_param(config, "Précision seuils", 0)
     criteria = get_criteria(config)
     if not criteria:
         raise ValueError("Aucun critère trouvé.")

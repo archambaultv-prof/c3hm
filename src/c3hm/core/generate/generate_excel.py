@@ -19,12 +19,110 @@ def generate_excel_from_rubric(rubric: Rubric, output_path: Path | str) -> None:
     wb = pyxl.Workbook()
     for sheet in wb.worksheets:
         wb.remove(sheet)
+
+    ws = wb.create_sheet(title="c3hm")
+    add_c3hm_sheet(ws, rubric)
+
     for student in rubric.students:
         # Crée une feuille pour chaque étudiant
         ws = wb.create_sheet(title=student.id)
         add_student_sheet(ws, rubric, student)
 
     wb.save(output_path)
+
+def add_c3hm_sheet(ws: Worksheet, rubric: Rubric) -> None:
+    ws.sheet_view.showGridLines = False
+
+    # Tailles de colonnes
+    ws.column_dimensions['A'].width = 20
+    ws.column_dimensions['B'].width = 20
+    ws.column_dimensions['C'].width = 20
+    ws.column_dimensions['D'].width = 20
+    ws.column_dimensions['E'].width = 4
+    ws.column_dimensions['F'].width = 20
+    ws.column_dimensions['G'].width = 30
+
+    # Info étudiant
+    ws.append(["Code Omnivox", "Prénom", "Nom de famille", "Id"])
+    for i in range(1, 5):
+        cell = ws.cell(row=ws.max_row, column=i)
+        cell.style = "Headline 1"
+    cell = ws.cell(row=ws.max_row, column=1)
+    dn = DefinedName(
+        name="cthm_code_omnivox",
+        attr_text=f"{quote_sheetname(ws.title)}!{absolute_coordinate(cell.coordinate)}",
+    )
+    ws.defined_names.add(dn)
+    for student in rubric.students:
+        ws.append([student.omnivox_code, student.first_name, student.last_name, student.id])
+
+    # Paramètres de la grille
+    key_col = 6
+    key_row = 1
+    ws.cell(row=1, column=key_col).value = "POUR RÉFÉRENCE, NE PAS CHANGER CES PARAMÈTRES"
+    ws.cell(row=1, column=key_col).style = "Warning Text"
+
+    key_row = 2
+    ws.cell(row=key_row, column=key_col).value = "Clé"
+    ws.cell(row=key_row, column=key_col).style = "Headline 1"
+    ws.cell(row=key_row, column=key_col + 1).value = "Valeur"
+    ws.cell(row=key_row, column=key_col + 1).style = "Headline 1"
+    cell = ws.cell(row=key_row, column=key_col + 1)
+    dn = DefinedName(
+        name="cthm_config_key",
+        attr_text=f"{quote_sheetname(ws.title)}!{absolute_coordinate(cell.coordinate)}",
+    )
+    ws.defined_names.add(dn)
+
+    ws.cell(row=key_row + 1, column=key_col).value = "Cours"
+    ws.cell(row=key_row + 1, column=key_col + 1).value = rubric.course
+
+    ws.cell(row=key_row + 2, column=key_col).value = "Évaluation"
+    ws.cell(row=key_row + 2, column=key_col + 1).value = rubric.evaluation
+
+    ws.cell(row=key_row + 3, column=key_col).value = "Total"
+    ws.cell(row=key_row + 3, column=key_col + 1).value = rubric.grid.total_score
+
+    ws.cell(row=key_row + 4, column=key_col).value = "Précision poids"
+    ws.cell(row=key_row + 4, column=key_col + 1).value = rubric.grid.pts_precision
+
+    ws.cell(row=key_row + 5, column=key_col).value = "Précision seuils"
+    ws.cell(row=key_row + 5, column=key_col + 1).value = rubric.grid.thresholds_precision
+
+    level_row = key_row + 6
+    for i, level in enumerate(rubric.grid.scale):
+        ws.cell(row=level_row + i, column=key_col).value = f"Niveau {i+1}"
+        ws.cell(row=level_row + i, column=key_col + 1).value = level
+
+    threshold_row = level_row + len(rubric.grid.scale)
+    for i, threshold in enumerate(rubric.grid.thresholds):
+        ws.cell(row=threshold_row + i, column=key_col).value = f"Seuil {i+1}"
+        ws.cell(row=threshold_row + i, column=key_col + 1).value = threshold
+
+    next_row = threshold_row + len(rubric.grid.thresholds)
+    for criterion in rubric.grid.criteria:
+        ws.cell(row=next_row, column=key_col).value = "Critère"
+        ws.cell(row=next_row, column=key_col).style = "Headline 3"
+        ws.cell(row=next_row, column=key_col + 1).value = criterion.name
+        ws.cell(row=next_row, column=key_col + 1).style = "Headline 3"
+
+        ws.cell(row=next_row + 1, column=key_col).value = "Critère poids"
+        ws.cell(row=next_row + 1, column=key_col + 1).value = criterion.weight
+
+        next_row += 2
+        for indicator in criterion.indicators:
+            ws.cell(row=next_row, column=key_col).value = "Indicateur"
+            ws.cell(row=next_row, column=key_col).style = "Headline 4"
+            ws.cell(row=next_row, column=key_col + 1).value = indicator.name
+            ws.cell(row=next_row, column=key_col + 1).style = "Headline 4"
+
+            next_row += 1
+            for idx, descriptor in enumerate(indicator.descriptors):
+                ws.cell(row=next_row, column=key_col).value = f"Descripteur {idx+1}"
+                ws.cell(row=next_row, column=key_col).style = "Explanatory Text"
+                ws.cell(row=next_row, column=key_col + 1).value = descriptor
+                ws.cell(row=next_row, column=key_col + 1).style = "Explanatory Text"
+                next_row += 1
 
 def add_student_sheet(ws: Worksheet, rubric: Rubric, student: Student) -> None:
     ws.sheet_view.showGridLines = False
@@ -104,6 +202,11 @@ def add_student_sheet(ws: Worksheet, rubric: Rubric, student: Student) -> None:
         criterion_rows.append(cr)
         cell = ws.cell(row=ws.max_row, column=1)
         cell.style = "Headline 3"
+        dn = DefinedName(
+            name=f"cthm_C{cidx+1}_label",
+            attr_text=f"{quote_sheetname(ws.title)}!{absolute_coordinate(cell.coordinate)}",
+        )
+        ws.defined_names.add(dn)
 
         # note calculée
         cell = ws.cell(row=ws.max_row, column= computed_col)
@@ -136,6 +239,12 @@ def add_student_sheet(ws: Worksheet, rubric: Rubric, student: Student) -> None:
         # Descripteur
         for idix, indicator in enumerate(criterion.indicators):
             ws.append([indicator.name, 1])
+            cell = ws.cell(row=ws.max_row, column=1)
+            dn = DefinedName(
+                name=f"cthm_C{cidx+1}_I{idix+1}_label",
+                attr_text=f"{quote_sheetname(ws.title)}!{absolute_coordinate(cell.coordinate)}",
+            )
+            ws.defined_names.add(dn)
             for i in range(2):
                 cell = ws.cell(row=ws.max_row, column=i+1)
                 cell.style = "Explanatory Text"
