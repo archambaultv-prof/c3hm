@@ -15,6 +15,10 @@ class Indicator(BaseModel):
     """
     name: str = Field(..., min_length=1)
     descriptors: list[str]
+    grade: Decimal | None = Field(
+        default=None,
+        ge=Decimal(0)
+    )
 
 
 class Criterion(BaseModel):
@@ -24,6 +28,10 @@ class Criterion(BaseModel):
     name: str = Field(..., min_length=1)
     indicators: list[Indicator]
     weight: Decimal | None = Field(
+        default=None,
+        ge=Decimal(0)
+    )
+    grade: Decimal | None = Field(
         default=None,
         ge=Decimal(0)
     )
@@ -62,6 +70,10 @@ class RubricGrid(BaseModel):
     thresholds_precision: int = Field(
         default=0,
         ge=0
+    ),
+    show_indicators_grade: bool = Field(
+        default=False,
+        description="Indique si la note des indicateurs doit être affichée dans la grille."
     )
     def nb_criteria(self) -> int:
         """
