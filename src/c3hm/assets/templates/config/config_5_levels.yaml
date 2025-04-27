@@ -73,7 +73,7 @@ grille:
         - Noms de variables explicites, significatifs et selon les conventions, quelques exceptions.
         - Noms de variables parfois génériques ou cryptiques, nécessitant un effort de réflexion.
         - Noms de variables souvent génériques ou cryptiques, rendant la compréhension difficile.
-        - Noms de variables génériques ou cryptiques, rendant le code presque incompréhensible sans documentation.
+        - Noms de variables génériques ou cryptiques, rendant le code presque incompréhensible.
     - nom: Code bien indenté
       poids relatif: 1
       descripteurs:
@@ -98,9 +98,9 @@ grille:
         poids relatif: 1
         descripteurs:
           - Durée respectée.
-          - null
+          - S. O.
           - Dépassement modéré ou présentation un peu courte.
-          - null
+          - S. O
           - Durée non maîtrisée, temps largement dépassé ou insuffisant.
 
       - nom: Support visuel adapté

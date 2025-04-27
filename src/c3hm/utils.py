@@ -24,50 +24,44 @@ def split_integer(n: int, nb_of_parts: int) -> list[int]:
     return [base + 1] * remainder + [base] * (nb_of_parts - remainder)
 
 
-def is_within_decimal_limit(d: Decimal, max_places: int) -> bool:
+def is_multiple_of_quantum(x: Decimal, quantum: Decimal) -> bool:
     """
-    Vérifie si le nombre décimal a au plus max_places décimales.
+    Retourne True si x est un multiple exact de quantum,
+    c’est-à-dire que x % quantum == 0.
     """
-    t = d.normalize().as_tuple()
-    places = -t.exponent if t.exponent < 0 else 0
-    return places <= max_places
-
+    if quantum <= 0:
+        raise ValueError("quantum must be positive")
+    return (x % quantum) == 0
 
 def split_decimal(
     x: Decimal,
     nb_of_parts: int,
-    max_places: int
+    quantum: Decimal
 ) -> list[Decimal]:
     """
-    Fractionne X en N parts qui :
-      - totalisent exactement X,
-      - ont au plus max_places décimales,
-      - diffèrent d’au plus une unité de quantum (10⁻max_places).
+    Fractionne x en nb_of_parts parts telles que :
+      - elles totalisent exactement x,
+      - les nb_of_parts-1 premières sont des multiples de quantum,
+      - elles diffèrent d'au plus une unité de quantum
+
+    Lance une exception si x n'est pas un multiple exact de quantum.
     """
-    # 1) Construire le facteur et le quantum (plus petite unité)
-    factor  = Decimal(10) ** max_places       # ex. max_places=2 → factor=100
-    quantum = Decimal(1) / factor             # ex. Decimal('0.01')
+    # Vérification x et quantum
+    if not is_multiple_of_quantum(x, quantum):
+        raise ValueError(f"{x!r} n'est pas un multiple exact de {quantum!r}")
 
-    # 2) Arrondir X à la précision désirée
-    xq = x.quantize(quantum, rounding=ROUND_HALF_UP)
+    # Nombre de quanta entiers dans x
+    total_units = int((x // quantum).to_integral_value())
 
-    # 3) Convertir Xq en nombre entier de quanta
-    xq_int = int((xq * factor).to_integral_value())
+    # Répartition des unités entières
+    units_list = split_integer(total_units, nb_of_parts)
 
-    # 4) Appeler la fonction split_integer pour diviser l'entier
-    xs = split_integer(xq_int, nb_of_parts)
-
-    # 5) Reconvertir les parties en décimales
-    parts = [Decimal(i) / factor for i in xs]
+    # Conversion en Decimal
+    parts = [Decimal(u) * quantum for u in units_list]
 
     return parts
 
 
-def decimal_is_integer(d: Decimal) -> bool:
-    """
-    Vérifie si le nombre décimal est un entier.
-    """
-    return d == d.to_integral_value()
 
 
 def decimal_to_number(d: Decimal) -> float | int:
@@ -75,7 +69,7 @@ def decimal_to_number(d: Decimal) -> float | int:
     Convertit un nombre décimal en nombre flottant
     ou entier, selon la valeur.
     """
-    if decimal_is_integer(d):
+    if d == d.to_integral_value():
         return int(d)
     else:
         return float(d)

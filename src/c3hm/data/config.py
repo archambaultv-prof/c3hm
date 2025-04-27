@@ -30,13 +30,15 @@ class Config(BaseModel):
     @classmethod
     def from_dict(cls, data: dict) -> "Config":
         """
-        Crée une instance de Config à partir d'un dictionnaire.
+        Crée une instance validée de Config à partir d'un dictionnaire.
         """
-        return cls(
+        config = cls(
             evaluation=Evaluation.from_dict(data["évaluation"]),
             rubric=Rubric.from_dict(data["grille"]),
             students=[Student.from_dict(student) for student in data["étudiants"]],
         )
+        config.validate_config()
+        return config
 
     def title(self) -> str:
         """
@@ -61,13 +63,10 @@ class Config(BaseModel):
             data = yaml.safe_load(file)
         return cls.from_dict(data)
 
-    # def validate_rubric(self) -> None:
-    #     """
-    #     Valide la grille d'évaluation et les étudiants.
+    def validate_config(self) -> None:
+        """
+        Valide la grille d'évaluation et les étudiants.
 
-    #     Voir la méthode validate de RubricGrid pour les détails de la validation.
-    #     """
-    #     self.rubric.validate()
-
-    #     if len(self.students) != len(set(s.id for s in self.students)):
-    #         raise ValueError("Les étudiants doivent avoir des identifiants uniques.")
+        Voir la méthode validate de Rubric pour les détails de la validation.
+        """
+        self.rubric.validate()
