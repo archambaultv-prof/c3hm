@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
 
-from c3hm.commands.student import generate_word_from_rubric, word_to_pdf
+from c3hm.commands.student import generate_student_rubric, word_to_pdf
 from c3hm.data.config import Config
 
 
@@ -18,7 +18,7 @@ def test_generate_word_from_rubric(
     """
     config = Config.from_yaml(rubric_template_5_path)
     doc_file = tmp_path / rubric_template_5_path.with_suffix(".docx")
-    generate_word_from_rubric(config.rubric, doc_file, title=config.title())
+    generate_student_rubric(config.rubric, doc_file, title=config.title())
     assert doc_file.exists()
 
     # Copie le fichier dans le répertoire de sortie pour inspection manuelle

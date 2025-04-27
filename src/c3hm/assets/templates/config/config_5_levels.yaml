@@ -21,9 +21,11 @@ grille:
   précision: 1
   critères:
   - critère: Rédiger un rapport
+    xl_cell_id: null
     pondération: null
     indicateurs:
     - nom: Consignes respectées
+      xl_cell_id: null
       poids relatif: 1
       descripteurs:
         - Toutes les consignes sont respectées.
@@ -32,6 +34,7 @@ grille:
         - Certaines consignes sont respectées, des points importants sont manquants.
         - Des éléments essentiels de la consigne ne sont pas traités.
     - nom: Lecture fluide
+      xl_cell_id: null
       poids relatif: 1
       descripteurs:
         - Parfaitement clair, lecture aisée.
@@ -40,6 +43,7 @@ grille:
         - Partiellement clair, lecture difficile.
         - Confus, lecture laborieuse.
     - nom: Présentation soignée
+      xl_cell_id: null
       poids relatif: 1
       descripteurs:
         - Présentation impeccable.
@@ -48,9 +52,11 @@ grille:
         - Présentation brouillonne par endroits.
         - Présentation négligée.
   - critère: Écrire du code lisible
+    xl_cell_id: null
     pondération: null
     indicateurs:
     - nom: Commentaires en quantité suffisante
+      xl_cell_id: null
       poids relatif: 1
       descripteurs:
         - Toutes les définitions et blocs complexes sont commentés de manière cohérente.
@@ -59,6 +65,7 @@ grille:
         - Commentaires parcellaires, couvrant peu de parties complexes du code.
         - Absence de commentaires aux endroits attendus.
     - nom: Commentaires pertinents
+      xl_cell_id: null
       poids relatif: 1
       descripteurs:
         - Commentaires clairs et précis, sans redondance avec le code.
@@ -67,6 +74,7 @@ grille:
         - Commentaires trop succincts ou peu précis, apport limité à la compréhension.
         - Commentaires hors sujet ou redondants avec le code.
     - nom: Nommage des variables
+      xl_cell_id: null
       poids relatif: 1
       descripteurs:
         - Noms de variables explicites, significatifs et selon les conventions.
@@ -75,6 +83,7 @@ grille:
         - Noms de variables souvent génériques ou cryptiques, rendant la compréhension difficile.
         - Noms de variables génériques ou cryptiques, rendant le code presque incompréhensible.
     - nom: Code bien indenté
+      xl_cell_id: null
       poids relatif: 1
       descripteurs:
         - Indentation rigoureuse et conforme aux conventions du projet.
@@ -83,9 +92,11 @@ grille:
         - Indentation inégale, rendant la lecture difficile.
         - Indentation incorrecte et incohérente, nuisant à la lisibilité du code.
   - critère: Donner une présentation orale
+    xl_cell_id: null
     pondération: null
     indicateurs:
       - nom: Clarté de l'expression orale
+        xl_cell_id: null
         poids relatif: 1
         descripteurs:
           - Expression très claire et précise, aucun effort requis pour comprendre.
@@ -95,6 +106,7 @@ grille:
           - Expression confuse, la compréhension est très laborieuse.
 
       - nom: Respect du temps imparti
+        xl_cell_id: null
         poids relatif: 1
         descripteurs:
           - Durée respectée.
@@ -104,6 +116,7 @@ grille:
           - Durée non maîtrisée, temps largement dépassé ou insuffisant.
 
       - nom: Support visuel adapté
+        xl_cell_id: null
         poids relatif: 1
         descripteurs:
           - Support visuel parfaitement adapté, très clair et enrichissant la présentation.
@@ -113,6 +126,7 @@ grille:
           - Support visuel inadapté, confus ou absent.
 
       - nom: Interaction avec l'auditoire
+        xl_cell_id: null
         poids relatif: 1
         descripteurs:
           - Interaction naturelle et efficace avec l'auditoire, dynamise la présentation.

@@ -14,7 +14,7 @@ class Indicator(BaseModel):
     Représente un indicateur d'évaluation pour un critère donné.
     """
     name: str = Field(..., min_length=1)
-    descriptors: list[str | None]
+    descriptors: list[str]
     weight: Decimal = Field(
         default=1,
         ge=0,

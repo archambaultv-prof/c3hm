@@ -85,7 +85,7 @@ def set_row_borders(row, top=0.5, bottom=0.5):
         if bottom:
             set_border(tc_borders, 'bottom', bottom)
 
-def generate_word_from_rubric(
+def generate_student_rubric(
         rubric: Rubric,
         output_path: Path | str,
         *,
