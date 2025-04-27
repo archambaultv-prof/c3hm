@@ -6,7 +6,7 @@ import openpyxl as pyxl
 from openpyxl import Workbook
 from pydantic import BaseModel, Field
 
-from c3hm.utils import is_within_decimal_limit, split_decimal
+from c3hm.utils import decimal_to_number, is_within_decimal_limit, split_decimal
 
 
 class Indicator(BaseModel):
@@ -14,8 +14,8 @@ class Indicator(BaseModel):
     Représente un indicateur d'évaluation pour un critère donné.
     """
     name: str = Field(..., min_length=1)
-    descriptors: list[str]
-    weight: float = Field(
+    descriptors: list[str | None]
+    weight: Decimal = Field(
         default=1,
         ge=0,
         description="Poids relatif de l'indicateur dans le critère."
@@ -27,7 +27,7 @@ class Indicator(BaseModel):
         """
         return {
             "nom": self.name,
-            "poids relatif": self.weight,
+            "poids relatif": decimal_to_number(self.weight),
             "descripteurs": self.descriptors,
         }
 
@@ -64,8 +64,8 @@ class Criterion(BaseModel):
         Retourne un dictionnaire représentant le critère.
         """
         return {
-            "nom": self.name,
-            "pondération": self.points,
+            "critère": self.name,
+            "pondération": decimal_to_number(self.points) if self.points is not None else None,
             "indicateurs": [indicator.to_dict() for indicator in self.indicators],
         }
 
@@ -75,7 +75,7 @@ class Criterion(BaseModel):
         Crée une instance de Criterion à partir d'un dictionnaire.
         """
         return cls(
-            name=data["nom"],
+            name=data["critère"],
             points=data["pondération"],
             indicators=[Indicator.from_dict(ind) for ind in data["indicateurs"]],
         )
@@ -96,7 +96,7 @@ class EvaluationLevel(BaseModel):
         """
         return {
             "nom": self.name,
-            "seuil": self.threshold,
+            "seuil": decimal_to_number(self.threshold),
         }
 
     @classmethod
@@ -125,7 +125,7 @@ class Scale(BaseModel):
         """
         return {
             "niveaux": [level.to_dict() for level in self.levels],
-            "précision": self.precision,
+            "précision": decimal_to_number(self.precision),
         }
 
     @classmethod
@@ -153,7 +153,7 @@ class Rubric(BaseModel):
         default=100,
         ge=0
     )
-    pts_precision: int = Field(
+    pts_precision: Decimal = Field(
         default=0,
         ge=0
     )
@@ -165,8 +165,8 @@ class Rubric(BaseModel):
         return {
             "échelle": self.scale.to_dict(),
             "critères": [criterion.to_dict() for criterion in self.criteria],
-            "total": self.pts_total,
-            "précision": self.pts_precision,
+            "total": decimal_to_number(self.pts_total),
+            "précision": decimal_to_number(self.pts_precision),
         }
 
     @classmethod

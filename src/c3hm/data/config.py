@@ -1,3 +1,4 @@
+import yaml
 from pydantic import BaseModel, Field
 
 from c3hm.data.evaluation import Evaluation
@@ -50,6 +51,15 @@ class Config(BaseModel):
         if self.evaluation.name:
             title += f" {endash} {self.evaluation.name}"
         return title
+
+    @classmethod
+    def from_yaml(cls, path: str) -> "Config":
+        """
+        Crée une instance de Config à partir d'un fichier YAML.
+        """
+        with open(path, encoding="utf-8") as file:
+            data = yaml.safe_load(file)
+        return cls.from_dict(data)
 
     # def validate_rubric(self) -> None:
     #     """

@@ -61,3 +61,21 @@ def split_decimal(
     parts = [Decimal(i) / factor for i in xs]
 
     return parts
+
+
+def decimal_is_integer(d: Decimal) -> bool:
+    """
+    Vérifie si le nombre décimal est un entier.
+    """
+    return d == d.to_integral_value()
+
+
+def decimal_to_number(d: Decimal) -> float | int:
+    """
+    Convertit un nombre décimal en nombre flottant
+    ou entier, selon la valeur.
+    """
+    if decimal_is_integer(d):
+        return int(d)
+    else:
+        return float(d)

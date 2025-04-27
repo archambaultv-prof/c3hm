@@ -25,7 +25,7 @@ grille:
     indicateurs:
     - nom: Consignes respectées
       poids relatif: 1
-      descripteur:
+      descripteurs:
         - Toutes les consignes sont respectées.
         - Les consignes sont respectées, sauf quelques détails mineurs.
         - Globalement les consignes sont respectées, un point important est manquant.
@@ -33,7 +33,7 @@ grille:
         - Des éléments essentiels de la consigne ne sont pas traités.
     - nom: Lecture fluide
       poids relatif: 1
-      descripteur:
+      descripteurs:
         - Parfaitement clair, lecture aisée.
         - Très clair, lecture assez fluide.
         - Globalement clair, lecture parfois hachée.
@@ -41,7 +41,7 @@ grille:
         - Confus, lecture laborieuse.
     - nom: Présentation soignée
       poids relatif: 1
-      descripteur:
+      descripteurs:
         - Présentation impeccable.
         - Présentation soignée, coquilles mineures.
         - Présentation convenable, quelques erreurs de forme.
@@ -52,7 +52,7 @@ grille:
     indicateurs:
     - nom: Commentaires en quantité suffisante
       poids relatif: 1
-      descripteur:
+      descripteurs:
         - Toutes les définitions et blocs complexes sont commentés de manière cohérente.
         - Presque toutes des définitions et blocs complexes sont commentés.
         - Commentaires présents sur certaines définitions et blocs complexes, mais absents sur d’autres.
@@ -60,7 +60,7 @@ grille:
         - Absence de commentaires aux endroits attendus.
     - nom: Commentaires pertinents
       poids relatif: 1
-      descripteur:
+      descripteurs:
         - Commentaires clairs et précis, sans redondance avec le code.
         - Commentaires clairs et précis, quelques redondances avec le code.
         - Commentaires compréhensibles mais parfois trop verbeux ou légèrement redondants.
@@ -68,7 +68,7 @@ grille:
         - Commentaires hors sujet ou redondants avec le code.
     - nom: Nommage des variables
       poids relatif: 1
-      descripteur:
+      descripteurs:
         - Noms de variables explicites, significatifs et selon les conventions.
         - Noms de variables explicites, significatifs et selon les conventions, quelques exceptions.
         - Noms de variables parfois génériques ou cryptiques, nécessitant un effort de réflexion.
@@ -76,7 +76,7 @@ grille:
         - Noms de variables génériques ou cryptiques, rendant le code presque incompréhensible sans documentation.
     - nom: Code bien indenté
       poids relatif: 1
-      descripteur:
+      descripteurs:
         - Indentation rigoureuse et conforme aux conventions du projet.
         - Indentation correcte avec quelques écarts mineurs.
         - Indentation généralement cohérente mais irrégulière par moments.
@@ -87,7 +87,7 @@ grille:
     indicateurs:
       - nom: Clarté de l'expression orale
         poids relatif: 1
-        descripteur:
+        descripteurs:
           - Expression très claire et précise, aucun effort requis pour comprendre.
           - Expression claire, légers moments d'hésitation sans impact sur la compréhension.
           - Expression généralement claire, quelques passages nécessitent un effort.
@@ -96,7 +96,7 @@ grille:
 
       - nom: Respect du temps imparti
         poids relatif: 1
-        descripteur:
+        descripteurs:
           - Durée respectée.
           - null
           - Dépassement modéré ou présentation un peu courte.
@@ -105,7 +105,7 @@ grille:
 
       - nom: Support visuel adapté
         poids relatif: 1
-        descripteur:
+        descripteurs:
           - Support visuel parfaitement adapté, très clair et enrichissant la présentation.
           - Support visuel clair et globalement adapté, quelques imperfections mineures.
           - Support visuel correct mais améliorable, apport modéré à la présentation.
@@ -114,7 +114,7 @@ grille:
 
       - nom: Interaction avec l'auditoire
         poids relatif: 1
-        descripteur:
+        descripteurs:
           - Interaction naturelle et efficace avec l'auditoire, dynamise la présentation.
           - Bonne interaction, mais ponctuelle ou légèrement artificielle.
           - Interaction modérée, parfois maladroite ou insuffisante.
