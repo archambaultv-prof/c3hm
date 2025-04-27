@@ -63,6 +63,14 @@ class Config(BaseModel):
             data = yaml.safe_load(file)
         return cls.from_dict(data)
 
+    def to_yaml(self, path: str) -> None:
+        """
+        Sauvegarde la configuration dans un fichier YAML.
+        """
+        with open(path, "w", encoding="utf-8") as file:
+            yaml.dump(self.to_dict(), file, allow_unicode=True,
+                      sort_keys=False)
+
     def validate_config(self) -> None:
         """
         Valide la grille d'évaluation et les étudiants.
@@ -70,3 +78,12 @@ class Config(BaseModel):
         Voir la méthode validate de Rubric pour les détails de la validation.
         """
         self.rubric.validate()
+
+    def find_student(self, omnivox_code: str) -> Student | None:
+        """
+        Trouve un étudiant dans la configuration à partir de son code omnivox.
+        """
+        for student in self.students:
+            if student.omnivox_code == omnivox_code:
+                return student
+        return None

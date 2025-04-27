@@ -63,6 +63,16 @@ def split_decimal(
 
 
 
+def round_to_nearest_quantum(x: Decimal, quantum: Decimal) -> Decimal:
+    """
+    Arrondit x au multiple de quantum le plus proche.
+    Si x est exactement à mi-chemin entre deux multiples de quantum,
+    arrondit vers le multiple supérieur.
+    """
+    if quantum <= 0:
+        raise ValueError("quantum doit être positif")
+    return (x / quantum).to_integral_value(rounding=ROUND_HALF_UP) * quantum
+
 
 def decimal_to_number(d: Decimal) -> float | int:
     """

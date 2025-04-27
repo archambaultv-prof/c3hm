@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any
 
 import openpyxl as pyxl
+import yaml
 from openpyxl import Workbook
 from pydantic import BaseModel, Field
 
@@ -20,6 +21,27 @@ class Indicator(BaseModel):
         ge=0,
         description="Poids relatif de l'indicateur dans le critère."
     )
+    xl_cell_id: str | None = Field(
+        default=None,
+        description="Identifiant de la cellule dans le fichier Excel pour la correction.",
+        min_length=1
+    )
+
+    def xl_grade_cell_id(self) -> str:
+        """
+        Retourne l'identifiant de la cellule pour la note de l'indicateur.
+        """
+        if self.xl_cell_id is None:
+            raise ValueError("xl_cell_id n'est pas défini.")
+        return f"{self.xl_cell_id}_grade"
+
+    def xl_comment_cell_id(self) -> str:
+        """
+        Retourne l'identifiant de la cellule pour le commentaire de l'indicateur.
+        """
+        if self.xl_cell_id is None:
+            raise ValueError("xl_cell_id n'est pas défini.")
+        return f"{self.xl_cell_id}_comment"
 
     def to_dict(self) -> dict:
         """
@@ -52,6 +74,27 @@ class Criterion(BaseModel):
         default=None,
         ge=Decimal(0)
     )
+    xl_cell_id: str | None = Field(
+        default=None,
+        description="Identifiant de la cellule dans le fichier Excel pour la correction.",
+        min_length=1
+    )
+
+    def xl_grade_cell_id(self) -> str:
+        """
+        Retourne l'identifiant de la cellule pour la note du critère.
+        """
+        if self.xl_cell_id is None:
+            raise ValueError("xl_cell_id n'est pas défini.")
+        return f"{self.xl_cell_id}_grade"
+
+    def xl_comment_cell_id(self) -> str:
+        """
+        Retourne l'identifiant de la cellule pour le commentaire du critère.
+        """
+        if self.xl_cell_id is None:
+            raise ValueError("xl_cell_id n'est pas défini.")
+        return f"{self.xl_cell_id}_comment"
 
     def nb_indicators(self) -> int:
         """
@@ -235,8 +278,11 @@ class Rubric(BaseModel):
         """
         Valide la grille d'évaluation.
 
-        Vérifie que les poids des critères sont valides et que les descripteurs et
-        indicateurs sont correctement définis.
+        - Vérifie que les poids des critères sont valides
+        - Vérifie que la somme des poids est égale au total
+        - Vérifie les xl_cell_id des critères et indicateurs
+        - Vérifie la consistance des descripteurs et indicateurs
+
         """
         # Vérification des poids
         weight_total = Decimal(0)
@@ -264,17 +310,29 @@ class Rubric(BaseModel):
                     criterion.points = weights.pop()
 
         # Vérification des descripteurs et indicateurs
-        for criterion in self.criteria:
+        for c, criterion in enumerate(self.criteria):
             if not criterion.indicators:
                 raise ValueError(f"Le critère '{criterion.name}' n'a pas d'indicateurs.")
-            for indicator in criterion.indicators:
+            if criterion.xl_cell_id is None:
+                criterion.xl_cell_id = f"cthm_C{c+1}"
+            for i, indicator in enumerate(criterion.indicators):
+                if indicator.xl_cell_id is None:
+                    indicator.xl_cell_id = f"cthm_C{c+1}_I{i+1}"
                 if len(indicator.descriptors) != len(self.scale):
                     raise ValueError(
                         f"Le nombre de descripteurs pour l'indicateur '{indicator.name}' "
                         f"doit correspondre au nombre de niveaux du barème."
                     )
 
-
+    def to_yaml(self, filepath: str | Path) -> None:
+        """
+        Sauvegarde la grille d'évaluation au format YAML.
+        """
+        filepath = Path(filepath)
+        filepath.parent.mkdir(parents=True, exist_ok=True)
+        with open(filepath, "w", encoding="utf-8") as f:
+            yaml.dump(self.to_dict(), f, allow_unicode=True,
+                      sort_keys=False)
 
 # def load_rubric_from_xlsx(
 #         filepath: str | Path,

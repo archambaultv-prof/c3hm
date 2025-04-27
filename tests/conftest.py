@@ -5,9 +5,25 @@ import pytest
 
 
 @pytest.fixture
-def rubric_template_5_path() -> Path:
+def config_1_path() -> Path:
     """
-    Retourne le chemin vers le fichier de la grille d'évaluation grille_5_levels.yaml
+    Retourne le chemin vers le fichier de la grille d'évaluation config_1.yaml
+    """
+    d = Path(__file__).parent / "fixtures"
+    return d / "config_1.yaml"
+
+@pytest.fixture
+def gradebook_1_path() -> Path:
+    """
+    Retourne le chemin vers le fichier gradebook_1.yaml
+    """
+    d = Path(__file__).parent / "fixtures"
+    return d / "gradebook_1.xlsx"
+
+@pytest.fixture
+def config_template_5_path() -> Path:
+    """
+    Retourne le chemin vers le fichier de la grille d'évaluation config_5_levels.yaml
     """
     d = Path(__file__).parent.parent / "src" / "c3hm" / "assets" / "templates" / "config"
     return d / "config_5_levels.yaml"

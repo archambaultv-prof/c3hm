@@ -85,15 +85,26 @@ def set_row_borders(row, top=0.5, bottom=0.5):
         if bottom:
             set_border(tc_borders, 'bottom', bottom)
 
-def generate_student_rubric(
+def generate_rubric(
         rubric: Rubric,
         output_path: Path | str,
         *,
         title: str = "Grille d'évaluation",
+        set_first_row = None,
+        add_criterion = None,
+        add_comments = None,
         ) -> None:
     """
     Génère un document Word pour les étudiants à partir d’un grille d’évaluation (Rubric).
     """
+    if set_first_row is None:
+        set_first_row = student_set_first_row
+    if add_criterion is None:
+        add_criterion = student_add_criterion
+    if add_comments is None:
+        def add_comments(_, __):
+            return None
+
     output_path = Path(output_path)
 
     # forcer l'extension .docx
@@ -118,19 +129,25 @@ def generate_student_rubric(
 
     # Remplir le reste avec critères et indicateurs dans l'ordre
     for criterion in rubric.criteria:
-        add_criterion(table, criterion)
+        add_criterion(table, criterion, rubric)
 
     # Ajouter une bordure en bas de la dernière ligne
     last_row = table.rows[-1]
     set_row_borders(last_row, top=None, bottom=1.0)
 
+    # Ajoute des commentaires (pour la correction)
+    add_comments(doc, rubric)
+
     # enregistrer le fichier
     doc.save(output_path)
 
 
-def add_criterion(table: Table, criterion: Criterion):
+def student_add_criterion(table: Table,
+                          criterion: Criterion,
+                          _: Rubric):
     """
     Ajoute un critère et ses indicateurs à la table.
+    Le dernier paramètre est la grille, mais elle n'est pas utilisée ici.
     """
     row = table.add_row()
     # Critère
@@ -150,7 +167,7 @@ def add_criterion(table: Table, criterion: Criterion):
         for i, descriptor in enumerate(indicator.descriptors):
             row.cells[i + 1].text = descriptor
 
-def set_first_row(rubric: Rubric, table: Table):
+def student_set_first_row(rubric: Rubric, table: Table):
     """
     Remplit la première ligne du tableau avec le barème et les seuils.
     """
@@ -168,6 +185,9 @@ def set_first_row(rubric: Rubric, table: Table):
     p.style = "Heading 3"
 
     # Barème et seuils
+    set_scale(rubric, hdr_cells)
+
+def set_scale(rubric, hdr_cells):
     color_schemes = scale_color_schemes(len(rubric.scale))
     precision = rubric.scale.precision
     for i, label in enumerate(rubric.scale):

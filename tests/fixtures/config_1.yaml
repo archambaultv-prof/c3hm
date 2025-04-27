@@ -112,7 +112,7 @@ grille:
           - Durée respectée.
           - S. O.
           - Dépassement modéré ou présentation un peu courte.
-          - S. O.
+          - S. O
           - Durée non maîtrisée, temps largement dépassé ou insuffisant.
 
       - nom: Support visuel adapté
@@ -135,4 +135,16 @@ grille:
           - Interaction très limitée, hésitante ou peu pertinente.
           - Aucune interaction avec l'auditoire, présentation monotone.
 
-étudiants: []
+étudiants:
+  - prénom: Jean
+    nom de famille: Dupont
+    code omnivox: "123456"
+    alias: jdupont
+  - prénom: Marie
+    nom de famille: Durand
+    code omnivox: "654321"
+    alias: mdurand
+  - prénom: Pierre
+    nom de famille: Martin
+    code omnivox: "789012"
+    alias: pmartin
