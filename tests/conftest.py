@@ -7,9 +7,10 @@ import pytest
 @pytest.fixture
 def rubric_template_5_path() -> Path:
     """
-    Retourne le chemin vers le fichier de la grille d'évaluation grille_5_niveaux.xlsx.
+    Retourne le chemin vers le fichier de la grille d'évaluation grille_5_levels.yaml
     """
-    return Path(__file__).parent.parent / "gabarits_grilles" / "grille_5_niveaux.xlsx"
+    d = Path(__file__).parent.parent / "src" / "c3hm" / "assets" / "templates" / "config"
+    return d / "config_5_levels.yaml"
 
 @pytest.fixture(scope="session")
 def output_dir() -> Path:

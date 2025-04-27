@@ -7,7 +7,7 @@ import docx.enum.text
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
-from c3hm.core.rubric import Rubric
+from c3hm.data.rubric import Rubric
 
 
 def scale_color_schemes(size: int) -> list[str] | None:
@@ -138,8 +138,8 @@ def generate_word_from_rubric(rubric: Rubric, output_path: Path | str) -> None:
         row = table.add_row()
         # Critère
         p = row.cells[0].paragraphs[0]
-        pts = "pt" if criterion.weight == 1 else "pts"
-        p.text = f"{criterion.name} ({criterion.weight} {pts})"
+        pts = "pt" if criterion.points == 1 else "pts"
+        p.text = f"{criterion.name} ({criterion.points} {pts})"
         p.style = "Heading 3"
 
         # Indicateurs

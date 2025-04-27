@@ -1,7 +1,7 @@
 import typer
 
-from c3hm.commands.clean import clean_command
-from c3hm.commands.rubric import rubric_app
+from c3hm.cli.clean import clean_command
+from c3hm.cli.rubric import rubric_app
 
 app = typer.Typer(help="c3hm — Corriger à 3 heures du matin")
 

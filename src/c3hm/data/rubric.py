@@ -6,7 +6,7 @@ import openpyxl as pyxl
 from openpyxl import Workbook
 from pydantic import BaseModel, Field
 
-from c3hm.core.utils import has_max_decimals, split_decimal
+from c3hm.utils import is_within_decimal_limit, split_decimal
 
 
 class Indicator(BaseModel):
@@ -15,11 +15,32 @@ class Indicator(BaseModel):
     """
     name: str = Field(..., min_length=1)
     descriptors: list[str]
-    grade: Decimal | None = Field(
-        default=None,
-        ge=Decimal(0)
+    weight: float = Field(
+        default=1,
+        ge=0,
+        description="Poids relatif de l'indicateur dans le critère."
     )
 
+    def to_dict(self) -> dict:
+        """
+        Retourne un dictionnaire représentant l'indicateur.
+        """
+        return {
+            "nom": self.name,
+            "poids relatif": self.weight,
+            "descripteurs": self.descriptors,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Indicator":
+        """
+        Crée une instance de Indicator à partir d'un dictionnaire.
+        """
+        return cls(
+            name=data["nom"],
+            weight=data["poids relatif"],
+            descriptors=data["descripteurs"],
+        )
 
 class Criterion(BaseModel):
     """
@@ -27,11 +48,7 @@ class Criterion(BaseModel):
     """
     name: str = Field(..., min_length=1)
     indicators: list[Indicator]
-    weight: Decimal | None = Field(
-        default=None,
-        ge=Decimal(0)
-    )
-    grade: Decimal | None = Field(
+    points: Decimal | None = Field(
         default=None,
         ge=Decimal(0)
     )
@@ -42,20 +59,97 @@ class Criterion(BaseModel):
         """
         return len(self.indicators)
 
+    def to_dict(self) -> dict:
+        """
+        Retourne un dictionnaire représentant le critère.
+        """
+        return {
+            "nom": self.name,
+            "pondération": self.points,
+            "indicateurs": [indicator.to_dict() for indicator in self.indicators],
+        }
 
-class RubricGrid(BaseModel):
+    @classmethod
+    def from_dict(cls, data: dict) -> "Criterion":
+        """
+        Crée une instance de Criterion à partir d'un dictionnaire.
+        """
+        return cls(
+            name=data["nom"],
+            points=data["pondération"],
+            indicators=[Indicator.from_dict(ind) for ind in data["indicateurs"]],
+        )
+
+class EvaluationLevel(BaseModel):
+    """
+    Représente un niveau de la grille d'évaluation.
+    """
+    name: str = Field(..., min_length=1)
+    threshold: Decimal = Field(
+        ge=Decimal(0),
+        description="Seuil minimum pour atteindre ce niveau."
+    )
+
+    def to_dict(self) -> dict:
+        """
+        Retourne un dictionnaire représentant le niveau.
+        """
+        return {
+            "nom": self.name,
+            "seuil": self.threshold,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "EvaluationLevel":
+        """
+        Crée une instance de EvaluationLevel à partir d'un dictionnaire.
+        """
+        return cls(
+            name=data["nom"],
+            threshold=data["seuil"],
+        )
+
+class Scale(BaseModel):
+    """
+    Représente la liste des niveaux de la grille d'évaluation.
+    """
+    levels: list[EvaluationLevel] = Field(..., min_length=1)
+    precision: Decimal = Field(
+        default=Decimal(1),
+        ge=0
+    )
+
+    def to_dict(self) -> dict:
+        """
+        Retourne un dictionnaire représentant la liste des niveaux.
+        """
+        return {
+            "niveaux": [level.to_dict() for level in self.levels],
+            "précision": self.precision,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Scale":
+        """
+        Crée une instance de Scale à partir d'un dictionnaire.
+        """
+        return cls(
+            levels=[EvaluationLevel.from_dict(level) for level in data["niveaux"]],
+            precision=data["précision"],
+        )
+
+class Rubric(BaseModel):
     """
     Représente la grille d'évaluation.
 
     Une grille est formée de niveaux (Excellent, Très bien, ...) et d'une liste de critères.
     Il est possible d'ajouter des seuils pour chaque critère.
     """
-    scale: list[str] = Field(
-        default=["Excellent", "Très bien", "Bien", "Passable", "Insuffisant"],
-        min_length=2
-        )
+    scale: Scale
+
     criteria: list[Criterion] = Field(..., min_length=1)
-    total_score: Decimal = Field(
+
+    pts_total: Decimal = Field(
         default=100,
         ge=0
     )
@@ -63,18 +157,30 @@ class RubricGrid(BaseModel):
         default=0,
         ge=0
     )
-    thresholds: list[int] = Field(
-        default=[100, 85, 70, 60, 0],
-        min_length=2,
-    ),
-    thresholds_precision: int = Field(
-        default=0,
-        ge=0
-    ),
-    show_indicators_grade: bool = Field(
-        default=False,
-        description="Indique si la note des indicateurs doit être affichée dans la grille."
-    )
+
+    def to_dict(self) -> dict:
+        """
+        Retourne un dictionnaire représentant la grille d'évaluation.
+        """
+        return {
+            "échelle": self.scale.to_dict(),
+            "critères": [criterion.to_dict() for criterion in self.criteria],
+            "total": self.pts_total,
+            "précision": self.pts_precision,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Rubric":
+        """
+        Crée une instance de Rubric à partir d'un dictionnaire.
+        """
+        return cls(
+            scale=Scale.from_dict(data["échelle"]),
+            criteria=[Criterion.from_dict(criterion) for criterion in data["critères"]],
+            pts_total=data["total"],
+            pts_precision=data["précision"],
+        )
+
     def nb_criteria(self) -> int:
         """
         Retourne le nombre de critères dans la grille.
@@ -101,115 +207,59 @@ class RubricGrid(BaseModel):
         """
         return 1 + len(self.scale)
 
-    def validate(self) -> None:
-        """
-        Valide la grille d'évaluation.
+    # def validate(self) -> None:
+    #     """
+    #     Valide la grille d'évaluation.
 
-        Vérifie que le nombre de seuils correspond au nombre de niveaux du barème,
-        que les poids des critères sont valides et que les descripteurs et
-        indicateurs sont correctement définis.
-        """
-        # Vérification du nombre de seuils
-        if len(self.scale) != len(self.thresholds):
-            raise ValueError("Le nombre de seuils doit correspondre "
-                             "au nombre de niveaux du barème.")
+    #     Vérifie que le nombre de seuils correspond au nombre de niveaux du barème,
+    #     que les poids des critères sont valides et que les descripteurs et
+    #     indicateurs sont correctement définis.
+    #     """
+    #     # Vérification du nombre de seuils
+    #     if len(self.scale) != len(self.thresholds):
+    #         raise ValueError("Le nombre de seuils doit correspondre "
+    #                          "au nombre de niveaux du barème.")
 
-        # Vérification des poids
-        weight_total = Decimal(0)
-        nb_without_weight = 0
-        for criterion in self.criteria:
-            if criterion.weight is None:
-                nb_without_weight += 1
-            else:
-                # Verification si precision est respectée
+    #     # Vérification des poids
+    #     weight_total = Decimal(0)
+    #     nb_without_weight = 0
+    #     for criterion in self.criteria:
+    #         if criterion.points is None:
+    #             nb_without_weight += 1
+    #         else:
+    #             # Verification si precision est respectée
 
-                if not has_max_decimals(criterion.weight, self.pts_precision):
-                    raise ValueError(
-                        f"Le poids du critère '{criterion.name}' "
-                        f"doit avoir au plus {self.pts_precision} décimales."
-                    )
-                weight_total += criterion.weight
-        unallocated_weight = self.total_score - weight_total
-        if unallocated_weight < 0:
-            raise ValueError("La somme des poids des critères dépasse le total.")
-        if nb_without_weight > 0:
-            weights = split_decimal(unallocated_weight, nb_without_weight, self.pts_precision)
-            weights.reverse()
-            for criterion in self.criteria:
-                if criterion.weight is None:
-                    criterion.weight = weights.pop()
+    #             if not has_max_decimals(criterion.points, self.pts_precision):
+    #                 raise ValueError(
+    #                     f"Le poids du critère '{criterion.name}' "
+    #                     f"doit avoir au plus {self.pts_precision} décimales."
+    #                 )
+    #             weight_total += criterion.points
+    #     unallocated_weight = self.pts_total - weight_total
+    #     if unallocated_weight < 0:
+    #         raise ValueError("La somme des poids des critères dépasse le total.")
+    #     if nb_without_weight > 0:
+    #         weights = split_decimal(unallocated_weight, nb_without_weight, self.pts_precision)
+    #         weights.reverse()
+    #         for criterion in self.criteria:
+    #             if criterion.points is None:
+    #                 criterion.points = weights.pop()
 
-        # Vérification des descripteurs et indicateurs
-        for criterion in self.criteria:
-            if not criterion.indicators:
-                raise ValueError(f"Le critère '{criterion.name}' n'a pas d'indicateurs.")
-            for indicator in criterion.indicators:
-                if len(indicator.descriptors) != len(self.scale):
-                    raise ValueError(
-                        f"Le nombre de descripteurs pour l'indicateur '{indicator.name}' "
-                        f"doit correspondre au nombre de niveaux du barème."
-                    )
+    #     # Vérification des descripteurs et indicateurs
+    #     for criterion in self.criteria:
+    #         if not criterion.indicators:
+    #             raise ValueError(f"Le critère '{criterion.name}' n'a pas d'indicateurs.")
+    #         for indicator in criterion.indicators:
+    #             if len(indicator.descriptors) != len(self.scale):
+    #                 raise ValueError(
+    #                     f"Le nombre de descripteurs pour l'indicateur '{indicator.name}' "
+    #                     f"doit correspondre au nombre de niveaux du barème."
+    #                 )
 
 
-class Student(BaseModel):
-    """
-    Représente un étudiant avec un nom, prénom et code Omnivox.
-    """
-    first_name: str = Field(..., min_length=1)
-    last_name: str = Field(..., min_length=1)
-    omnivox_code: str = Field(..., min_length=1)
-    id: str = Field(..., min_length=1)
 
-    def ws_name(self) -> str:
-        """
-        Retourne le nom de la feuille de calcul pour l'étudiant.
 
-        Le nom est formé du prénom et du nom, séparés par un espace.
-        """
-        return self.id
 
-class Rubric(BaseModel):
-    """
-    Représente une grille d'évaluation pour un cours et une évaluation spécifiques.
-    """
-    course: str | None = Field(
-         default=None,
-         min_length=1
-         )
-    evaluation: str | None  = Field(
-        default=None,
-        min_length=1
-        )
-    grid: RubricGrid
-    students: list[Student] = Field(
-        default_factory=list,
-        min_length=0
-    )
-
-    def title(self) -> str:
-        """
-        Retourne le titre de la grille d'évaluation.
-
-        Le titre est formé du nom du cours et de l'évaluation, séparés par un tiret.
-        """
-        endash = "\u2013"
-        title = "Grille d'évaluation"
-        if self.evaluation:
-            title += f" {endash} {self.evaluation}"
-        if self.course:
-            title += f" {endash} {self.course}"
-        return title
-
-    def validate_rubric(self) -> None:
-        """
-        Valide la grille d'évaluation et les étudiants.
-
-        Voir la méthode validate de RubricGrid pour les détails de la validation.
-        """
-        self.grid.validate()
-
-        if len(self.students) != len(set(s.id for s in self.students)):
-            raise ValueError("Les étudiants doivent avoir des identifiants uniques.")
 
 
 def load_rubric_from_xlsx(
@@ -484,7 +534,7 @@ def get_criteria(c: list[tuple[str, Any]]) -> list[Criterion]:
                         f"Critère poids défini plusieurs fois pour {current_criterion.name}."
                     )
                 if value:
-                    current_criterion.weight = Decimal(str(value))
+                    current_criterion.points = Decimal(str(value))
                 seen_weight = True
             else:
                 raise ValueError("Critère poids sans critère.")

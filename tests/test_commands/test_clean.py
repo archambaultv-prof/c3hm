@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from c3hm.core.clean import is_excluded_dir, is_path_to_delete, remove_unwanted_dirs
+from c3hm.commands.clean import is_excluded_dir, is_path_to_delete, remove_unwanted_dirs
 
 
 @pytest.fixture
@@ -36,7 +36,7 @@ def temp_dir(tmp_path: Path, students_paths: list[dict]):
     Crée une structure de répertoires et fichiers temporaires pour les tests.
     """
     for entry in students_paths:
-        full_path = tmp_path / entry["path"]
+        full_path: Path = tmp_path / entry["path"]
         if entry["type"] == "file":
             full_path.touch()
         else:

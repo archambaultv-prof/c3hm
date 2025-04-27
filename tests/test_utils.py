@@ -1,16 +1,16 @@
 from decimal import Decimal
 
-from c3hm.core.utils import has_max_decimals, split_decimal
+from c3hm.utils import is_within_decimal_limit, split_decimal
 
 
-def test_has_max_decimals():
+def test_is_within_decimal_limit():
     """
     Teste la fonction has_max_decimals pour vérifier le nombre de décimales.
     """
-    assert has_max_decimals(Decimal("123.456"), 3) is True
-    assert has_max_decimals(Decimal("123.4567"), 3) is False
-    assert has_max_decimals(Decimal("123.4"), 3) is True
-    assert has_max_decimals(Decimal("123"), 3) is True
+    assert is_within_decimal_limit(Decimal("123.456"), 3) is True
+    assert is_within_decimal_limit(Decimal("123.4567"), 3) is False
+    assert is_within_decimal_limit(Decimal("123.4"), 3) is True
+    assert is_within_decimal_limit(Decimal("123"), 3) is True
 
 
 def test_split_decimal():

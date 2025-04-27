@@ -107,7 +107,7 @@ def add_c3hm_sheet(ws: Worksheet, rubric: Rubric) -> None:
         ws.cell(row=next_row, column=key_col + 1).style = "Headline 3"
 
         ws.cell(row=next_row + 1, column=key_col).value = "Critère poids"
-        ws.cell(row=next_row + 1, column=key_col + 1).value = criterion.weight
+        ws.cell(row=next_row + 1, column=key_col + 1).value = criterion.points
 
         next_row += 2
         for indicator in criterion.indicators:
@@ -197,7 +197,7 @@ def add_student_sheet(ws: Worksheet, rubric: Rubric, student: Student) -> None:
     final_letter = pyxl_utils.get_column_letter(final_col)
     for cidx, criterion in enumerate(grid.criteria):
         # Critère
-        ws.append([criterion.name, criterion.weight])
+        ws.append([criterion.name, criterion.points])
         cr = ws.max_row
         criterion_rows.append(cr)
         cell = ws.cell(row=ws.max_row, column=1)

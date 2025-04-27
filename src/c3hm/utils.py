@@ -24,7 +24,7 @@ def split_integer(n: int, nb_of_parts: int) -> list[int]:
     return [base + 1] * remainder + [base] * (nb_of_parts - remainder)
 
 
-def has_max_decimals(d: Decimal, max_places: int) -> bool:
+def is_within_decimal_limit(d: Decimal, max_places: int) -> bool:
     """
     Vérifie si le nombre décimal a au plus max_places décimales.
     """
