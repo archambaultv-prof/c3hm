@@ -52,14 +52,14 @@ def add_student_sheet(ws: Worksheet, config: Config, student: Student) -> None:
     ws.append(["Étudiant", f"{student.first_name} {student.last_name}"])
     cell = ws.cell(row=ws.max_row, column=2)
     dn = DefinedName(
-        name="cthm_etudiant",
+        name="cthm_student",
         attr_text=f"{quote_sheetname(ws.title)}!{absolute_coordinate(cell.coordinate)}",
     )
     ws.defined_names.add(dn)
     ws.append(["Code omnivox", f"{student.omnivox_code}"])
     cell = ws.cell(row=ws.max_row, column=2)
     dn = DefinedName(
-        name="cthm_code_omnivox",
+        name="cthm_omnivox",
         attr_text=f"{quote_sheetname(ws.title)}!{absolute_coordinate(cell.coordinate)}",
     )
     ws.defined_names.add(dn)
@@ -111,6 +111,7 @@ def add_student_sheet(ws: Worksheet, config: Config, student: Student) -> None:
     manual_letter = pyxl_utils.get_column_letter(manual_col)
     final_col = col_before_scale + len(rubric.scale) + 3
     final_letter = pyxl_utils.get_column_letter(final_col)
+    comment_col = col_before_scale + len(rubric.scale) + 4
     for cidx, criterion in enumerate(rubric.criteria):
         # Critère
         ws.append([criterion.name, criterion.points])
@@ -118,11 +119,6 @@ def add_student_sheet(ws: Worksheet, config: Config, student: Student) -> None:
         criterion_rows.append(cr)
         cell = ws.cell(row=ws.max_row, column=1)
         cell.style = "Headline 3"
-        dn = DefinedName(
-            name=f"cthm_C{cidx+1}_label",
-            attr_text=f"{quote_sheetname(ws.title)}!{absolute_coordinate(cell.coordinate)}",
-        )
-        ws.defined_names.add(dn)
 
         # note calculée
         cell = ws.cell(row=ws.max_row, column= computed_col)
@@ -147,7 +143,15 @@ def add_student_sheet(ws: Worksheet, config: Config, student: Student) -> None:
         cell.style = "Calculation"
         cell.number_format = "0.0"
         dn = DefinedName(
-            name=f"cthm_C{cidx+1}",
+            name=f"cthm_C{cidx+1}_grade",
+            attr_text=f"{quote_sheetname(ws.title)}!{absolute_coordinate(cell.coordinate)}",
+        )
+        ws.defined_names.add(dn)
+
+        # Commentaire
+        cell = ws.cell(row=ws.max_row, column=comment_col)
+        dn = DefinedName(
+            name=f"cthm_C{cidx+1}_comment",
             attr_text=f"{quote_sheetname(ws.title)}!{absolute_coordinate(cell.coordinate)}",
         )
         ws.defined_names.add(dn)
@@ -155,15 +159,11 @@ def add_student_sheet(ws: Worksheet, config: Config, student: Student) -> None:
         # Descripteur
         for idix, indicator in enumerate(criterion.indicators):
             ws.append([indicator.name, 1])
-            cell = ws.cell(row=ws.max_row, column=1)
-            dn = DefinedName(
-                name=f"cthm_C{cidx+1}_I{idix+1}_label",
-                attr_text=f"{quote_sheetname(ws.title)}!{absolute_coordinate(cell.coordinate)}",
-            )
-            ws.defined_names.add(dn)
+
             for i in range(2):
                 cell = ws.cell(row=ws.max_row, column=i+1)
                 cell.style = "Explanatory Text"
+
             # Affichage conditionnel pour les descripteurs
             for i in range(len(indicator.descriptors)):
                 color = "D3D3D3"  # Gris clair
@@ -202,7 +202,15 @@ def add_student_sheet(ws: Worksheet, config: Config, student: Student) -> None:
             cell.style = "Output"
             cell.number_format = "0.0"
             dn = DefinedName(
-                name=f"cthm_C{cidx+1}_I{idix+1}",
+                name=f"cthm_C{cidx+1}_I{idix+1}_grade",
+                attr_text=f"{quote_sheetname(ws.title)}!{absolute_coordinate(cell.coordinate)}",
+            )
+            ws.defined_names.add(dn)
+
+            # Commentaire
+            cell = ws.cell(row=ws.max_row, column=comment_col)
+            dn = DefinedName(
+                name=f"cthm_C{cidx+1}_I{idix+1}_comment",
                 attr_text=f"{quote_sheetname(ws.title)}!{absolute_coordinate(cell.coordinate)}",
             )
             ws.defined_names.add(dn)
