@@ -13,3 +13,10 @@ wheels/
 .ruff_cache
 .pytest_cache
 .vscode
+
+# Test output folder
+tests/output
+
+# Miscellaneous
+~$*
+.DS_Store

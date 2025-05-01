@@ -8,9 +8,15 @@ authors = [
 ]
 requires-python = ">=3.10"
 dependencies = [
-    "pywin32>=310",
+    "openpyxl>=3.1.5",
+    "pydantic>=2.11.3",
+    "python-docx>=1.1.2",
+    "pyyaml>=6.0.2",
     "typer>=0.15.2",
 ]
+
+[project.optional-dependencies]
+windows-export = ["pywin32>=310"]
 
 [project.scripts]
 c3hm = "c3hm.cli:main"
@@ -27,7 +33,6 @@ dev = [
 ]
 
 [tool.ruff]
-# Set line length
 line-length = 99
 
 [tool.ruff.lint]
@@ -47,4 +52,5 @@ select = [
 [tool.pytest.ini_options]
 addopts = [
     "--import-mode=importlib",
+    "-p no:faulthandler"  #  pywin32 and COM sometimes prints to stderr, this silences it
 ]

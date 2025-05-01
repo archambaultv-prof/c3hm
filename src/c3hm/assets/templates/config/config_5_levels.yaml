@@ -1,0 +1,138 @@
+évaluation:
+  nom: Configuration 5 niveaux
+  cours: 420-C3HM-MA
+
+grille:
+  échelle:
+    précision: 1
+    niveaux:
+    - nom: Excellent
+      seuil: 100
+    - nom: Très bien
+      seuil: 85
+    - nom: Bien
+      seuil: 70
+    - nom: Passable
+      seuil: 60
+    - nom: Insuffisant
+      seuil: 0
+
+  total: 100
+  précision: 1
+  critères:
+  - critère: Rédiger un rapport
+    xl_cell_id: null
+    pondération: null
+    indicateurs:
+    - nom: Consignes respectées
+      xl_cell_id: null
+      poids relatif: 1
+      descripteurs:
+        - Toutes les consignes sont respectées.
+        - Les consignes sont respectées, sauf quelques détails mineurs.
+        - Globalement les consignes sont respectées, un point important est manquant.
+        - Certaines consignes sont respectées, des points importants sont manquants.
+        - Des éléments essentiels de la consigne ne sont pas traités.
+    - nom: Lecture fluide
+      xl_cell_id: null
+      poids relatif: 1
+      descripteurs:
+        - Parfaitement clair, lecture aisée.
+        - Très clair, lecture assez fluide.
+        - Globalement clair, lecture parfois hachée.
+        - Partiellement clair, lecture difficile.
+        - Confus, lecture laborieuse.
+    - nom: Présentation soignée
+      xl_cell_id: null
+      poids relatif: 1
+      descripteurs:
+        - Présentation impeccable.
+        - Présentation soignée, coquilles mineures.
+        - Présentation convenable, quelques erreurs de forme.
+        - Présentation brouillonne par endroits.
+        - Présentation négligée.
+  - critère: Écrire du code lisible
+    xl_cell_id: null
+    pondération: null
+    indicateurs:
+    - nom: Commentaires en quantité suffisante
+      xl_cell_id: null
+      poids relatif: 1
+      descripteurs:
+        - Toutes les définitions et blocs complexes sont commentés de manière cohérente.
+        - Presque toutes des définitions et blocs complexes sont commentés.
+        - Commentaires présents sur certaines définitions et blocs complexes, mais absents sur d’autres.
+        - Commentaires parcellaires, couvrant peu de parties complexes du code.
+        - Absence de commentaires aux endroits attendus.
+    - nom: Commentaires pertinents
+      xl_cell_id: null
+      poids relatif: 1
+      descripteurs:
+        - Commentaires clairs et précis, sans redondance avec le code.
+        - Commentaires clairs et précis, quelques redondances avec le code.
+        - Commentaires compréhensibles mais parfois trop verbeux ou légèrement redondants.
+        - Commentaires trop succincts ou peu précis, apport limité à la compréhension.
+        - Commentaires hors sujet ou redondants avec le code.
+    - nom: Nommage des variables
+      xl_cell_id: null
+      poids relatif: 1
+      descripteurs:
+        - Noms de variables explicites, significatifs et selon les conventions.
+        - Noms de variables explicites, significatifs et selon les conventions, quelques exceptions.
+        - Noms de variables parfois génériques ou cryptiques, nécessitant un effort de réflexion.
+        - Noms de variables souvent génériques ou cryptiques, rendant la compréhension difficile.
+        - Noms de variables génériques ou cryptiques, rendant le code presque incompréhensible.
+    - nom: Code bien indenté
+      xl_cell_id: null
+      poids relatif: 1
+      descripteurs:
+        - Indentation rigoureuse et conforme aux conventions du projet.
+        - Indentation correcte avec quelques écarts mineurs.
+        - Indentation généralement cohérente mais irrégulière par moments.
+        - Indentation inégale, rendant la lecture difficile.
+        - Indentation incorrecte et incohérente, nuisant à la lisibilité du code.
+  - critère: Donner une présentation orale
+    xl_cell_id: null
+    pondération: null
+    indicateurs:
+      - nom: Clarté de l'expression orale
+        xl_cell_id: null
+        poids relatif: 1
+        descripteurs:
+          - Expression très claire et précise, aucun effort requis pour comprendre.
+          - Expression claire, légers moments d'hésitation sans impact sur la compréhension.
+          - Expression généralement claire, quelques passages nécessitent un effort.
+          - Expression souvent hésitante ou imprécise, compréhension difficile par moments.
+          - Expression confuse, la compréhension est très laborieuse.
+
+      - nom: Respect du temps imparti
+        xl_cell_id: null
+        poids relatif: 1
+        descripteurs:
+          - Durée respectée.
+          - S. O.
+          - Dépassement modéré ou présentation un peu courte.
+          - S. O.
+          - Durée non maîtrisée, temps largement dépassé ou insuffisant.
+
+      - nom: Support visuel adapté
+        xl_cell_id: null
+        poids relatif: 1
+        descripteurs:
+          - Support visuel parfaitement adapté, très clair et enrichissant la présentation.
+          - Support visuel clair et globalement adapté, quelques imperfections mineures.
+          - Support visuel correct mais améliorable, apport modéré à la présentation.
+          - Support visuel peu clair ou partiellement adapté, parfois distrayant.
+          - Support visuel inadapté, confus ou absent.
+
+      - nom: Interaction avec l'auditoire
+        xl_cell_id: null
+        poids relatif: 1
+        descripteurs:
+          - Interaction naturelle et efficace avec l'auditoire, dynamise la présentation.
+          - Bonne interaction, mais ponctuelle ou légèrement artificielle.
+          - Interaction modérée, parfois maladroite ou insuffisante.
+          - Interaction très limitée, hésitante ou peu pertinente.
+          - Aucune interaction avec l'auditoire, présentation monotone.
+
+étudiants: []
