@@ -2,6 +2,8 @@ from pathlib import Path
 
 import typer
 
+from c3hm.commands.clean import PATHS_TO_DELETE, remove_unwanted_dirs
+
 
 def clean_command(
     path: Path = typer.Argument(  # noqa: B008
@@ -63,5 +65,14 @@ def clean_command(
 
       > c3hm clean --all
     """
-    # TODO : implémenter la logique de nettoyage ici
-    pass
+    to_delete = PATHS_TO_DELETE.extend(delete)
+    remove_unwanted_dirs(
+        root_path=path,
+        dryrun=dryrun,
+        keep=keep,
+        exclude_dir= exclude_dir,
+        paths_to_delete=to_delete,
+        verbose=verbose,
+        scan_all=scan_all,
+    )
+    typer.echo("Nettoyage terminé.")
