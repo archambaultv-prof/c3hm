@@ -65,11 +65,12 @@ def clean_command(
 
       > c3hm clean --all
     """
-    to_delete = PATHS_TO_DELETE.extend(delete)
+    to_delete = PATHS_TO_DELETE.extend(delete) if delete else PATHS_TO_DELETE
+    if keep:
+        to_delete = [path for path in to_delete if path not in keep]
     remove_unwanted_dirs(
         root_path=path,
         dryrun=dryrun,
-        keep=keep,
         exclude_dir= exclude_dir,
         paths_to_delete=to_delete,
         verbose=verbose,
