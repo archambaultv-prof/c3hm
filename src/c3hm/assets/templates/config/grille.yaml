@@ -1,0 +1,219 @@
+# Configuration de la grille d'évaluation
+# Utilisé par C3HM : Corriger à 3 heures du matin
+# https://github.com/archambaultv-prof/c3hm
+
+#  Information générale sur l'évaluation
+évaluation:
+
+  # Travail pratique 1, Exercice 2, etc.
+  nom: Le Grand Carénage des Flibustiers
+
+  # Le nom du cours
+  cours: 420-C3HM-MA
+
+# Une grille d'évaluation est un outil qui permet d'évaluer les étudiants sur plusieurs critères.
+# Chaque critère est divisé en indicateurs qui sont notés selon une échelle de notation.
+# L'échelle de notation peut être différente pour chaque critère ou même pour chaque indicateur.
+# La grille ci-dessous peut être représentée de façon simplifiée comme suit :
+# +------------------------------------------+-----------+-----------+-------+----------+--------------+
+# | Critère                                  | Excellent | Très bien | Bien  | Passable | Insuffisant  | <- Niveaux
+# +------------------------------------------+-----------+-----------+-------+----------+--------------+
+# | Grand lessivage du pont                  |           |           |       |          |              | <- Critère
+# |  – Balai brandi comme un sabre           |           |           |       |          |              | <- Indicateur
+# |  – Seau d’eau salée renversé             |           |           |       |          |              | <- Indicateur
+# |  – Mousse digne d’un kraken              |           |           |       |          |              | <- Indicateur
+# |  – Chant marin entonné en chœur          |           |           |       |          |              | <- Indicateur
+# +------------------------------------------+-----------+-----------+-------+----------+--------------+
+# | Hissage du pavillon noir                 |           |           |       |          |              | <- Critère
+# |  – Cordage enroulé en huit impeccable    |           |           |       |          |              | <- Indicateur
+# |  – Pavillon solidement fixé au mât       |           |           |       |          |              | <- Indicateur
+# |  – Drisse tendue sans nœud lâche         |           |           |       |          |              | <- Indicateur
+# +------------------------------------------+-----------+-----------+-------+----------+--------------+
+# | Distribution du rhum                     |           |           |       |          |              | <- Critère
+# |  – Gobelets remplis jusqu’à ras bord     |           |           |       |          |              | <- Indicateur
+# |  – File d’attente respectée              |           |           |       |          |              | <- Indicateur
+# |  – Toast improvisé incluant le capitaine |           |           |       |          |              | <- Indicateur
+# +------------------------------------------+-----------+-----------+-------+----------+--------------+
+grille:
+
+  # Optionnel. Le total de l'évaluation. Par défaut, cette valeur correspond
+  # à la somme des totaux de chaque critère. Le total des notes des critères
+  # est ramené au total de la grille à l'aide d'une règle de trois.
+  total: 20
+
+  # Optionnel : Si vrai, la sommes des notes des critères doit être égale au
+  # total de la grille.
+  vérifier total: false
+
+  #  L'échelle de notation définit le nombre de niveaux et la pondération par défaut.
+  #  La pondération par défaut s'applique à tous les indicateurs, sauf si elle est redéfinie.
+  échelle:
+
+    # Un liste de niveaux
+    niveaux: [Excellent, Très bien, Bien, Passable, Insuffisant]
+
+    # Optionnel. Une liste de pondération. Même longueur que le nombre de niveaux.
+    # Les valeurs peuvent être des valeurs numériques unique (ex: 10), 
+    # des listes de valeurs possibles (ex: [10, 9.5, 9]) ou des plages de valeurs (ex: depuis: 0 jusqu’à: 5 pas: 1)
+    # La valeur la plus haute du premier niveau est la meilleure note possible pour l'indicateur.
+    pondération par défaut:
+    - [10, 9.5, 9]  # Le niveau Excellent est soit 10, 9.5 ou 9
+    - [8.5, 8]
+    - [7.5, 7]
+    - [6.5, 6]
+    - depuis: 0  # Le niveau Insuffisant est entre 0 et 5, par pas de 1
+      jusqu’à: 5
+      pas: 0.5  # Optionnel, la valeur par défaut est 1
+
+  # La liste des critères d'évaluation
+  critères:
+
+    # Nom du critère
+  - critère: Grand lessivage du pont.
+
+    # Optionnel, note totale du critère. Si non spécifié, le total du
+    # critère est la somme de la meilleure note possible de chaque indicateur.
+    # Le total des notes des indicateurs est ramené à la note maximale du critère à l'aide
+    # d'une règle de trois.
+    total: 20
+
+    # Optionnel : Si vrai, la sommes des meilleurs notes des indicateurs doit être égale au
+    # total du critère.
+    vérifier total: true
+
+    # Redéfinition de la pondération par défaut pour tous les indicateurs de ce critère
+    pondération par défaut: [5, 4, [3, 2], 1, 0]
+
+    # Liste des indicateurs
+    indicateurs:
+
+    # Nom de l'indicateur
+    - nom: Balai brandi comme un sabre en pleine mêlée.
+      # Optionnel, un descripteur pour chaque niveau.
+      descripteurs:
+        - Maniable tel un vrai cutlass, le balai fend l’air et terrasse tous les flots de crasse.
+        - Virevolte avec assurance, décapant chaque lame de pont… sauf peut-être un coin.
+        - Balayage assuré, mais manque un peu de panache corsaire.
+        - Mouvement hésitant, quelques copeaux d’algues subsistent.
+        - Le balai reste figé, le pont grince comme un vieux gréement.
+      # Optionnel, la pondération de l'indicateur. Même longueur que le nombre de niveaux.
+      pondération:
+      - 5
+      - 4
+      - 3
+      - 2
+      - 1
+
+    # Autres indicateurs
+    - nom: Seau d’eau salée renversé avec panache.
+      descripteurs:
+        - Eau jaillissante en gerbes, digne d’une tempête de kraken !
+        - Renversement propre, quelques gouttes hors cible.
+        - Seau basculé sans trop d’éclaboussures, mais le pont reste un peu sec.
+        - Mauvais angle, le mât est mouillé mais le pont demeure aride.
+        - Seau rebondit, éclaboussures désordonnées partout sauf au bon endroit.
+    - nom: Mousse digne d’un kraken en plein spasme.
+      descripteurs:
+        - Crée un tapis de mousse épais comme un nuage d’écume mythique.
+        - Mousse généreuse, seuls quelques coins restent nus.
+        - Une couche correcte de mousse, mais manque de volume.
+        - Mousse clairsemée, opération bâclée.
+        - À peine une trace de mousse, on dirait un désert maritime.
+    - nom: Chant marin entonné en chœur pour stimuler l’équipage.
+      descripteurs:
+        - Harmonies parfaites ; mêmes les mouettes balancent la tête en rythme !
+        - Voix solides, deux ou trois fausses notes anecdotiques.
+        - Chant cadencé mais sans souffle en fin de couplet.
+        - Paroles oubliées, tempo en berne.
+        - Hurlements discordants, l’équipage se bouche les oreilles.
+
+  # 2e critère
+  - critère: Hissage du pavillon noir
+    indicateurs:
+    - nom: Cordage enroulé en huit impeccable.
+      descripteurs:
+        - Nœud huit parfait, digne d’un musée des beaux cordages !
+        - Tours bien placés, un seul brin chevauche légèrement.
+        - Structure correcte mais cordage un peu lâche.
+        - Hésitations visibles, le huit part en vrille.
+        - Corde en salade, impossible à démêler sans un bon couteau.
+    - nom: Pavillon solidement fixé au mât.
+      descripteurs:
+        - Le drapeau claque fièrement, aucun risque de le voir s’envoler.
+        - Fixation robuste, léger flottement par grands vents.
+        - Accroché convenablement, mais se relâche parfois.
+        - Pavillon branlant, mauvais signe pour la détermination.
+        - Pendouille misérablement, honneur entamé.
+    - nom: Drisse tendue sans nœud lâche.
+      descripteurs:
+        - Tendue comme un étai prêt à affronter la plus rude tempête.
+        - Bonne tension, un petit relâchement sous forte traction.
+        - Correcte mais le nœud principal mérite d’être retendu.
+        - Tension inégale, la drisse gondole par endroits.
+        - Molle comme une voile en panne, prête à céder au premier souffle.
+    
+  # 3e critère
+  - critère: Distribution du rhum.
+    indicateurs:
+    - nom: Gobelets remplis jusqu’à ras bord.
+      descripteurs:
+        - Débordement majestueux ; la mer de rhum pourrait engloutir tout l’équipage !
+        - Presque plein, quelques gouttes s’échappent lors du toast.
+        - Niveau correct, un petit espace sous le bord.
+        - Moitié vide, la vaillance s’étiole.
+        - Verre désertique, le rhum reste prisonnier du tonneau.
+    - nom: File d’attente de matelots respectée.
+      descripteurs:
+        - Discipline militaire, file alignée comme un cortège royal.
+        - Légèrement relâchée, mais aucun doublage flagrant.
+        - Quelques manœuvres douteuses, mais l’ordre demeure globalement respecté.
+        - Bousculades et murmures, mêlée digne d’un abordage improvisé.
+        - Chaos total, chacun s’arrache son gobelet par la force.
+    - nom: Toast improvisé incluant le capitaine.
+      descripteurs:
+        - Rime épique et verve flamboyante ; même Neptune essuie une larme.
+        - Toast sincère, un ou deux blancs poétiques.
+        - Toast correct, manque un brin d’enthousiasme.
+        - Mots plats, l’écho du tonneau couvre la voix.
+        - Silence embarrassant, pas un mot ne franchit les lèvres.
+      pondération:
+      - [20, 19, 18]
+      - [17, 16]
+      - [15, 14]
+      - [13, 12]
+      - depuis: 0
+        jusqu’à: 11
+
+  # Options de formattage de la grille
+  format:
+    # Optionnel. Paysage par défaut si 4 niveaux ou plus, portrait sinon.
+    orientation: paysage # portrait ou paysage
+
+    # Lorsque vrai, la grille est affichée sous forme de tableau avec seulement une rangée par critère.
+    # Pour chaque niveau, les descripteurs de chaque indicateur sont affichés dans la même colonne, séparés par des sauts de ligne.
+    # Les noms des indicateurs sont masqués.
+    # Cette option n'est valide que si des descripteurs sont fournis pour chaque indicateur.
+    # Lorsque faux, chaque indicateur est affiché sur une ligne distincte.
+    fusionner indicateurs et descripteurs: false
+
+    # Lorsque vrai, seul le total de chaque critère est affiché.
+    masquer la pondération des indicateurs: false
+
+# La liste des étudiants, fournis par Omnivox
+# Ils est aussi possible de mettre un lien vers un fichier CSV ou Excel contenant la liste des étudiants.
+# étudiants: ma_liste.csv
+# étudiants: ma_liste.xlsx
+étudiants:
+  - prénom: Timonière
+    nom de famille: Houle
+    code omnivox: 314159
+    # Utiliser pour le nom de la feuille pour le fichier Excel de correction
+    alias: houle
+  - prénom: Moussaillon
+    nom de famille: Terre-Rio
+    code omnivox: 271828
+    alias: terrerio
+  - prénom: Quartier-maître
+    nom de famille: GrandeColline-Rhum
+    code omnivox: 19216801
+    alias: grhum

@@ -1,0 +1,60 @@
+évaluation:
+  nom: Le Grand Carénage des Flibustiers
+  cours: 420-C3HM-MA
+
+grille:
+  échelle:
+    niveaux: [Excellent, Très bien, Bien, Passable, Insuffisant]
+    pondération_par_défaut:
+    - [10, 9.5, 9]
+    - [8.5, 8]
+    - [7.5, 7]
+    - [6.5, 6]
+    - depuis: 0
+      jusqu’à: 5
+
+  critères:
+  - critère: Grand lessivage du pont.
+    total: 20
+    pondération_par_défaut: [5, 4, [3, 2], 1, 0]
+    indicateurs:
+    - nom: Balai brandi comme un sabre en pleine mêlée.
+    - nom: Seau d’eau salée renversé avec panache.
+    - nom: Mousse digne d’un kraken en plein spasme.
+    - nom: Chant marin entonné en chœur pour stimuler l’équipage.
+  - critère: Hissage du pavillon noir
+    indicateurs:
+    - nom: Cordage enroulé en huit impeccable.
+    - nom: Pavillon solidement fixé au mât.
+    - nom: Drisse tendue sans nœud lâche.
+  - critère: Distribution du rhum.
+    total: 40
+    indicateurs:
+    - nom: Gobelets remplis jusqu’à ras bord.
+    - nom: File d’attente de matelots respectée.
+    - nom: Toast improvisé incluant le capitaine.
+      pondération:
+      - [20, 19, 18]
+      - [17, 16]
+      - [15, 14]
+      - [13, 12]
+      - depuis: 0
+        jusqu’à: 11
+
+  format:
+    afficher_critères: true
+    afficher_indicateurs: true
+
+étudiants:
+  - prénom: Timonière
+    nom de famille: Houle
+    code omnivox: "314159"
+    alias: houle
+  - prénom: Moussaillon
+    nom de famille: Terre-Rio
+    code omnivox: "271828"
+    alias: terrerio
+  - prénom: Quartier-maître
+    nom de famille: GrandeColline-Rhum
+    code omnivox: "19216801"
+    alias: grhum
