@@ -6,10 +6,7 @@ class Evaluation(BaseModel):
     Information sur une évaluation.
     """
     name: str = Field(..., min_length=1)
-    course: str | None = Field(
-         default=None,
-         min_length=1
-         )
+    course: str | None = Field(..., min_length=1)
 
     def to_dict(self) -> dict:
         """
@@ -27,5 +24,5 @@ class Evaluation(BaseModel):
         """
         return cls(
             name=data["nom"],
-            course=data["cours"],
+            course=data.get("cours")
         )
