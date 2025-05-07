@@ -13,11 +13,9 @@ les profs de cégep qui veulent survivre à la tempête de copies.
 ## 🔭 Juché sur les épaules de géants
 
 Un grand merci à mes collègues du Collège de Maisonneuve, notamment Caroline
-Houle pour avoir partagé ses grilles d'évaluation et macros Excel. Merci également à Miguel
-Grandmont-Champagne pour avoir partagé sa grille d'évaluation avec Eva
-Terriault et merci à Eva de me l'avoir montrée 😊.
+Houle pour avoir partagé ses grilles d'évaluation et macros Excel.
 
-Finalement, merci à Patrice Farand de l'École Polytechnique de Montréal pour m'avoir 
+Merci également à Patrice Farand de l'École Polytechnique de Montréal pour m'avoir 
 appris à faire une grille d'évaluation. 
 
 Le succès de `c3hm` leur revient en bonne partie, toutes les erreurs sont les miennes.
@@ -73,15 +71,6 @@ Si tu préfères les méthodes plus classiques (ou si tu es nostalgique des ann�
 2000), pas de panique. `c3hm` est un package Python, et tu peux l'installer sur ta
 machine avec `pip`. Tu connais les environnements virtuels, non ?
 
-### 😢 Windows seulement
-
-La honte, mais pour l'instant `c3hm` ne fonctionne que sur Windows. Le programme manipule
-extensivement des fichiers Excel et Word, et c'est plus facile de le faire avec le [Component Object Model (COM)](https://en.wikipedia.org/wiki/Component_Object_Model) de Windows.
-
-Autrement dit, je n'ai pas trouvé de package Python qui fonctionne aussi bien
-que `pywin32` pour manipuler les fichiers Excel et Word. Si toi aussi
-tu es un magicien du code et que tu veux l'adapter pour Linux ou Mac, n'hésite
-pas à me le faire savoir. Je suis preneur !
 
 ### 🧪 Compatibilité
 
@@ -94,15 +83,6 @@ pas à me le faire savoir. Je suis preneur !
 Je sais, je sais, comme les étudiants tu voudrais une vidéo TikTok pour tout t'expliquer en moins de
 30 secondes. Mais ici, on fait les choses à l'ancienne. Alors va lire le [guide de démarrage](guide-demarrage.md) et
 ensuite plonge dans le code, il est super bien commenté (c'est dans les critères des grilles de Caroline).
-
-## 🗂️ Banque de grilles d'évaluation
-
-Ah, comme ça tu dois évaluer la lisibilité du code de tes étudiants ou évaluer
-leur grandiloquence lors d'une présentation ?
-
-Évidemment, tu dois remettre ton énoncé pour demain matin 8h et le Canadien est
-en prolongation. Pas le choix, copie-colle rapidement quelques critères dans la
-grille modèle et retourne aider le Canadien en criant très fort dans ton salon.
 
 ## 🛡️ Licence
 
