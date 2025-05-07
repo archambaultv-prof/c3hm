@@ -1,69 +1,72 @@
-# Configuration de la grille d'évaluation
+# Fichier de configuration de la grille d'évaluation
 # Utilisé par C3HM : Corriger à 3 heures du matin
 # https://github.com/archambaultv-prof/c3hm
 
 #  Information générale sur l'évaluation
 évaluation:
 
-  # Travail pratique 1, Exercice 2, etc.
+  # ex: Travail pratique 1, Exercice 2, etc.
   nom: Le Grand Carénage des Flibustiers
 
-  # Le nom du cours
+  # Le nom ou sigle du cours
   cours: 420-C3HM-MA
 
 # Une grille d'évaluation est un outil qui permet d'évaluer les étudiants sur plusieurs critères.
 # Chaque critère est divisé en indicateurs qui sont notés selon une échelle de notation.
-# L'échelle de notation peut être différente pour chaque critère ou même pour chaque indicateur.
-# La grille ci-dessous peut être représentée de façon simplifiée comme suit :
-# +------------------------------------------+-----------+-----------+-------+----------+--------------+
-# | Critère                                  | Excellent | Très bien | Bien  | Passable | Insuffisant  | <- Niveaux
-# +------------------------------------------+-----------+-----------+-------+----------+--------------+
-# | Grand lessivage du pont                  |           |           |       |          |              | <- Critère
-# |  – Balai brandi comme un sabre           |           |           |       |          |              | <- Indicateur
-# |  – Seau d’eau salée renversé             |           |           |       |          |              | <- Indicateur
-# |  – Mousse digne d’un kraken              |           |           |       |          |              | <- Indicateur
-# |  – Chant marin entonné en chœur          |           |           |       |          |              | <- Indicateur
-# +------------------------------------------+-----------+-----------+-------+----------+--------------+
-# | Hissage du pavillon noir                 |           |           |       |          |              | <- Critère
-# |  – Cordage enroulé en huit impeccable    |           |           |       |          |              | <- Indicateur
-# |  – Pavillon solidement fixé au mât       |           |           |       |          |              | <- Indicateur
-# |  – Drisse tendue sans nœud lâche         |           |           |       |          |              | <- Indicateur
-# +------------------------------------------+-----------+-----------+-------+----------+--------------+
-# | Distribution du rhum                     |           |           |       |          |              | <- Critère
-# |  – Gobelets remplis jusqu’à ras bord     |           |           |       |          |              | <- Indicateur
-# |  – File d’attente respectée              |           |           |       |          |              | <- Indicateur
-# |  – Toast improvisé incluant le capitaine |           |           |       |          |              | <- Indicateur
-# +------------------------------------------+-----------+-----------+-------+----------+--------------+
+# Tous les critères et indicateurs partagent le même nombre de niveaux (par exemple : Excellent, Très bien, etc.).
+# Cependant, la pondération (ou le pointage) peut être différente pour chaque indicateur ou critère.
+# L'échelle de notation peut donc être adaptée pour refléter l'importance relative de chaque élément.
+
+# La grille de ce fichier peut être représentée de façon simplifiée comme suit
+# (les descripteurs sont omis) :
+#
+# Le total est sur 50 points divisé en 3 critères. Les indicateurs d’un critère partagent ses points selon leur poids.
+# +------------------------------------------+-----------+-----------+---------+----------+--------------+
+# | Total sur 50 pts                         | Excellent | Très bien | Bien    | Passable | Insuffisant  | <- Niveaux
+# +------------------------------------------+-----------+-----------+---------+----------+--------------+
+# | Grand lessivage du pont (15 pts)         |           |           |         |          |              | <- Critère
+# |  – Balai brandi comme un sabre           | 20 à 18   | 17 - 16   | 15 - 14 | 13 - 12  | 11 à 0       | <- Indicateur
+# |  – Seau d’eau salée renversé             | 20 à 18   | 17 - 16   | 15 - 14 | 13 - 12  | 11 à 0       | <- Indicateur
+# |  – Mousse digne d’un kraken              | 20 à 18   | 17 - 16   | 15 - 14 | 13 - 12  | 11 à 0       | <- Indicateur
+# |  – Chant marin entonné en chœur          | 20 à 18   | 17 - 16   | 15 - 14 | 13 - 12  | 11 à 0       | <- Indicateur
+# +------------------------------------------+-----------+-----------+---------+----------+--------------+
+# | Hissage du pavillon noir (20 pts)        |           |           |         |          |              | <- Critère
+# |  – Cordage enroulé en huit impeccable    | 5         | 4         | 3       | 2        | 0            | <- Indicateur
+# |  – Pavillon solidement fixé au mât       | 5         | 4         | 3       | 2        | 0            | <- Indicateur
+# |  – Drisse tendue sans nœud lâche         | 5         | 4         | 3       | 2        | 0            | <- Indicateur
+# +------------------------------------------+-----------+-----------+---------+----------+--------------+
+# | Distribution du rhum (15 pts)            |           |           |         |          |              | <- Critère
+# |  – Gobelets remplis jusqu’à ras bord     | 5         | 4         | 3       | 2        | 0            | <- Indicateur
+# |  – File d’attente respectée              | 5         | 4         | 3       | 2        | 0            | <- Indicateur
+# |  – Toast improvisé incluant le capitaine | 20 à 18   | 17 - 16   | 15 - 14 | 13 - 12  | 11 à 0       | <- Indicateur
+# +------------------------------------------+-----------+-----------+---------+----------+--------------+
 grille:
 
   # Optionnel. Le total de l'évaluation. Par défaut, cette valeur correspond
-  # à la somme des totaux de chaque critère. Le total des notes des critères
-  # est ramené au total de la grille à l'aide d'une règle de trois.
-  total: 20
+  # à la somme des totaux de chaque critère. Si précisé, la somme des totaux
+  # des critères doit être égale au total de l'évaluation.
+  total: 50
 
-  # Optionnel : Si vrai, la sommes des notes des critères doit être égale au
-  # total de la grille.
-  vérifier total: false
 
   #  L'échelle de notation définit le nombre de niveaux et la pondération par défaut.
   #  La pondération par défaut s'applique à tous les indicateurs, sauf si elle est redéfinie.
   échelle:
 
-    # Un liste de niveaux
+    # Une liste de niveaux
     niveaux: [Excellent, Très bien, Bien, Passable, Insuffisant]
 
-    # Optionnel. Une liste de pondération. Même longueur que le nombre de niveaux.
-    # Les valeurs peuvent être des valeurs numériques unique (ex: 10), 
+    # Optionnel. Une liste de pondérations. Même longueur que le nombre de niveaux.
+    # Les valeurs peuvent être des valeurs numériques uniques (ex: 10), 
     # des listes de valeurs possibles (ex: [10, 9.5, 9]) ou des plages de valeurs (ex: depuis: 0 jusqu’à: 5 pas: 1)
     # La valeur la plus haute du premier niveau est la meilleure note possible pour l'indicateur.
     pondération par défaut:
-    - [10, 9.5, 9]  # Le niveau Excellent est soit 10, 9.5 ou 9
-    - [8.5, 8]
-    - [7.5, 7]
-    - [6.5, 6]
-    - depuis: 0  # Le niveau Insuffisant est entre 0 et 5, par pas de 1
-      jusqu’à: 5
-      pas: 0.5  # Optionnel, la valeur par défaut est 1
+    - [20, 19, 18]  # Le niveau Excellent est soit 20, 19 ou 18
+    - [17, 16]
+    - [15, 14]
+    - [13, 12]
+    - depuis: 0  # Le niveau Insuffisant est entre 0 et 11, par pas de 1
+      jusqu’à: 11
+      pas: 1  # Optionnel, la valeur par défaut est 1
 
   # La liste des critères d'évaluation
   critères:
@@ -75,14 +78,7 @@ grille:
     # critère est la somme de la meilleure note possible de chaque indicateur.
     # Le total des notes des indicateurs est ramené à la note maximale du critère à l'aide
     # d'une règle de trois.
-    total: 20
-
-    # Optionnel : Si vrai, la sommes des meilleurs notes des indicateurs doit être égale au
-    # total du critère.
-    vérifier total: true
-
-    # Redéfinition de la pondération par défaut pour tous les indicateurs de ce critère
-    pondération par défaut: [5, 4, [3, 2], 1, 0]
+    total: 15
 
     # Liste des indicateurs
     indicateurs:
@@ -96,13 +92,6 @@ grille:
         - Balayage assuré, mais manque un peu de panache corsaire.
         - Mouvement hésitant, quelques copeaux d’algues subsistent.
         - Le balai reste figé, le pont grince comme un vieux gréement.
-      # Optionnel, la pondération de l'indicateur. Même longueur que le nombre de niveaux.
-      pondération:
-      - 5
-      - 4
-      - 3
-      - 2
-      - 1
 
     # Autres indicateurs
     - nom: Seau d’eau salée renversé avec panache.
@@ -129,6 +118,10 @@ grille:
 
   # 2e critère
   - critère: Hissage du pavillon noir
+    total: 20
+    
+    # Redéfinition de la pondération par défaut pour tous les indicateurs de ce critère
+    pondération par défaut: [5, 4, 3, 2, 0]
     indicateurs:
     - nom: Cordage enroulé en huit impeccable.
       descripteurs:
@@ -154,8 +147,12 @@ grille:
     
   # 3e critère
   - critère: Distribution du rhum.
+    total: 15
+
     indicateurs:
     - nom: Gobelets remplis jusqu’à ras bord.
+      # Optionnel, redéfinition de la pondération pour cet indicateur seulement
+      pondération: [5, 4, 3, 2, 0]
       descripteurs:
         - Débordement majestueux ; la mer de rhum pourrait engloutir tout l’équipage !
         - Presque plein, quelques gouttes s’échappent lors du toast.
@@ -163,6 +160,8 @@ grille:
         - Moitié vide, la vaillance s’étiole.
         - Verre désertique, le rhum reste prisonnier du tonneau.
     - nom: File d’attente de matelots respectée.
+      # Optionnel, redéfinition de la pondération pour cet indicateur seulement
+      pondération: [5, 4, 3, 2, 0]
       descripteurs:
         - Discipline militaire, file alignée comme un cortège royal.
         - Légèrement relâchée, mais aucun doublage flagrant.
@@ -176,28 +175,21 @@ grille:
         - Toast correct, manque un brin d’enthousiasme.
         - Mots plats, l’écho du tonneau couvre la voix.
         - Silence embarrassant, pas un mot ne franchit les lèvres.
-      pondération:
-      - [20, 19, 18]
-      - [17, 16]
-      - [15, 14]
-      - [13, 12]
-      - depuis: 0
-        jusqu’à: 11
 
-  # Options de formattage de la grille
+  # Options de formatage de la grille
   format:
     # Optionnel. Paysage par défaut si 4 niveaux ou plus, portrait sinon.
     orientation: paysage # portrait ou paysage
 
+    # Optionnel. Faux par défaut.
     # Lorsque vrai, la grille est affichée sous forme de tableau avec seulement une rangée par critère.
-    # Pour chaque niveau, les descripteurs de chaque indicateur sont affichés dans la même colonne, séparés par des sauts de ligne.
+    # Pour chaque niveau, les descripteurs de chaque indicateur sont affichés dans la même cellule, séparés par des sauts de ligne.
     # Les noms des indicateurs sont masqués.
-    # Cette option n'est valide que si des descripteurs sont fournis pour chaque indicateur.
+    # Cette option n'est valide que dans les deux cas suivants :
+    # a) des descripteurs sont fournis pour chaque indicateur.
+    # b) il n'y a qu'un seul indicateur par critère. Dans ce cas, les descripteurs peuvent être omis.
     # Lorsque faux, chaque indicateur est affiché sur une ligne distincte.
-    fusionner indicateurs et descripteurs: false
-
-    # Lorsque vrai, seul le total de chaque critère est affiché.
-    masquer la pondération des indicateurs: false
+    masquer les indicateurs: false
 
 # La liste des étudiants, fournis par Omnivox
 # Ils est aussi possible de mettre un lien vers un fichier CSV ou Excel contenant la liste des étudiants.
@@ -207,10 +199,10 @@ grille:
   - prénom: Timonière
     nom de famille: Houle
     code omnivox: 314159
-    # Utiliser pour le nom de la feuille pour le fichier Excel de correction
+    # Utiliser pour le nom de la feuille correspondante dans le fichier Excel de correction
     alias: houle
   - prénom: Moussaillon
-    nom de famille: Terre-Rio
+    nom de famille: ArchiBord
     code omnivox: 271828
     alias: terrerio
   - prénom: Quartier-maître
