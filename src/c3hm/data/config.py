@@ -1,5 +1,5 @@
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from c3hm.data.evaluation import Evaluation
 from c3hm.data.rubric import Rubric
@@ -12,10 +12,7 @@ class Config(BaseModel):
     """
     evaluation: Evaluation
     rubric: Rubric
-    students: list[Student] = Field(
-        default_factory=list,
-        min_length=0
-    )
+    students: list[Student]
 
     def to_dict(self) -> dict:
         """

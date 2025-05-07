@@ -47,26 +47,21 @@ grille:
   # des critères doit être égale au total de l'évaluation.
   total: 50
 
+  # Une liste de niveaux de notation.
+  niveaux: [Excellent, Très bien, Bien, Passable, Insuffisant]
 
-  #  L'échelle de notation définit le nombre de niveaux et la pondération par défaut.
-  #  La pondération par défaut s'applique à tous les indicateurs, sauf si elle est redéfinie.
-  échelle:
-
-    # Une liste de niveaux
-    niveaux: [Excellent, Très bien, Bien, Passable, Insuffisant]
-
-    # Optionnel. Une liste de pondérations. Même longueur que le nombre de niveaux.
-    # Les valeurs peuvent être des valeurs numériques uniques (ex: 10), 
-    # des listes de valeurs possibles (ex: [10, 9.5, 9]) ou des plages de valeurs (ex: depuis: 0 jusqu’à: 5 pas: 1)
-    # La valeur la plus haute du premier niveau est la meilleure note possible pour l'indicateur.
-    pondération par défaut:
-    - [20, 19, 18]  # Le niveau Excellent est soit 20, 19 ou 18
-    - [17, 16]
-    - [15, 14]
-    - [13, 12]
-    - depuis: 0  # Le niveau Insuffisant est entre 0 et 11, par pas de 1
-      jusqu’à: 11
-      pas: 1  # Optionnel, la valeur par défaut est 1
+  # Optionnel. Une liste de pondérations. Même longueur que le nombre de niveaux.
+  # Les valeurs peuvent être des valeurs numériques uniques (ex: 10), 
+  # des listes de valeurs possibles (ex: [10, 9.5, 9]) ou des plages de valeurs (ex: début: 0 fin: 5 pas: 1)
+  # La valeur la plus haute du premier niveau est la meilleure note possible pour l'indicateur.
+  pondération par défaut:
+  - [20, 19, 18]  # Le niveau Excellent est soit 20, 19 ou 18
+  - [17, 16]
+  - [15, 14]
+  - [13, 12]
+  - début: 0  # Le niveau Insuffisant est entre 0 et 11, par pas de 1
+    fin: 11
+    pas: 1  # Optionnel, la valeur par défaut est 1
 
   # La liste des critères d'évaluation
   critères:
@@ -80,11 +75,24 @@ grille:
     # d'une règle de trois.
     total: 15
 
+    # Optionnel, le nom de cellule de la feuille Excel où le critère est noté.
+    # Si non spécifié, le nom est généré selon l'ordre des critères (C1, C2, C3, etc.)
+    # Le nom de la cellule est aussi utilisé pour lire les résultats dans le fichier Excel de correction.
+    # Le nom doit être un nom valide pour une cellule Excel
+    xl id: lessivage
+
     # Liste des indicateurs
     indicateurs:
 
     # Nom de l'indicateur
     - nom: Balai brandi comme un sabre en pleine mêlée.
+
+      # Optionnel, le nom de cellule de la feuille Excel où le critère est noté.
+      # Si non spécifié, le nom est généré selon l'ordre des critères (C1, C2, C3, etc.)
+      # Le nom de la cellule est aussi utilisé pour lire les résultats dans le fichier Excel de correction.
+      # Le nom doit être un nom valide pour une cellule Excel
+      xl id: lessivage_balai
+
       # Optionnel, un descripteur pour chaque niveau.
       descripteurs:
         - Maniable tel un vrai cutlass, le balai fend l’air et terrasse tous les flots de crasse.
