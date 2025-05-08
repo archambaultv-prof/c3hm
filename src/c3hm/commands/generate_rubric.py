@@ -7,6 +7,7 @@ import docx
 import docx.enum.text
 from docx.document import Document
 from docx.enum.section import WD_ORIENT
+from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, RGBColor
@@ -255,6 +256,9 @@ def add_criterion(table: Table,
             run = p.add_run(f"{desc_skip}{grade_weight_to_str(grade_weight)}")
             run.style = "Emphasis"
             run.font.color.rgb = RGBColor(0x80, 0x80, 0x80)
+            if not indicator.descriptors:
+                # Si pas de descripteur, on aligne la pondération au centre
+                p.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
 
 def grade_weight_to_str(grade_weight: GradeWeight) -> str:
     endash = "\u2013"
@@ -301,6 +305,7 @@ def set_grade_levels(rubric: Rubric, hdr_cells):
         p = cell.paragraphs[0]
         p.text = label
         p.style = "Heading 3"
+        p.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
 
 
 def word_to_pdf(docx_path: Path, pdf_path: Path):
