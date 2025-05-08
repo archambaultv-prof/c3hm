@@ -74,7 +74,7 @@ class GradedCriterion(Criterion):
         return cls(
             name=criterion.name,
             indicators=graded_indicators,
-            points=criterion.points,
+            points=criterion.total,
             xl_cell_id=criterion.xl_cell_id,
             grade=grade,
             comment=comment
@@ -115,7 +115,7 @@ class GradedRubric(Rubric):
         return cls(
             criteria=graded_criteria,
             scale=rubric.scale,
-            pts_total=rubric.pts_total,
+            pts_total=rubric.total,
             pts_precision=rubric.pts_precision,
             student=student
         )

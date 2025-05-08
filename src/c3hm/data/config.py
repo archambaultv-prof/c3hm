@@ -84,3 +84,13 @@ class Config(BaseModel):
             if student.omnivox_code == omnivox_code:
                 return student
         return None
+
+    def copy(self) -> "Config":
+        """
+        Retourne une copie de la configuration.
+        """
+        return Config(
+            evaluation=self.evaluation.copy(),
+            rubric=self.rubric.copy(),
+            students=[student.copy() for student in self.students],
+        )

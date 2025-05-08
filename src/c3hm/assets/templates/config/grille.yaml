@@ -67,10 +67,10 @@ grille:
   critères:
 
     # Nom du critère
-  - critère: Grand lessivage du pont.
+  - critère: Grand lessivage du pont
 
     # Optionnel, note totale du critère. Si non spécifié, le total du
-    # critère est la somme de la meilleure note possible de chaque indicateur.
+    # critère est la somme de la meilleure note possible de chaque indicateur.é
     # Le total des notes des indicateurs est ramené à la note maximale du critère à l'aide
     # d'une règle de trois.
     total: 15
@@ -154,7 +154,7 @@ grille:
         - Molle comme une voile en panne, prête à céder au premier souffle.
     
   # 3e critère
-  - critère: Distribution du rhum.
+  - critère: Distribution du rhum
     total: 15
 
     indicateurs:

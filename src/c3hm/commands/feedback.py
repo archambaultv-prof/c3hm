@@ -10,7 +10,7 @@ from openpyxl import Workbook
 from openpyxl.cell.cell import Cell
 from openpyxl.worksheet.worksheet import Worksheet
 
-from c3hm.commands.student import generate_rubric, set_as_table_header, set_row_borders, set_scale
+from c3hm.commands.statement import generate_rubric, set_as_table_header, set_row_borders, set_scale
 from c3hm.data.config import Config
 from c3hm.data.gradedrubric import GradedCriterion, GradedIndicator, GradedRubric
 from c3hm.utils import round_to_nearest_quantum
@@ -158,7 +158,7 @@ def feedback_set_first_row(rubric: GradedRubric, table: Table):
     hdr_cells = table.rows[0].cells
     total_cell = hdr_cells[0]
     p = total_cell.paragraphs[0]
-    p.text = f"Note : {total} / {rubric.pts_total}"
+    p.text = f"Note : {total} / {rubric.total}"
     p.style = "Heading 3"
 
     # Barème et seuils
@@ -174,15 +174,15 @@ def feedback_add_criterion(table: Table,
     row = table.add_row()
     # Critère
     p = row.cells[0].paragraphs[0]
-    pts = "pt" if criterion.points == 1 else "pts"
-    p.text = f"{criterion.name} ({criterion.points} {pts})"
+    pts = "pt" if criterion.total == 1 else "pts"
+    p.text = f"{criterion.name} ({criterion.total} {pts})"
     p.style = "Heading 3"
     perfect = graded_rubric.scale[0].threshold
-    score = perfect * criterion.grade / criterion.points
+    score = perfect * criterion.grade / criterion.total
     for i, scale in enumerate(graded_rubric.scale):
         if score >= scale.threshold:
             p = row.cells[i + 1].paragraphs[0]
-            p.text = f"{criterion.grade} / {criterion.points}"
+            p.text = f"{criterion.grade} / {criterion.total}"
             p.style = "Heading 3"
             break
 

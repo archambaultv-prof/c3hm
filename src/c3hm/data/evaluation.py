@@ -26,3 +26,12 @@ class Evaluation(BaseModel):
             name=data["nom"],
             course=data.get("cours")
         )
+
+    def copy(self) -> "Evaluation":
+        """
+        Retourne une copie de l'évaluation.
+        """
+        return Evaluation(
+            name=self.name,
+            course=self.course
+        )

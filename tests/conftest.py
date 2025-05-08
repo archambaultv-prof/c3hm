@@ -21,12 +21,12 @@ def gradebook_1_path() -> Path:
     return d / "gradebook_1.xlsx"
 
 @pytest.fixture
-def config_template_5_path() -> Path:
+def config_template_path() -> Path:
     """
     Retourne le chemin vers le fichier de la grille d'évaluation config_5_levels.yaml
     """
     d = Path(__file__).parent.parent / "src" / "c3hm" / "assets" / "templates" / "config"
-    return d / "config_5_levels.yaml"
+    return d / "grille.yaml"
 
 @pytest.fixture(scope="session")
 def output_dir() -> Path:

@@ -1,10 +1,12 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Student(BaseModel):
     """
     Représente un étudiant avec un nom, prénom et code Omnivox.
     """
+    model_config = ConfigDict(coerce_numbers_to_str=True)
+
     first_name: str = Field(..., min_length=1)
     last_name: str = Field(..., min_length=1)
     omnivox_code: str = Field(..., min_length=1)
@@ -37,4 +39,15 @@ class Student(BaseModel):
             last_name=data["nom de famille"],
             omnivox_code=data["code omnivox"],
             alias=data["alias"],
+        )
+
+    def copy(self) -> "Student":
+        """
+        Retourne une copie de l'étudiant.
+        """
+        return Student(
+            first_name=self.first_name,
+            last_name=self.last_name,
+            omnivox_code=self.omnivox_code,
+            alias=self.alias,
         )

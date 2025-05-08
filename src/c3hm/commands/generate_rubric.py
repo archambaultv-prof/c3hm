@@ -1,14 +1,19 @@
 import sys
+from decimal import Decimal
 from importlib import resources
 from pathlib import Path
 
 import docx
 import docx.enum.text
+from docx.enum.section import WD_ORIENT
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
+from docx.shared import RGBColor
 from docx.table import Table
 
-from c3hm.data.rubric import Criterion, Rubric
+from c3hm.data.rubric import Criterion, GradeWeight, Rubric
+from c3hm.data.student import Student
+from c3hm.utils import decimal_to_number
 
 PERFECT_GREEN    = "C8FFC8"  # RGB(200, 255, 200)
 VERY_GOOD_GREEN  = "F0FFB0"  # RGB(240, 255, 176)
@@ -85,26 +90,44 @@ def set_row_borders(row, top=0.5, bottom=0.5):
         if bottom:
             set_border(tc_borders, 'bottom', bottom)
 
+def set_orientation(doc, orientation: str):
+    """
+    Définit l'orientation de la page dans un document Word.
+    """
+    sections = doc.sections
+    for section in sections:
+        if orientation == "paysage":
+            section.orientation = WD_ORIENT.LANDSCAPE
+            # Échanger la largeur et la hauteur de la page
+            if section.page_width < section.page_height:
+                section.page_width, section.page_height = (
+                    section.page_height,
+                    section.page_width,
+                )
+        elif orientation == "portrait":
+            section.orientation = WD_ORIENT.PORTRAIT
+            # Échanger la largeur et la hauteur de la page
+            if section.page_width > section.page_height:
+                section.page_width, section.page_height = (
+                    section.page_height,
+                    section.page_width,
+                )
+        else:
+            raise ValueError(f"Orientation '{orientation}' non valide. "
+                             "Utilisez 'paysage' ou 'portrait'.")
+
+
 def generate_rubric(
         rubric: Rubric,
         output_path: Path | str,
         *,
         title: str = "Grille d'évaluation",
-        set_first_row = None,
-        add_criterion = None,
-        add_comments = None,
+        student: Student | None = None,
+        grades: dict[str, Decimal] | None = None,
         ) -> None:
     """
     Génère un document Word pour les étudiants à partir d’un grille d’évaluation (Rubric).
     """
-    if set_first_row is None:
-        set_first_row = student_set_first_row
-    if add_criterion is None:
-        add_criterion = student_add_criterion
-    if add_comments is None:
-        def add_comments(_, __):
-            return None
-
     output_path = Path(output_path)
 
     # forcer l'extension .docx
@@ -117,9 +140,19 @@ def generate_rubric(
     with resources.as_file(template) as path:
         doc = docx.Document(path)
 
+    # Modifier l'orientation de la page au besoin
+    if rubric.format.orientation:
+        set_orientation(doc, rubric.format.orientation)
+    elif rubric.nb_columns() > 4:
+        set_orientation(doc, "landscape")
+    else:
+        set_orientation(doc, "portrait")
+
     # insérer le titre
-    heading = doc.add_heading(title, level=1)
-    heading.alignment = docx.enum.text.WD_PARAGRAPH_ALIGNMENT.CENTER
+    p = doc.paragraphs[0]
+    p.text = title
+    p.style = "Heading 1"
+    p.alignment = docx.enum.text.WD_PARAGRAPH_ALIGNMENT.CENTER
 
     # insérer la table pour la grille
     table = doc.add_table(rows=1, cols=rubric.nb_columns(), style="Normal Table")
@@ -136,13 +169,13 @@ def generate_rubric(
     set_row_borders(last_row, top=None, bottom=1.0)
 
     # Ajoute des commentaires (pour la correction)
-    add_comments(doc, rubric)
+    # add_comments(doc, rubric)
 
     # enregistrer le fichier
     doc.save(output_path)
 
 
-def student_add_criterion(table: Table,
+def add_criterion(table: Table,
                           criterion: Criterion,
                           _: Rubric):
     """
@@ -152,11 +185,11 @@ def student_add_criterion(table: Table,
     row = table.add_row()
     # Critère
     p = row.cells[0].paragraphs[0]
-    pts = "pt" if criterion.points == 1 else "pts"
-    p.text = f"{criterion.name} ({criterion.points} {pts})"
+    pts = "pt" if criterion.total == 1 else "pts"
+    p.text = f"{criterion.name} ({criterion.total} {pts})"
     p.style = "Heading 3"
 
-        # Indicateurs
+    # Indicateurs
     for indicator in criterion.indicators:
         row = table.add_row()
         p = row.cells[0].paragraphs[0]
@@ -164,10 +197,34 @@ def student_add_criterion(table: Table,
         run.style = "Emphasis"
 
         # Descripteurs alignés avec les niveaux de barème
-        for i, descriptor in enumerate(indicator.descriptors):
-            row.cells[i + 1].text = descriptor
+        for i, grade_weight in enumerate(indicator.grade_weights):
+            if indicator.descriptors:
+                row.cells[i + 1].text = indicator.descriptors[i]
+                desc_skip = "\n"
+            else:
+                desc_skip = ""
+            p = row.cells[i + 1].paragraphs[0]
+            run = p.add_run(f"{desc_skip}{grade_weight_to_str(grade_weight)}")
+            run.style = "Emphasis"
+            run.font.color.rgb = RGBColor(0x80, 0x80, 0x80)
 
-def student_set_first_row(rubric: Rubric, table: Table):
+def grade_weight_to_str(grade_weight: GradeWeight) -> str:
+    endash = "\u2013"
+    if isinstance(grade_weight, Decimal):
+        return str(decimal_to_number(grade_weight))
+    elif isinstance(grade_weight, int):
+        return str(grade_weight)
+    elif isinstance(grade_weight, list):
+        ls = [str(decimal_to_number(w)) for w in grade_weight]
+        return f" {endash} ".join(ls)
+    elif isinstance(grade_weight, dict):
+        start = decimal_to_number(grade_weight["début"])
+        end = decimal_to_number(grade_weight["fin"])
+        return f"{end} {endash} {start}"
+    else:
+        raise TypeError(f"Type de grade_weight non pris en charge : {type(grade_weight)}")
+
+def set_first_row(rubric: Rubric, table: Table):
     """
     Remplit la première ligne du tableau avec le barème et les seuils.
     """
@@ -180,28 +237,21 @@ def student_set_first_row(rubric: Rubric, table: Table):
     hdr_cells = table.rows[0].cells
     total_cell = hdr_cells[0]
     p = total_cell.paragraphs[0]
-    pts = "pt" if rubric.pts_total == 1 else "pts"
-    p.text = f"Total sur {rubric.pts_total} {pts}"
+    pts = "pt" if rubric.total == 1 else "pts"
+    p.text = f"Total sur {rubric.total} {pts}"
     p.style = "Heading 3"
 
     # Barème et seuils
-    set_scale(rubric, hdr_cells)
+    set_grade_levels(rubric, hdr_cells)
 
-def set_scale(rubric, hdr_cells):
-    color_schemes = scale_color_schemes(len(rubric.scale))
-    precision = rubric.scale.precision
-    for i, label in enumerate(rubric.scale):
+def set_grade_levels(rubric: Rubric, hdr_cells):
+    color_schemes = scale_color_schemes(len(rubric.grade_levels))
+    for i, label in enumerate(rubric.grade_levels):
         cell = hdr_cells[i + 1]
         if color_schemes:
             set_cell_background(cell, color_schemes[i])
         p = cell.paragraphs[0]
-        if i == 0:
-            threshold_str = str(rubric.scale[i].threshold)
-        else:
-            start = rubric.scale[i-1].threshold - precision
-            end = rubric.scale[i].threshold
-            threshold_str = f"{start}-{end}"
-        p.text = f"{label.name} [{threshold_str}]"
+        p.text = label
         p.style = "Heading 3"
 
 

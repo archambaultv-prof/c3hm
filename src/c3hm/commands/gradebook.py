@@ -8,7 +8,7 @@ from openpyxl.utils import absolute_coordinate, quote_sheetname
 from openpyxl.workbook.defined_name import DefinedName
 from openpyxl.worksheet.worksheet import Worksheet
 
-from c3hm.commands.student import scale_color_schemes
+from c3hm.commands.statement import scale_color_schemes
 from c3hm.data.config import Config
 from c3hm.data.student import Student
 from c3hm.utils import decimal_to_number
@@ -61,8 +61,8 @@ def add_student_sheet(ws: Worksheet, config: Config, student: Student) -> None:
     ws.append([])
 
     # Total sur X pts
-    pts = "pt" if config.rubric.pts_total == 1 else "pts"
-    ws.append([f"Total sur {config.rubric.pts_total} {pts}"])
+    pts = "pt" if config.rubric.total == 1 else "pts"
+    ws.append([f"Total sur {config.rubric.total} {pts}"])
     cell = ws.cell(row=ws.max_row, column=1)
     cell.style = "Headline 2"
 
@@ -109,7 +109,7 @@ def add_student_sheet(ws: Worksheet, config: Config, student: Student) -> None:
     comment_col = col_before_scale + len(rubric.scale) + 4
     for criterion in rubric.criteria:
         # Critère
-        ws.append([criterion.name, criterion.points])
+        ws.append([criterion.name, criterion.total])
         cr = ws.max_row
         criterion_rows.append(cr)
         cell = ws.cell(row=ws.max_row, column=1)

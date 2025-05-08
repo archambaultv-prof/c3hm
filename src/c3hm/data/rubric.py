@@ -1,5 +1,6 @@
 from decimal import Decimal
 from pathlib import Path
+from typing import Literal
 
 import yaml
 from pydantic import BaseModel, Field
@@ -79,6 +80,22 @@ class Indicator(BaseModel):
             descriptors=data.get("descripteurs", []),
         )
 
+    def copy(self) -> "Indicator":
+        """
+        Retourne une copie de l'indicateur.
+        """
+        if isinstance(self.grade_weights, list | dict):
+            gw = self.grade_weights.copy()
+        else:
+            gw = self.grade_weights
+
+        return Indicator(
+            name=self.name,
+            xl_cell_id=self.xl_cell_id,
+            grade_weights=gw,
+            descriptors=self.descriptors.copy(),
+        )
+
 class Criterion(BaseModel):
     """
     Représente un critère d'évaluation. Ce dernière est formée d'une liste d'indicateurs.
@@ -141,41 +158,28 @@ class Criterion(BaseModel):
             default_grade_weights=data.get("pondération par défaut"),
         )
 
-class Scale(BaseModel):
-    """
-    Représente la liste des niveaux de la grille d'évaluation.
-    """
-    grade_levels: GradeLevels = Field(..., min_length=1)
-    default_grade_weights: GradeWeights | None
+    def copy(self) -> "Criterion":
+        """
+        Retourne une copie du critère.
+        """
+        if isinstance(self.default_grade_weights, list | dict):
+            gw = self.default_grade_weights.copy()
+        else:
+            gw = self.default_grade_weights
 
-    def to_dict(self) -> dict:
-        """
-        Retourne un dictionnaire représentant la liste des niveaux.
-        """
-        return {
-            "niveaux": self.grade_levels,
-            "pondération par défault": grade_weights_to_yaml(self.default_grade_weights),
-        }
-
-    @classmethod
-    def from_dict(cls, data: dict) -> "Scale":
-        """
-        Crée une instance de Scale à partir d'un dictionnaire.
-        """
-        return cls(
-            levels=data["niveaux"],
-            default_grade_weights=data.get("pondération par défault"),
+        return Criterion(
+            name=self.name,
+            xl_cell_id=self.xl_cell_id,
+            total=self.total,
+            indicators=[indicator.copy() for indicator in self.indicators],
+            default_grade_weights=gw,
         )
 
 class Format(BaseModel):
     """
     Représente le format de la grille d'évaluation.
     """
-    orientation: str | None = Field(
-        default=None,
-        description="Orientation de la grille d'évaluation (portrait ou paysage).",
-        regex="^(portrait|paysage)$"
-    )
+    orientation: None | Literal["portrait", "paysage"]
     hide_indicators: bool = Field(
         default=False,
         description="Indique si les indicateurs doivent être masqués dans la grille d'évaluation."
@@ -198,6 +202,15 @@ class Format(BaseModel):
         return cls(
             orientation=data.get("orientation"),
             hide_indicators=data.get("masquer les indicateurs", False),
+        )
+
+    def copy(self) -> "Format":
+        """
+        Retourne une copie du format.
+        """
+        return Format(
+            orientation=self.orientation,
+            hide_indicators=self.hide_indicators,
         )
 
 class Rubric(BaseModel):
@@ -224,7 +237,7 @@ class Rubric(BaseModel):
         return {
             "total": decimal_to_number(self.total),
             "niveaux": self.grade_levels,
-            "pondération par défault": grade_weights_to_yaml(self.default_grade_weights),
+            "pondération par défaut": grade_weights_to_yaml(self.default_grade_weights),
             "critères": [criterion.to_dict() for criterion in self.criteria],
             "format": self.format.to_dict(),
         }
@@ -235,10 +248,10 @@ class Rubric(BaseModel):
         Crée une instance de Rubric à partir d'un dictionnaire.
         """
         return cls(
-            scale=Scale.from_dict(data["échelle"]),
+            total=data["total"],
+            grade_levels=data["niveaux"],
+            default_grade_weights=data.get("pondération par défaut"),
             criteria=[Criterion.from_dict(criterion) for criterion in data["critères"]],
-            pts_total=data["total"],
-            pts_precision=data["précision"],
             format=Format.from_dict(data["format"]),
         )
 
@@ -256,7 +269,7 @@ class Rubric(BaseModel):
         Cela inclut une colonne pour les critères/descripteurs et une colonne
         pour chaque niveau de barème.
         """
-        return 1 + len(self.scale)
+        return 1 + len(self.grade_levels)
 
     def validate(self) -> None:
         """
@@ -267,7 +280,9 @@ class Rubric(BaseModel):
         computed_total = sum(
             criterion.total for criterion in self.criteria if criterion.total is not None
         )
-        if self.total is not None and computed_total != self.total:
+        if self.total is None:
+            self.total = computed_total
+        elif computed_total != self.total:
             raise ValueError(
                 f"La somme des poids des critères ({computed_total}) "
                 f"ne correspond pas au total ({self.total})."
@@ -279,7 +294,7 @@ class Rubric(BaseModel):
         if (self.default_grade_weights is not None and
             len(self.default_grade_weights) != nb_of_levels):
                 raise ValueError(
-                    "La pondération par défault de la grille "
+                    "La pondération par défaut de la grille "
                     f"ne correspond pas au nombre de niveaux ({nb_of_levels})."
                 )
 
@@ -314,7 +329,7 @@ class Rubric(BaseModel):
                             "n'a pas de pondération. Aucune pondération par défaut n'est "
                             "définie pour le critère ou la grille."
                         )
-                if (indicator.descriptors is not None and
+                if (indicator.descriptors and
                     len(indicator.descriptors) != nb_of_levels):
                     raise ValueError(
                         f"Le nombre de descripteurs pour l'indicateur '{indicator.name}' "
@@ -331,3 +346,16 @@ class Rubric(BaseModel):
         with open(filepath, "w", encoding="utf-8") as f:
             yaml.dump(self.to_dict(), f, allow_unicode=True,
                       sort_keys=False)
+
+    def copy(self) -> "Rubric":
+        """
+        Retourne une copie de la grille d'évaluation.
+        """
+        return Rubric(
+            total=self.total,
+            grade_levels=self.grade_levels.copy(),
+            default_grade_weights= self.default_grade_weights.copy()
+                                    if self.default_grade_weights else None,
+            criteria=[criterion.copy() for criterion in self.criteria],
+            format=self.format.copy(),
+        )
