@@ -225,8 +225,8 @@ def add_word_table(doc: Document, n_cols: int, column_widths_cm: list[float|None
 
 
 def add_criterion(table: Table,
-                          criterion: Criterion,
-                          _: Rubric):
+                  criterion: Criterion,
+                  rubric: Rubric):
     """
     Ajoute un critère et ses indicateurs à la table.
     Le dernier paramètre est la grille, mais elle n'est pas utilisée ici.
@@ -252,13 +252,15 @@ def add_criterion(table: Table,
                 desc_skip = "\n"
             else:
                 desc_skip = ""
-            p = row.cells[i + 1].paragraphs[0]
-            run = p.add_run(f"{desc_skip}{grade_weight_to_str(grade_weight)}")
-            run.style = "Emphasis"
-            run.font.color.rgb = RGBColor(0x80, 0x80, 0x80)
-            if not indicator.descriptors:
-                # Si pas de descripteur, on aligne la pondération au centre
-                p.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+
+            if not rubric.format.hide_indicators_weight:
+                p = row.cells[i + 1].paragraphs[0]
+                run = p.add_run(f"{desc_skip}{grade_weight_to_str(grade_weight)}")
+                run.style = "Emphasis"
+                run.font.color.rgb = RGBColor(0x80, 0x80, 0x80)
+                if not indicator.descriptors:
+                    # Si pas de descripteur, on aligne la pondération au centre
+                    p.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
 
 def grade_weight_to_str(grade_weight: GradeWeight) -> str:
     endash = "\u2013"

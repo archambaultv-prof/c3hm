@@ -193,6 +193,11 @@ class Format(BaseModel):
                     "La première colonne est pour les critères, "
                     "les autres pour les niveaux de barème."
     )
+    hide_indicators_weight: bool = Field(
+        default=False,
+        description=("Indique si les poids des indicateurs doivent être masqués "
+                     "dans la grille d'évaluation.")
+    )
 
     def to_dict(self) -> dict:
         """
@@ -201,6 +206,7 @@ class Format(BaseModel):
         return {
             "orientation": self.orientation,
             "masquer les indicateurs": self.hide_indicators,
+            "masquer la pondération des indicateurs": self.hide_indicators_weight,
             "largeur des colonnes": self.columns_width,
         }
 
@@ -212,6 +218,7 @@ class Format(BaseModel):
         return cls(
             orientation=data.get("orientation"),
             hide_indicators=data.get("masquer les indicateurs", False),
+            hide_indicators_weight=data.get("masquer la pondération des indicateurs", False),
             column_width=data.get("largeur des colonnes", []),
         )
 
@@ -222,6 +229,8 @@ class Format(BaseModel):
         return Format(
             orientation=self.orientation,
             hide_indicators=self.hide_indicators,
+            hide_indicators_weight=self.hide_indicators_weight,
+            columns_width=self.columns_width.copy(),
         )
 
 class Rubric(BaseModel):

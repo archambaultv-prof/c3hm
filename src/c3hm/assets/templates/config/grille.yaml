@@ -199,6 +199,10 @@ grille:
     # Lorsque faux, chaque indicateur est affiché sur une ligne distincte.
     masquer les indicateurs: false
 
+    # Optionnel. Faux par défaut.
+    # Lorsque vrai, la grille est affichée sans la pondération des indicateurs.
+    masquer la pondération des indicateurs: false
+
     # Optionnel. Largeur des colonnes de la grille en centimètres.
     # Si vide, la largeur des colonnes est calculée automatiquement.
     # Doit être de la même longueur que le nombre de niveaux + 1.
