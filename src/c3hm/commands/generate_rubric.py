@@ -14,7 +14,7 @@ from docx.oxml.ns import qn
 from docx.shared import Cm, RGBColor
 from docx.table import Table
 
-from c3hm.data.rubric import Criterion, GradeWeight, Rubric, min_grade_weight
+from c3hm.data.rubric import Criterion, GradeWeight, Rubric, max_grade_weight, min_grade_weight
 from c3hm.data.student import Student
 from c3hm.utils import decimal_to_number
 
@@ -260,6 +260,7 @@ def add_criterion(table: Table,
         # Descripteurs alignés avec les niveaux de barème
         found_grade_indicator = False
         skip_highlight = False
+        perfect_grade = max_grade_weight(indicator.grade_weights[0])
         for i, grade_weight in enumerate(indicator.grade_weights):
             # Vérifie si l'indicateur est celui correspondant à la note
             min_weight = min_grade_weight(grade_weight)
@@ -278,7 +279,8 @@ def add_criterion(table: Table,
             if not rubric.format.hide_indicators_weight:
                 p = row.cells[i + 1].paragraphs[0]
                 if found_grade_indicator and not skip_highlight:
-                    run = p.add_run(f"{desc_skip}{grades[indicator.xl_grade_cell_id()]}")
+                    run = p.add_run(
+                        f"{desc_skip}{grades[indicator.xl_grade_cell_id()]} / {perfect_grade}")
                 elif not grades:
                     run = p.add_run(f"{desc_skip}{grade_weight_to_str(grade_weight)}")
                 else:
