@@ -338,6 +338,7 @@ class Rubric(BaseModel):
             )
 
         # Vérification des critères
+        seen_xl_ids = set()
         for c, criterion in enumerate(self.criteria):
             # Vérification de la pondération par défaut du critère si elle existe
             # sinon on lui assigne la pondération par défaut de la grille si elle existe
@@ -352,13 +353,27 @@ class Rubric(BaseModel):
 
             if criterion.xl_cell_id is None:
                 criterion.xl_cell_id = f"cthm_C{c+1}"
+            if criterion.xl_cell_id in seen_xl_ids:
+                raise ValueError(
+                    f"Le critère '{criterion.name}' a un identifiant de cellule "
+                    f"Excel dupliqué : {criterion.xl_cell_id}."
+                )
+            seen_xl_ids.add(criterion.xl_cell_id)
 
             # Vérification des indicateurs
             if not criterion.indicators:
                 raise ValueError(f"Le critère '{criterion.name}' n'a pas d'indicateurs.")
             for i, indicator in enumerate(criterion.indicators):
                 if indicator.xl_cell_id is None:
-                    indicator.xl_cell_id = f"cthm_C{c+1}_I{i+1}"
+                    prefix = criterion.xl_cell_id
+                    indicator.xl_cell_id = f"{prefix}_I{i+1}"
+                if indicator.xl_cell_id in seen_xl_ids:
+                    raise ValueError(
+                        f"L'indicateur '{indicator.name}' du critère '{criterion.name}' "
+                        f"a un identifiant de cellule Excel dupliqué : {indicator.xl_cell_id}."
+                    )
+                seen_xl_ids.add(indicator.xl_cell_id)
+
                 if indicator.grade_weights is None:
                     if criterion.default_grade_weights:
                         indicator.grade_weights = criterion.default_grade_weights
