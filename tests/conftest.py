@@ -5,20 +5,12 @@ import pytest
 
 
 @pytest.fixture
-def config_1_path() -> Path:
-    """
-    Retourne le chemin vers le fichier de la grille d'évaluation config_1.yaml
-    """
-    d = Path(__file__).parent / "fixtures"
-    return d / "config_1.yaml"
-
-@pytest.fixture
-def gradebook_1_path() -> Path:
+def gradebook_path() -> Path:
     """
     Retourne le chemin vers le fichier gradebook_1.yaml
     """
     d = Path(__file__).parent / "fixtures"
-    return d / "gradebook_1.xlsx"
+    return d / "grille_gradebook.xlsx"
 
 @pytest.fixture
 def config_template_path() -> Path:

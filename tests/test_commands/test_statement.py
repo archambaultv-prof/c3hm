@@ -1,4 +1,5 @@
 import sys
+from decimal import Decimal
 from pathlib import Path
 
 from c3hm.commands.generate_rubric import word_to_pdf
@@ -41,12 +42,12 @@ def test_generate_word_from_rubric(
     c_2_levels = c_no_descriptors.copy()
     c_2_levels.rubric.format.orientation = "portrait"
     c_2_levels.rubric.grade_levels = ["✅", "❌"]
-    c_2_levels.rubric.default_grade_weights = [1, 0]
+    c_2_levels.rubric.default_grade_weights = [Decimal(1), Decimal(0)]
     c_2_levels.rubric.format.columns_width = [None, 3, 3]
     for criterion in c_2_levels.rubric.criteria:
-        criterion.default_grade_weights = [1, 0]
+        criterion.default_grade_weights = [Decimal(1), Decimal(0)]
         for ind in criterion.indicators:
-            ind.grade_weights = [1, 0]
+            ind.grade_weights = [Decimal(1), Decimal(0)]
     c_no_descriptors.rubric.validate()
     docfile = tmp_path / f"{config_template_path.stem}_2_levels.docx"
     generate_rubric(docfile, output_dir, c_2_levels)

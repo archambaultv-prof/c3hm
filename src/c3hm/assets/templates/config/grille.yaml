@@ -47,6 +47,10 @@ grille:
   # des critères doit être égale au total de l'évaluation.
   total: 50
 
+  # Optionnel. Le pas de notation pour le total et par défaut pour chaque critère.
+  # Par défaut, la valeur est 1.
+  total précision: 0.5
+
   # Une liste de niveaux de notation.
   niveaux: [Excellent, Très bien, Bien, Passable, Insuffisant]
 
@@ -75,6 +79,10 @@ grille:
     # d'une règle de trois.
     total: 15
 
+    # Optionnel. Le pas de notation pour le critère.
+    # Par défaut, la valeur est 1.
+    total précision: 0.1
+
     # Optionnel, le nom de cellule de la feuille Excel où le critère est noté.
     # Si non spécifié, le nom est généré selon l'ordre des critères (C1, C2, C3, etc.)
     # Le nom de la cellule est aussi utilisé pour lire les résultats dans le fichier Excel de correction.
@@ -85,7 +93,7 @@ grille:
     indicateurs:
 
     # Nom de l'indicateur
-    - nom: Balai brandi comme un sabre en pleine mêlée.
+    - nom: Balai brandi comme un sabre en pleine mêlée
 
       # Optionnel, le nom de cellule de la feuille Excel où le critère est noté.
       # Si non spécifié, le nom est généré selon l'ordre des critères (C1, C2, C3, etc.)
@@ -102,21 +110,21 @@ grille:
         - Le balai reste figé, le pont grince comme un vieux gréement.
 
     # Autres indicateurs
-    - nom: Seau d’eau salée renversé avec panache.
+    - nom: Seau d’eau salée renversé avec panache
       descripteurs:
         - Eau jaillissante en gerbes, digne d’une tempête de kraken !
         - Renversement propre, quelques gouttes hors cible.
         - Seau basculé sans trop d’éclaboussures, mais le pont reste un peu sec.
         - Mauvais angle, le mât est mouillé mais le pont demeure aride.
         - Seau rebondit, éclaboussures désordonnées partout sauf au bon endroit.
-    - nom: Mousse digne d’un kraken en plein spasme.
+    - nom: Mousse digne d’un kraken en plein spasme
       descripteurs:
         - Crée un tapis de mousse épais comme un nuage d’écume mythique.
         - Mousse généreuse, seuls quelques coins restent nus.
         - Une couche correcte de mousse, mais manque de volume.
         - Mousse clairsemée, opération bâclée.
         - À peine une trace de mousse, on dirait un désert maritime.
-    - nom: Chant marin entonné en chœur pour stimuler l’équipage.
+    - nom: Chant marin entonné en chœur pour stimuler l’équipage
       descripteurs:
         - Harmonies parfaites ; mêmes les mouettes balancent la tête en rythme !
         - Voix solides, deux ou trois fausses notes anecdotiques.
@@ -127,25 +135,26 @@ grille:
   # 2e critère
   - critère: Hissage du pavillon noir
     total: 20
-    
+    total précision: 0.1
+
     # Redéfinition de la pondération par défaut pour tous les indicateurs de ce critère
     pondération par défaut: [5, 4, 3, 2, 0]
     indicateurs:
-    - nom: Cordage enroulé en huit impeccable.
+    - nom: Cordage enroulé en huit impeccable
       descripteurs:
         - Nœud huit parfait, digne d’un musée des beaux cordages !
         - Tours bien placés, un seul brin chevauche légèrement.
         - Structure correcte mais cordage un peu lâche.
         - Hésitations visibles, le huit part en vrille.
         - Corde en salade, impossible à démêler sans un bon couteau.
-    - nom: Pavillon solidement fixé au mât.
+    - nom: Pavillon solidement fixé au mât
       descripteurs:
         - Le drapeau claque fièrement, aucun risque de le voir s’envoler.
         - Fixation robuste, léger flottement par grands vents.
         - Accroché convenablement, mais se relâche parfois.
         - Pavillon branlant, mauvais signe pour la détermination.
         - Pendouille misérablement, honneur entamé.
-    - nom: Drisse tendue sans nœud lâche.
+    - nom: Drisse tendue sans nœud lâche
       descripteurs:
         - Tendue comme un étai prêt à affronter la plus rude tempête.
         - Bonne tension, un petit relâchement sous forte traction.
@@ -156,9 +165,10 @@ grille:
   # 3e critère
   - critère: Distribution du rhum
     total: 15
+    total précision: 0.1
 
     indicateurs:
-    - nom: Gobelets remplis jusqu’à ras bord.
+    - nom: Gobelets remplis jusqu’à ras bord
       # Optionnel, redéfinition de la pondération pour cet indicateur seulement
       pondération: [5, 4, 3, 2, 0]
       descripteurs:
@@ -167,7 +177,7 @@ grille:
         - Niveau correct, un petit espace sous le bord.
         - Moitié vide, la vaillance s’étiole.
         - Verre désertique, le rhum reste prisonnier du tonneau.
-    - nom: File d’attente de matelots respectée.
+    - nom: File d’attente de matelots respectée
       # Optionnel, redéfinition de la pondération pour cet indicateur seulement
       pondération: [5, 4, 3, 2, 0]
       descripteurs:
@@ -176,7 +186,7 @@ grille:
         - Quelques manœuvres douteuses, mais l’ordre demeure globalement respecté.
         - Bousculades et murmures, mêlée digne d’un abordage improvisé.
         - Chaos total, chacun s’arrache son gobelet par la force.
-    - nom: Toast improvisé incluant le capitaine.
+    - nom: Toast improvisé incluant le capitaine
       descripteurs:
         - Rime épique et verve flamboyante ; même Neptune essuie une larme.
         - Toast sincère, un ou deux blancs poétiques.

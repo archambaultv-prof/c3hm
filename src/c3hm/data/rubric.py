@@ -13,6 +13,8 @@ GradeWeight = Decimal | list[Decimal] | dict[str, Decimal]
 
 GradeWeights = list[GradeWeight]
 
+CTHM_OMNIVOX = "cthm_omnivox"
+
 def max_grade_weight(grade_weight: GradeWeight) -> Decimal:
     """
     Retourne la meilleure note possible pour ce niveau.
@@ -21,6 +23,19 @@ def max_grade_weight(grade_weight: GradeWeight) -> Decimal:
         return max(grade_weight)
     elif isinstance(grade_weight, dict):
         return max(grade_weight.values())
+    elif isinstance(grade_weight, Decimal):
+        return grade_weight
+    else:
+        raise TypeError("Le poids de la note doit être un Decimal, une liste ou un dictionnaire.")
+
+def min_grade_weight(grade_weight: GradeWeight) -> Decimal:
+    """
+    Retourne la meilleure note possible pour ce niveau.
+    """
+    if isinstance(grade_weight, list):
+        return min(grade_weight)
+    elif isinstance(grade_weight, dict):
+        return min(grade_weight.values())
     elif isinstance(grade_weight, Decimal):
         return grade_weight
     else:
@@ -117,6 +132,10 @@ class Criterion(BaseModel):
     default_grade_weights: GradeWeights | None
     total: Decimal = Field(..., gt=Decimal(0)
     )
+    total_precision: Decimal = Field(
+        default=Decimal("1"),
+        description="Précision de la note du critère. Par défaut, 1."
+    )
     xl_cell_id: str | None = Field(
         default=None,
         description="Identifiant de la cellule dans le fichier Excel pour la correction.",
@@ -155,6 +174,7 @@ class Criterion(BaseModel):
             "pondération par défaut": grade_weights_to_yaml(self.default_grade_weights),
             "indicateurs": [indicator.to_dict() for indicator in self.indicators],
             "total": decimal_to_number(self.total),
+            "total précision": decimal_to_number(self.total_precision),
         }
 
     @classmethod
@@ -165,6 +185,7 @@ class Criterion(BaseModel):
         return cls(
             name=data["critère"],
             total=data["total"],
+            total_precision=data.get("total précision", Decimal("1")),
             indicators=[Indicator.from_dict(ind) for ind in data["indicateurs"]],
             xl_cell_id=data.get("xl id"),
             default_grade_weights=data.get("pondération par défaut"),
@@ -183,6 +204,7 @@ class Criterion(BaseModel):
             name=self.name,
             xl_cell_id=self.xl_cell_id,
             total=self.total,
+            total_precision=self.total_precision,
             indicators=[indicator.copy() for indicator in self.indicators],
             default_grade_weights=gw,
         )
@@ -254,6 +276,11 @@ class Rubric(BaseModel):
     """
     total: Decimal | None = Field(..., gt=0)
 
+    total_precision: Decimal = Field(
+        default=Decimal("1"),
+        description="Précision de la note totale. Par défaut, 1."
+    )
+
     grade_levels: GradeLevels = Field(..., min_length=1)
 
     default_grade_weights: GradeWeights | None
@@ -268,6 +295,7 @@ class Rubric(BaseModel):
         """
         return {
             "total": decimal_to_number(self.total),
+            "total précision": decimal_to_number(self.total_precision),
             "niveaux": self.grade_levels,
             "pondération par défaut": grade_weights_to_yaml(self.default_grade_weights),
             "critères": [criterion.to_dict() for criterion in self.criteria],
@@ -281,6 +309,7 @@ class Rubric(BaseModel):
         """
         return cls(
             total=data["total"],
+            total_precision=data.get("total précision", Decimal("1")),
             grade_levels=data["niveaux"],
             default_grade_weights=data.get("pondération par défaut"),
             criteria=[Criterion.from_dict(criterion) for criterion in data["critères"]],
@@ -338,7 +367,7 @@ class Rubric(BaseModel):
             )
 
         # Vérification des critères
-        seen_xl_ids = set()
+        seen_xl_ids = set(CTHM_OMNIVOX)  # cthm_omnivox est réservé pour le code omnivox
         for c, criterion in enumerate(self.criteria):
             # Vérification de la pondération par défaut du critère si elle existe
             # sinon on lui assigne la pondération par défaut de la grille si elle existe
@@ -407,6 +436,7 @@ class Rubric(BaseModel):
         """
         return Rubric(
             total=self.total,
+            total_precision=self.total_precision,
             grade_levels=self.grade_levels.copy(),
             default_grade_weights= self.default_grade_weights.copy()
                                     if self.default_grade_weights else None,

@@ -10,7 +10,7 @@ from openpyxl.worksheet.worksheet import Worksheet
 
 from c3hm.commands.generate_rubric import scale_color_schemes
 from c3hm.data.config import Config
-from c3hm.data.rubric import max_grade_weight
+from c3hm.data.rubric import CTHM_OMNIVOX, max_grade_weight
 from c3hm.data.student import Student
 from c3hm.utils import decimal_to_number
 
@@ -57,7 +57,7 @@ def add_student_sheet(ws: Worksheet, config: Config, student: Student) -> None:
     ws.append(["Code omnivox", f"{student.omnivox_code}"])
     cell = ws.cell(row=ws.max_row, column=2)
     dn = DefinedName(
-        name="cthm_omnivox",
+        name=CTHM_OMNIVOX,
         attr_text=f"{quote_sheetname(ws.title)}!{absolute_coordinate(cell.coordinate)}",
     )
     ws.defined_names.add(dn)

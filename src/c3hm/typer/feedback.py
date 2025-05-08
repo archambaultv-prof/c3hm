@@ -3,7 +3,7 @@ from pathlib import Path
 import openpyxl
 import typer
 
-from c3hm.commands.feedback import generate_feedback_rubric, graded_rubrics_from_wb
+from c3hm.commands.feedback import generate_feedback_rubric, grades_from_wb
 from c3hm.data.config import Config
 
 
@@ -29,7 +29,7 @@ def feedback_command(
     wb = openpyxl.load_workbook(gradebook_path,
                                 data_only=True,
                                 read_only=True)
-    graded_rubrics = graded_rubrics_from_wb(wb, config)
+    graded_rubrics = grades_from_wb(wb, config)
 
     # Génère le document Word
     for graded_rubric in graded_rubrics:
