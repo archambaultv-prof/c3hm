@@ -5,10 +5,11 @@ from pathlib import Path
 
 import docx
 import docx.enum.text
+from docx.document import Document
 from docx.enum.section import WD_ORIENT
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
-from docx.shared import RGBColor
+from docx.shared import Cm, RGBColor
 from docx.table import Table
 
 from c3hm.data.rubric import Criterion, GradeWeight, Rubric
@@ -90,7 +91,7 @@ def set_row_borders(row, top=0.5, bottom=0.5):
         if bottom:
             set_border(tc_borders, 'bottom', bottom)
 
-def set_orientation(doc, orientation: str):
+def set_orientation(doc: Document, orientation: str):
     """
     Définit l'orientation de la page dans un document Word.
     """
@@ -155,7 +156,7 @@ def generate_rubric(
     p.alignment = docx.enum.text.WD_PARAGRAPH_ALIGNMENT.CENTER
 
     # insérer la table pour la grille
-    table = doc.add_table(rows=1, cols=rubric.nb_columns(), style="Normal Table")
+    table = add_word_table(doc, rubric.nb_columns(), rubric.format.columns_width)
 
     # Remplir la première ligne avec le barème
     set_first_row(rubric, table)
@@ -173,6 +174,53 @@ def generate_rubric(
 
     # enregistrer le fichier
     doc.save(output_path)
+
+def add_word_table(doc: Document, n_cols: int, column_widths_cm: list[float|None]):
+    """
+    Insère un tableau à n_cols colonnes, en utilisant largeurs_cm pour définir
+    la largeur de chaque colonne en cm. Les valeurs None partagent
+    équitablement l’espace restant.
+    """
+    # 1) Création du tableau
+    table = doc.add_table(rows=1, cols=n_cols, style="Normal Table")
+    if not column_widths_cm:
+        return table
+
+    table.autofit = False  # désactive l’ajustement automatique de Word
+
+    # 2) Calcul de la largeur disponible en EMU
+    sect = doc.sections[0]
+    avail_width_emu = (
+        sect.page_width
+        - sect.left_margin
+        - sect.right_margin
+    )
+
+    # 3) Conversion des spécifications cm en EMU
+    fixed_emu = [Cm(w) for w in column_widths_cm if w is not None]
+    total_fixed = sum(fixed_emu)
+
+    # Décompte du nombre de colonnes à largeur automatique
+    nb_auto = sum(1 for w in column_widths_cm if w is None)
+    emu_auto = (
+        (avail_width_emu - total_fixed) // nb_auto
+        if nb_auto else
+        0
+    )
+
+    # 4) Assignation de la largeur à chaque colonne
+    for idx, col in enumerate(table.columns):
+        w = column_widths_cm[idx]
+        col.width = Cm(w) if w is not None else emu_auto
+
+    # 5) Assignation de la largeur à chaque cellule
+    # (yep ... c'est comme ça dans Word)
+    for row in table.rows:
+        for idx, cell in enumerate(row.cells):
+            w = column_widths_cm[idx]
+            cell.width = Cm(w) if w is not None else emu_auto
+
+    return table
 
 
 def add_criterion(table: Table,

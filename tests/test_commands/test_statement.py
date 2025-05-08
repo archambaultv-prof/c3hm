@@ -36,6 +36,7 @@ def test_generate_word_from_rubric(
     c_2_levels.rubric.format.orientation = "portrait"
     c_2_levels.rubric.grade_levels = ["✅", "❌"]
     c_2_levels.rubric.default_grade_weights = [1, 0]
+    c_2_levels.rubric.format.columns_width = [None, 2, 2]
     for criterion in c_2_levels.rubric.criteria:
         criterion.default_grade_weights = [1, 0]
         for ind in criterion.indicators:

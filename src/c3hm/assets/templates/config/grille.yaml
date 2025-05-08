@@ -199,6 +199,12 @@ grille:
     # Lorsque faux, chaque indicateur est affiché sur une ligne distincte.
     masquer les indicateurs: false
 
+    # Optionnel. Largeur des colonnes de la grille en centimètres.
+    # Si vide, la largeur des colonnes est calculée automatiquement.
+    # Doit être de la même longueur que le nombre de niveaux + 1.
+    # Inscrire null pour une colonne de largeur automatique.
+    largeur des colonnes: []
+
 # La liste des étudiants, fournis par Omnivox
 # Ils est aussi possible de mettre un lien vers un fichier CSV ou Excel contenant la liste des étudiants.
 # étudiants: ma_liste.csv

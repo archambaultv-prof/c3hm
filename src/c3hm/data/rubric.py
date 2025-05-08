@@ -179,10 +179,19 @@ class Format(BaseModel):
     """
     Représente le format de la grille d'évaluation.
     """
-    orientation: None | Literal["portrait", "paysage"]
+    orientation: None | Literal["portrait", "paysage"] = Field(
+        default=None,
+        description="Orientation de la grille d'évaluation. Peut être 'portrait' ou 'paysage'."
+    )
     hide_indicators: bool = Field(
         default=False,
         description="Indique si les indicateurs doivent être masqués dans la grille d'évaluation."
+    )
+    columns_width: list[float | None] = Field(
+        default_factory=list,
+        description="Largeur des colonnes de la grille d'évaluation. "
+                    "La première colonne est pour les critères, "
+                    "les autres pour les niveaux de barème."
     )
 
     def to_dict(self) -> dict:
@@ -192,6 +201,7 @@ class Format(BaseModel):
         return {
             "orientation": self.orientation,
             "masquer les indicateurs": self.hide_indicators,
+            "largeur des colonnes": self.columns_width,
         }
 
     @classmethod
@@ -202,6 +212,7 @@ class Format(BaseModel):
         return cls(
             orientation=data.get("orientation"),
             hide_indicators=data.get("masquer les indicateurs", False),
+            column_width=data.get("largeur des colonnes", []),
         )
 
     def copy(self) -> "Format":
@@ -297,6 +308,13 @@ class Rubric(BaseModel):
                     "La pondération par défaut de la grille "
                     f"ne correspond pas au nombre de niveaux ({nb_of_levels})."
                 )
+
+        # Vérification largeur des colonnes
+        if self.format.columns_width and len(self.format.columns_width) != nb_of_levels + 1:
+            raise ValueError(
+                "La largeur des colonnes ne correspond pas au nombre de niveaux + 1"
+                f"({nb_of_levels + 1})."
+            )
 
         # Vérification des critères
         for c, criterion in enumerate(self.criteria):
