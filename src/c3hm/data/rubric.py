@@ -13,6 +13,19 @@ GradeWeight = Decimal | list[Decimal] | dict[str, Decimal]
 
 GradeWeights = list[GradeWeight]
 
+def max_grade_weight(grade_weight: GradeWeight) -> Decimal:
+    """
+    Retourne la meilleure note possible pour ce niveau.
+    """
+    if isinstance(grade_weight, list):
+        return max(grade_weight)
+    elif isinstance(grade_weight, dict):
+        return max(grade_weight.values())
+    elif isinstance(grade_weight, Decimal):
+        return grade_weight
+    else:
+        raise TypeError("Le poids de la note doit être un Decimal, une liste ou un dictionnaire.")
+
 def grade_weights_to_yaml(grade_weights: GradeWeights | None):
     """
     Convertit les Decimal en nombres entier ou flottant pour éviter d'avoir des
@@ -26,7 +39,6 @@ def grade_weights_to_yaml(grade_weights: GradeWeights | None):
         return None
     else:
         return decimal_to_number(grade_weights)
-
 
 class Indicator(BaseModel):
     """

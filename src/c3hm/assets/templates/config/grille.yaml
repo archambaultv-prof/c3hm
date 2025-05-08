@@ -222,8 +222,8 @@ grille:
   - prénom: Moussaillon
     nom de famille: ArchiBord
     code omnivox: 271828
-    alias: terrerio
+    alias: archibord
   - prénom: Quartier-maître
     nom de famille: GrandeColline-Rhum
     code omnivox: 19216801
-    alias: grhum
+    alias: gc_rhum
