@@ -2,7 +2,12 @@ import shutil
 from pathlib import Path
 
 import pytest
+from click.testing import CliRunner
 
+
+@pytest.fixture
+def runner():
+    return CliRunner()
 
 @pytest.fixture
 def gradebook_path() -> Path:

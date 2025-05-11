@@ -1,13 +1,15 @@
 from decimal import Decimal
+from pathlib import Path
 from typing import Any
 
+import openpyxl
 from openpyxl import Workbook
 from openpyxl.cell.cell import Cell
 from openpyxl.worksheet.worksheet import Worksheet
 
 from c3hm.commands.generate_rubric import generate_rubric
 from c3hm.data.config import Config
-from c3hm.data.rubric import CTHM_OMNIVOX, Rubric
+from c3hm.data.rubric import CTHM_OMNIVOX
 from c3hm.utils import round_to_nearest_quantum
 
 
@@ -105,3 +107,36 @@ def grades_from_ws(ws: Worksheet, config: Config) -> dict[str, Any]:
             d[indicator.xl_comment_cell_id()] = ind_comment
 
     return d
+
+
+def generate_feedback(
+    config_path: Path | str,
+    gradebook_path: Path | str,
+    output_dir: Path | str
+) -> None:
+    """
+    Génère un document Word pour les étudiants à partir d’un grille d’évaluation (GradedRubric).
+    """
+    config_path = Path(config_path)
+    gradebook_path = Path(gradebook_path)
+    output_dir = Path(output_dir)
+
+    config = Config.from_yaml(config_path)
+    wb = openpyxl.load_workbook(gradebook_path,
+                                data_only=True,
+                                read_only=True)
+    grades = grades_from_wb(wb, config)
+
+    # Génère le document Word
+    for grade in grades:
+        student = config.find_student(grade[CTHM_OMNIVOX])
+        # Génère le fichier dans le répertoire de sortie pour inspection manuelle
+        feedback_path = output_dir / f"{student.omnivox_code}-{student.alias}.docx"
+        feedback_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Génère le document Word
+        title = (student.first_name + " " +
+                 student.last_name + " - " +
+                 config.evaluation.name + " - " +
+                 config.evaluation.course)
+        generate_rubric(config.rubric, feedback_path, title=title, grades=grade)
