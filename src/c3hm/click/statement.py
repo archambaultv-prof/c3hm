@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import click
-
 from c3hm.commands.statement import generate_statement_rubric
 from c3hm.data.config import Config
 

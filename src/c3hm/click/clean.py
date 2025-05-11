@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import click
-
 from c3hm.commands.clean import PATHS_TO_DELETE, remove_unwanted_dirs
 
 
@@ -15,7 +14,8 @@ from c3hm.commands.clean import PATHS_TO_DELETE, remove_unwanted_dirs
         "  c3hm clean                     # nettoyage standard dans le répertoire courant\n"
         "  c3hm clean mon_dossier -n      # simulation dans un dossier spécifique\n"
         "  c3hm clean --keep .git --keep .vscode\n"
-        "  c3hm clean --all               # scanner tous les dossiers, pas seulement ceux au format étudiant"
+        "  c3hm clean --all               # scanner tous les dossiers, pas seulement "
+        "ceux au format étudiant"
     )
 )
 @click.argument(

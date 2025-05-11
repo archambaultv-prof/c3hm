@@ -1,5 +1,4 @@
 import click
-
 from c3hm.click.clean import clean_command
 from c3hm.click.feedback import feedback_command
 from c3hm.click.gradebook import gradebook_command

@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import openpyxl
-import yaml
 
 from c3hm.commands.feedback import grades_from_wb
 from c3hm.commands.generate_rubric import generate_rubric

@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import click
-
 from c3hm.commands.feedback import generate_feedback
 
 
