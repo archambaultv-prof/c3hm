@@ -13,7 +13,7 @@ def template_command(
     )
 ):
     """
-    TODO: Remplacer par une vraie description
+    Génère un fichier de configuration commenté.
     """
-    output_path = Path.cwd() / "grille.yaml" if not output_path else Path(output_path)
+    output_path = Path.cwd() / ("grille.yaml" if not output_path else Path(output_path))
     export_template(output_path)
