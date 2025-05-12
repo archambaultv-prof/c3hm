@@ -1,36 +1,38 @@
 from decimal import Decimal
 from pathlib import Path
+from typing import Any
 
-import docx
-import docx.enum.text
-from docx.document import Document
-from docx.enum.text import WD_COLOR_INDEX
-from docx.table import Table
+import openpyxl
 from openpyxl import Workbook
 from openpyxl.cell.cell import Cell
 from openpyxl.worksheet.worksheet import Worksheet
 
-from c3hm.commands.student import generate_rubric, set_as_table_header, set_row_borders, set_scale
+from c3hm.commands.generate_rubric import generate_rubric
 from c3hm.data.config import Config
-from c3hm.data.gradedrubric import GradedCriterion, GradedIndicator, GradedRubric
+from c3hm.data.rubric import CTHM_OMNIVOX
 from c3hm.utils import round_to_nearest_quantum
 
 
-def graded_rubrics_from_wb(
+def grades_from_wb(
     wb: Workbook,
     config: Config,
-) -> list[GradedRubric]:
+) -> list[dict[str, Any]]:
     """
-    Lit le fichier Excel et retourne une liste de GradedRubric.
+    Lit le fichier Excel et retourne une liste de dictionnaires contenant
+    les informations sur les grilles d'évaluation.
+    Chaque dictionnaire contient les informations suivantes :
+    - omnivox_code : le code omnivox de l'étudiant. Clé : cthm_omnivox
+    - les notes et commentaires pour chaque critère et indicateur.
+      Clé : le xl_cell_id_[grade|comment]
     """
     graded_rubrics = []
 
     for ws in wb.worksheets:
         # Test si on a un nom de cellule "cthm_omnivox" dans la feuille
-        cell = find_named_cell(ws, "cthm_omnivox")
+        cell = find_named_cell(ws, CTHM_OMNIVOX)
         if cell is None:
             continue
-        gr = graded_rubric_from_ws(ws, config)
+        gr = grades_from_ws(ws, config)
         graded_rubrics.append(gr)
 
     return graded_rubrics
@@ -55,32 +57,28 @@ def find_named_cell(ws: Worksheet, named_cell: str) -> Cell | None:
     return None
 
 
-def graded_rubric_from_ws(ws: Worksheet, config: Config) -> GradedRubric:
+def grades_from_ws(ws: Worksheet, config: Config) -> dict[str, Any]:
     """
-    Lit une feuille de calcul et retourne un GradedRubric.
+    Lit une feuille de calcul et retourne un dictionnaire contenant
+    les informations sur les grilles d'évaluation.
     Se fit aux noms de cellules définis dans la feuille de calcul.
     """
     rubric = config.rubric
 
     # Récupère le code omnivox
-    cell = find_named_cell(ws, "cthm_omnivox")
+    cell = find_named_cell(ws, CTHM_OMNIVOX)
     if cell is None:
         raise ValueError("La cellule nommée 'cthm_omnivox' n'existe pas dans la feuille.")
-    omnivox_code = cell.value
-
-    student = config.find_student(omnivox_code)
-    if student is None:
-        raise ValueError(f"L'étudiant avec le code omnivox '{omnivox_code}'"
-                         " n'existe pas dans la configuration.")
+    d = {CTHM_OMNIVOX: cell.value}
 
     # Récupère les notes et commentaires
-    graded_criteria = []
     for criterion in rubric.criteria:
         grade_cell = find_named_cell(ws, criterion.xl_grade_cell_id())
         if grade_cell is None:
             raise ValueError(f"La cellule nommée '{criterion.xl_grade_cell_id()}'"
                              " n'existe pas dans la feuille.")
-        grade = round_to_nearest_quantum(Decimal(str(grade_cell.value)), rubric.pts_precision)
+        grade = round_to_nearest_quantum(Decimal(str(grade_cell.value)), criterion.total_precision)
+        d[criterion.xl_grade_cell_id()] = grade
 
         # Récupère les commentaires
         comment_cell = find_named_cell(ws, criterion.xl_comment_cell_id())
@@ -88,16 +86,16 @@ def graded_rubric_from_ws(ws: Worksheet, config: Config) -> GradedRubric:
             raise ValueError(f"La cellule nommée '{criterion.xl_comment_cell_id()}'"
                              " n'existe pas dans la feuille.")
         comment = "" if comment_cell.value is None else str(comment_cell.value).strip()
+        d[criterion.xl_comment_cell_id()] = comment
 
-        graded_indicators = []
         for indicator in criterion.indicators:
             # Récupère la note de l'indicateur
             ind_grade_cell = find_named_cell(ws, indicator.xl_grade_cell_id())
             if ind_grade_cell is None:
                 raise ValueError(f"La cellule nommée '{indicator.xl_grade_cell_id()}'"
                                  " n'existe pas dans la feuille.")
-            ind_grade = round_to_nearest_quantum(Decimal(str(ind_grade_cell.value)),
-                                                 rubric.scale.precision)
+            ind_grade = Decimal(str(ind_grade_cell.value))
+            d[indicator.xl_grade_cell_id()] = ind_grade
 
             # Récupère le commentaire de l'indicateur
             ind_comment_cell = find_named_cell(ws, indicator.xl_comment_cell_id())
@@ -106,121 +104,39 @@ def graded_rubric_from_ws(ws: Worksheet, config: Config) -> GradedRubric:
                                  " n'existe pas dans la feuille.")
             ind_comment = (""  if ind_comment_cell.value is None
                            else str(ind_comment_cell.value).strip())
+            d[indicator.xl_comment_cell_id()] = ind_comment
 
-            graded_indicator = GradedIndicator.from_indicator(
-                indicator=indicator,
-                grade=ind_grade,
-                comment=ind_comment,
-            )
-            graded_indicators.append(graded_indicator)
-
-        graded_criterion = GradedCriterion.from_criterion(
-            criterion=criterion,
-            graded_indicators=graded_indicators,
-            grade=grade,
-            comment=comment,
-        )
-
-        graded_criteria.append(graded_criterion)
-
-    return GradedRubric.from_rubric(
-        rubric=rubric,
-        graded_criteria=graded_criteria,
-        student=student)
+    return d
 
 
-def generate_feedback_rubric(graded_rubric: GradedRubric,
-                             output_path: Path | str,
-                             *,
-                             title: str = "Grille d'évaluation") -> None:
+def generate_feedback(
+    config_path: Path | str,
+    gradebook_path: Path | str,
+    output_dir: Path | str
+) -> None:
     """
-    Génère un fichier de rétroaction à partir d'une GradedRubric.
+    Génère un document Word pour les étudiants à partir d’un grille d’évaluation (GradedRubric).
     """
-    generate_rubric(graded_rubric,
-                    output_path,
-                    title=title,
-                    set_first_row=feedback_set_first_row,
-                    add_criterion=feedback_add_criterion,
-                    add_comments=feedback_add_comments)
+    config_path = Path(config_path)
+    gradebook_path = Path(gradebook_path)
+    output_dir = Path(output_dir)
 
+    config = Config.from_yaml(config_path)
+    wb = openpyxl.load_workbook(gradebook_path,
+                                data_only=True,
+                                read_only=True)
+    grades = grades_from_wb(wb, config)
 
-def feedback_set_first_row(rubric: GradedRubric, table: Table):
-    """
-    Remplit la première ligne du tableau avec le barème et les seuils.
-    """
+    # Génère le document Word
+    for grade in grades:
+        student = config.find_student(grade[CTHM_OMNIVOX])
+        # Génère le fichier dans le répertoire de sortie pour inspection manuelle
+        feedback_path = output_dir / f"{student.omnivox_code}-{student.alias}.docx"
+        feedback_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # En-tête de la table
-    set_as_table_header(table.rows[0])
-    set_row_borders(table.rows[0])
-
-    # Première cellule : Total sur X pts
-    total = sum(criterion.grade for criterion in rubric.criteria)
-    hdr_cells = table.rows[0].cells
-    total_cell = hdr_cells[0]
-    p = total_cell.paragraphs[0]
-    p.text = f"Note : {total} / {rubric.pts_total}"
-    p.style = "Heading 3"
-
-    # Barème et seuils
-    set_scale(rubric, hdr_cells)
-
-
-def feedback_add_criterion(table: Table,
-                           criterion: GradedCriterion,
-                           graded_rubric: GradedRubric):
-    """
-    Ajoute un critère et ses indicateurs à la table.
-    """
-    row = table.add_row()
-    # Critère
-    p = row.cells[0].paragraphs[0]
-    pts = "pt" if criterion.points == 1 else "pts"
-    p.text = f"{criterion.name} ({criterion.points} {pts})"
-    p.style = "Heading 3"
-    perfect = graded_rubric.scale[0].threshold
-    score = perfect * criterion.grade / criterion.points
-    for i, scale in enumerate(graded_rubric.scale):
-        if score >= scale.threshold:
-            p = row.cells[i + 1].paragraphs[0]
-            p.text = f"{criterion.grade} / {criterion.points}"
-            p.style = "Heading 3"
-            break
-
-    # Indicateurs
-    for indicator in criterion.indicators:
-        row = table.add_row()
-        p = row.cells[0].paragraphs[0]
-        run = p.add_run(indicator.name)
-        run.style = "Emphasis"
-
-        # Descripteurs alignés avec les niveaux de barème
-        find_highlight = True
-        for scale, descriptor in enumerate(indicator.descriptors):
-            cell = row.cells[scale + 1]
-            cell.text = descriptor
-            if find_highlight and indicator.grade >= graded_rubric.scale[scale].threshold:
-                find_highlight = False
-                for paragraph in cell.paragraphs:
-                    for run in paragraph.runs:
-                        run.font.highlight_color = WD_COLOR_INDEX.YELLOW
-
-def feedback_add_comments(doc: Document,
-                          graded_rubric: GradedRubric):
-        """
-        Ajoute les commentaires de l'évaluateur à la fin du document.
-        """
-        heading = doc.add_heading("Commentaires", level=1)
-        heading.alignment = docx.enum.text.WD_PARAGRAPH_ALIGNMENT.LEFT
-        for criterion in graded_rubric.criteria:
-            if criterion.has_comments():
-                heading = doc.add_heading(criterion.name, level=3)
-                heading.alignment = docx.enum.text.WD_PARAGRAPH_ALIGNMENT.LEFT
-
-                if criterion.comment.strip():
-                    doc.add_paragraph(criterion.comment.strip())
-            for indicator in criterion.indicators:
-                if indicator.comment.strip():
-                    p = doc.add_paragraph(f"{indicator.name} : ")
-                    run = p.runs[0]
-                    run.style = "Emphasis"
-                    p.add_run(indicator.comment.strip())
+        # Génère le document Word
+        title = (student.first_name + " " +
+                 student.last_name + " - " +
+                 config.evaluation.name + " - " +
+                 config.evaluation.course)
+        generate_rubric(config.rubric, feedback_path, title=title, grades=grade)

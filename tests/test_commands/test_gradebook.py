@@ -2,11 +2,10 @@ from pathlib import Path
 
 from c3hm.commands.gradebook import generate_gradebook
 from c3hm.data.config import Config
-from c3hm.data.student import Student
 
 
 def test_generate_gradebook(
-        config_template_5_path: Path,
+        config_template_path: Path,
         tmp_path: Path,
         output_dir: Path):
     """
@@ -16,25 +15,10 @@ def test_generate_gradebook(
     Recopie le fichier créé dans le répertoire tests/output pour inspection
     manuelle si nécessaire.
     """
-    config = Config.from_yaml(config_template_5_path)
-    config.students = [
-            {"code omnivox": "123456",
-             "prénom": "Jean",
-             "nom de famille": "Dupont",
-             "alias": "jdupont"},
-            {"code omnivox": "654321",
-             "prénom": "Marie",
-             "nom de famille": "Durand",
-             "alias": "mdurand"},
-            {"code omnivox": "789012",
-             "prénom": "Pierre",
-             "nom de famille": "Martin",
-             "alias": "pmartin"},
-    ]
-    config.students = [Student.from_dict(student) for student in config.students]
+    config = Config.from_yaml(config_template_path)
 
-    name = config_template_5_path.with_name(
-            f"{config_template_5_path.stem}.xlsx")
+    name = config_template_path.with_name(
+            f"{config_template_path.stem}.xlsx")
     xl_file = tmp_path / name
     generate_gradebook(config, xl_file)
     assert xl_file.exists()

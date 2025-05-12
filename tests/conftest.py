@@ -3,30 +3,28 @@ from pathlib import Path
 
 import pytest
 
+from click.testing import CliRunner
+
 
 @pytest.fixture
-def config_1_path() -> Path:
-    """
-    Retourne le chemin vers le fichier de la grille d'évaluation config_1.yaml
-    """
-    d = Path(__file__).parent / "fixtures"
-    return d / "config_1.yaml"
+def runner():
+    return CliRunner()
 
 @pytest.fixture
-def gradebook_1_path() -> Path:
+def gradebook_path() -> Path:
     """
     Retourne le chemin vers le fichier gradebook_1.yaml
     """
     d = Path(__file__).parent / "fixtures"
-    return d / "gradebook_1.xlsx"
+    return d / "grille_gradebook.xlsx"
 
 @pytest.fixture
-def config_template_5_path() -> Path:
+def config_template_path() -> Path:
     """
     Retourne le chemin vers le fichier de la grille d'évaluation config_5_levels.yaml
     """
     d = Path(__file__).parent.parent / "src" / "c3hm" / "assets" / "templates" / "config"
-    return d / "config_5_levels.yaml"
+    return d / "grille.yaml"
 
 @pytest.fixture(scope="session")
 def output_dir() -> Path:
