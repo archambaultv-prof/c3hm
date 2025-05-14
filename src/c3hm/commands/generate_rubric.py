@@ -14,7 +14,14 @@ from docx.oxml.ns import qn
 from docx.shared import Cm, RGBColor
 from docx.table import Table
 
-from c3hm.data.rubric import Criterion, GradeWeight, Rubric, max_grade_weight, min_grade_weight
+from c3hm.data.rubric import (
+    CTHM_GLOBAL_COMMENT,
+    Criterion,
+    GradeWeight,
+    Rubric,
+    max_grade_weight,
+    min_grade_weight,
+)
 from c3hm.data.student import Student
 from c3hm.utils import decimal_to_number
 
@@ -161,6 +168,14 @@ def generate_rubric(
     if student:
         p = doc.add_paragraph()
         p.text = f"{student.first_name} {student.last_name}"
+
+    # Insérer le commentaire général
+    if grades and CTHM_GLOBAL_COMMENT in grades and grades[CTHM_GLOBAL_COMMENT]:
+        comment = str(grades[CTHM_GLOBAL_COMMENT]).strip()
+        p = doc.add_paragraph()
+        p.text = f"Commentaire : {comment}"
+        p.style = "Normal"
+        p.alignment = docx.enum.text.WD_PARAGRAPH_ALIGNMENT.LEFT
 
     # insérer la table pour la grille
     table = add_word_table(doc, rubric.nb_columns(), rubric.format.columns_width)

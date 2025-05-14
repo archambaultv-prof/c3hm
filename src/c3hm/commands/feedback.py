@@ -9,7 +9,7 @@ from openpyxl.worksheet.worksheet import Worksheet
 
 from c3hm.commands.generate_rubric import generate_rubric
 from c3hm.data.config import Config
-from c3hm.data.rubric import CTHM_OMNIVOX
+from c3hm.data.rubric import CTHM_GLOBAL_COMMENT, CTHM_OMNIVOX
 from c3hm.utils import round_to_nearest_quantum
 
 
@@ -68,8 +68,15 @@ def grades_from_ws(ws: Worksheet, config: Config) -> dict[str, Any]:
     # Récupère le code omnivox
     cell = find_named_cell(ws, CTHM_OMNIVOX)
     if cell is None:
-        raise ValueError("La cellule nommée 'cthm_omnivox' n'existe pas dans la feuille.")
+        raise ValueError(f"La cellule nommée '{CTHM_OMNIVOX}' n'existe pas dans la feuille.")
     d = {CTHM_OMNIVOX: cell.value}
+
+    # Récupère le commentaire général
+    cell = find_named_cell(ws, CTHM_GLOBAL_COMMENT)
+    if cell is None:
+        raise ValueError(f"La cellule nommée '{CTHM_GLOBAL_COMMENT}' "
+                         "n'existe pas dans la feuille.")
+    d[CTHM_GLOBAL_COMMENT] = cell.value
 
     # Récupère les notes et commentaires
     for criterion in rubric.criteria:
@@ -140,3 +147,33 @@ def generate_feedback(
                  config.evaluation.name + " - " +
                  config.evaluation.course)
         generate_rubric(config.rubric, feedback_path, title=title, grades=grade)
+
+    # Génère le fichier Excel pour charge les notes dans Omnivox
+    generate_xl_for_omnivox(config, grades, output_dir)
+
+
+def generate_xl_for_omnivox(
+    config: Config,
+    grades: list[dict[str, Any]],
+    output_dir: Path | str
+) -> None:
+    """
+    Génère un fichier Excel pour charger les notes dans Omnivox.
+    """
+    output_dir = Path(output_dir)
+    omnivox_path = output_dir / "omnivox.xlsx"
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Notes"
+
+    # En-têtes
+    ws.append(["Code omnivox", "Note", "Commentaire"])
+
+    # Remplit le tableau avec les notes et les commentaires
+    for grade in grades:
+        note = sum(grade[criterion.xl_grade_cell_id()] for criterion in config.rubric.criteria)
+        comment = grade.get(CTHM_GLOBAL_COMMENT, "")
+        ws.append([grade[CTHM_OMNIVOX], note, comment])
+
+    # Sauvegarde le fichier Excel
+    wb.save(omnivox_path)

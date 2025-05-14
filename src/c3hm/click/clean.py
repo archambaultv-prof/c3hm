@@ -32,14 +32,14 @@ from c3hm.commands.clean import PATHS_TO_DELETE, remove_unwanted_dirs
     "--dryrun", "-n",
     is_flag=True,
     default=False,
-    help="Simulation : affiche ce qui serait supprimé sans rien toucher"
+    help="Simulation : affiche ce qui serait supprimé sans rien toucher. Active le mode verbose."
 )
 @click.option(
     "--keep",
     multiple=True,
     help=(
         "Noms ou motifs (glob) à conserver alors qu'ils seraient normalement supprimés. "
-        'Exemple : --keep ".git"'
+        'Exemple : --keep .git'
     )
 )
 @click.option(

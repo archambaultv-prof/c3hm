@@ -14,6 +14,7 @@ GradeWeight = Decimal | list[Decimal] | dict[str, Decimal]
 GradeWeights = list[GradeWeight]
 
 CTHM_OMNIVOX = "cthm_omnivox"
+CTHM_GLOBAL_COMMENT = "cthm_global_comment"
 
 def max_grade_weight(grade_weight: GradeWeight) -> Decimal:
     """
