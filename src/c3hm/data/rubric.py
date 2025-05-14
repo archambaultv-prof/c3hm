@@ -46,14 +46,17 @@ def grade_weights_to_yaml(grade_weights: GradeWeights | None):
     Convertit les Decimal en nombres entier ou flottant pour éviter d'avoir des
     nombres flottants du style 1.0
     """
-    if isinstance(grade_weights, list):
-        return [decimal_to_number(weight) for weight in grade_weights]
-    elif isinstance(grade_weights, dict):
-        return {key: decimal_to_number(value) for key, value in grade_weights.items()}
-    elif grade_weights is None:
+    if grade_weights is None:
         return None
-    else:
-        return decimal_to_number(grade_weights)
+    ls = []
+    for weight in grade_weights:
+        if isinstance(weight, list):
+            ls.append([decimal_to_number(w) for w in weight])
+        elif isinstance(weight, dict):
+            ls.append({key: decimal_to_number(value) for key, value in weight.items()})
+        else:
+            ls.append(decimal_to_number(weight))
+    return ls
 
 class Indicator(BaseModel):
     """

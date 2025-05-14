@@ -42,3 +42,11 @@ def clear_output_folder(output_dir: Path):
     if output_dir.exists():
         shutil.rmtree(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+
+@pytest.fixture
+def student_list_path() -> Path:
+    """
+    Retourne le chemin vers le fichier liste_etudiants.csv
+    """
+    d = Path(__file__).parent / "fixtures"
+    return d / "liste_etudiants.csv"

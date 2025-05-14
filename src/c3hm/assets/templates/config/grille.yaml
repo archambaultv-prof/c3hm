@@ -219,10 +219,12 @@ grille:
     # Inscrire null pour une colonne de largeur automatique.
     largeur des colonnes: []
 
-# La liste des étudiants, fournis par Omnivox
-# Ils est aussi possible de mettre un lien vers un fichier CSV ou Excel contenant la liste des étudiants.
+# La liste des étudiants
+# Il est aussi possible de mettre un lien vers un fichier CSV (utf-8) ou Excel contenant la liste des étudiants.
+# Attention, Omnivox fournit une liste avec encodage iso-8859-1 (latin-1) et des '="' en trop.
+# L'entête du fichier CSV doit être identique à celui de la liste ci-dessous : code omnivox, prénom, nom de famille, alias
+
 # étudiants: ma_liste.csv
-# étudiants: ma_liste.xlsx
 étudiants:
   - prénom: Timonière
     nom de famille: Houle

@@ -1,3 +1,6 @@
+import csv
+from pathlib import Path
+
 import yaml
 from pydantic import BaseModel
 
@@ -29,6 +32,8 @@ class Config(BaseModel):
         """
         Crée une instance validée de Config à partir d'un dictionnaire.
         """
+        if isinstance(data["étudiants"], str | Path):
+            data["étudiants"] = read_student_csv(data["étudiants"])
         config = cls(
             evaluation=Evaluation.from_dict(data["évaluation"]),
             rubric=Rubric.from_dict(data["grille"]),
@@ -52,12 +57,21 @@ class Config(BaseModel):
         return title
 
     @classmethod
-    def from_yaml(cls, path: str) -> "Config":
+    def from_yaml(cls, yaml_path: str | Path) -> "Config":
         """
         Crée une instance de Config à partir d'un fichier YAML.
         """
-        with open(path, encoding="utf-8") as file:
+        with open(yaml_path, encoding="utf-8") as file:
             data = yaml.safe_load(file)
+
+        # Vérifie si le fichier YAML contient une clé "étudiants" qui est un
+        # chemin vers un fichier CSV.
+        if isinstance(data["étudiants"], str):
+            p = Path(data["étudiants"])
+            if not p.is_absolute():
+                p = Path(yaml_path).parent / p
+            data["étudiants"] = p
+
         return cls.from_dict(data)
 
     def to_yaml(self, path: str) -> None:
@@ -94,3 +108,15 @@ class Config(BaseModel):
             rubric=self.rubric.copy(),
             students=[student.copy() for student in self.students],
         )
+
+def read_student_csv(path: str | Path) -> list[dict[str, str]]:
+    """
+    Lit un fichier CSV contenant des informations sur les étudiants et retourne
+    une liste d'instances de Student.
+    """
+    students = []
+    with open(path, encoding="utf-8") as file:
+        csv_data = csv.DictReader(file)
+        for row in csv_data:
+            students.append(row)
+    return students
