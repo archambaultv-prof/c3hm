@@ -1,4 +1,5 @@
 import os
+import shutil
 from pathlib import Path
 
 from c3hm.commands.omnivox import is_student_folder
@@ -55,6 +56,9 @@ def remove_unwanted_dirs(root_path: Path | str = None,
 
     paths_to_delete = paths_to_delete or PATHS_TO_DELETE
 
+    if dryrun:
+        verbose=True
+
     if not scan_all:
         # Scan only directories in root_path that qualify as student folders.
         for item in os.listdir(root_path):
@@ -85,7 +89,7 @@ def remove_unwanted_dirs(root_path: Path | str = None,
                     if verbose:
                         print(f"Deleting directory: {d_path}")
                     if not dryrun:
-                        os.rmdir(d_path)
+                        shutil.rmtree(d_path)
                     # Remove it from dirs to prevent os.walk from descending into it.
                     dirs.remove(d)
             # Process files that match the deletion criteria.
