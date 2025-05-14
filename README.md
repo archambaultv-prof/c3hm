@@ -55,21 +55,13 @@ on est au Québec, et qu'on aime bien notre langue.
 
 ## 🪄 Installation
 
-Si tu es du genre à aimer les outils modernes comme
-[`uv`](https://docs.astral.sh/uv/), tu peux utiliser `c3hm` directement, sans
-te casser la tête avec des installations compliquées. Oui, c'est presque
-magique.
-
-Par exemple, pour générer ta grille d'évaluation `tp2` et impressionner tes
-collègues :
+Clone le dépôt et installe `c3hm` en utilisant [`pipx`](https://github.com/pypa/pipx) :
 
 ```bash
-uvx c3hm rubric generate tp2.yaml
+git clone https://github.com/archambaultv-prof/c3hm.git
+cd c3hm
+pipx install .
 ```
-
-Si tu préfères les méthodes plus classiques (ou si tu es nostalgique des années
-2000), pas de panique. `c3hm` est un package Python, et tu peux l'installer sur ta
-machine avec `pip`. Tu connais les environnements virtuels, non ?
 
 
 ### 🧪 Compatibilité
