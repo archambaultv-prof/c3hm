@@ -46,14 +46,17 @@ def grade_weights_to_yaml(grade_weights: GradeWeights | None):
     Convertit les Decimal en nombres entier ou flottant pour éviter d'avoir des
     nombres flottants du style 1.0
     """
-    if isinstance(grade_weights, list):
-        return [decimal_to_number(weight) for weight in grade_weights]
-    elif isinstance(grade_weights, dict):
-        return {key: decimal_to_number(value) for key, value in grade_weights.items()}
-    elif grade_weights is None:
+    if grade_weights is None:
         return None
-    else:
-        return decimal_to_number(grade_weights)
+    ls = []
+    for weight in grade_weights:
+        if isinstance(weight, list):
+            ls.append([decimal_to_number(w) for w in weight])
+        elif isinstance(weight, dict):
+            ls.append({key: decimal_to_number(value) for key, value in weight.items()})
+        else:
+            ls.append(decimal_to_number(weight))
+    return ls
 
 class Indicator(BaseModel):
     """
@@ -412,6 +415,13 @@ class Rubric(BaseModel):
                             "n'a pas de pondération. Aucune pondération par défaut n'est "
                             "définie pour le critère ou la grille."
                         )
+                else:
+                    if len(indicator.grade_weights) != nb_of_levels:
+                        raise ValueError(
+                            f"La pondération de l'indicateur '{indicator.name}' du critère "
+                            f"'{criterion.name}' ne correspond pas au nombre de niveaux "
+                            f"({nb_of_levels})."
+                        )
                 if (indicator.descriptors and
                     len(indicator.descriptors) != nb_of_levels):
                     raise ValueError(
@@ -419,6 +429,7 @@ class Rubric(BaseModel):
                         f"du critère '{criterion.name}' ne correspond pas au nombre de niveaux "
                         f"({nb_of_levels})."
                     )
+
 
     def to_yaml(self, filepath: str | Path) -> None:
         """

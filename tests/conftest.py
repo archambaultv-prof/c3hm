@@ -19,6 +19,14 @@ def gradebook_path() -> Path:
     return d / "grille_gradebook.xlsx"
 
 @pytest.fixture
+def config_bug_1() -> Path:
+    """
+    Retourne le chemin vers le fichier grille_bug_1.yaml
+    """
+    d = Path(__file__).parent / "fixtures"
+    return d / "grille_bug_1.yaml"
+
+@pytest.fixture
 def config_template_path() -> Path:
     """
     Retourne le chemin vers le fichier de la grille d'évaluation config_5_levels.yaml
@@ -42,3 +50,11 @@ def clear_output_folder(output_dir: Path):
     if output_dir.exists():
         shutil.rmtree(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+
+@pytest.fixture
+def student_list_path() -> Path:
+    """
+    Retourne le chemin vers le fichier liste_etudiants.csv
+    """
+    d = Path(__file__).parent / "fixtures"
+    return d / "liste_etudiants.csv"
