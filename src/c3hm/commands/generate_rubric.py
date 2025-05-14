@@ -170,9 +170,10 @@ def generate_rubric(
         p.text = f"{student.first_name} {student.last_name}"
 
     # Insérer le commentaire général
-    if grades and CTHM_GLOBAL_COMMENT in grades and grades[CTHM_GLOBAL_COMMENT].strip():
+    if grades and CTHM_GLOBAL_COMMENT in grades and grades[CTHM_GLOBAL_COMMENT]:
+        comment = str(grades[CTHM_GLOBAL_COMMENT]).strip()
         p = doc.add_paragraph()
-        p.text = f"Commentaire : {grades[CTHM_GLOBAL_COMMENT].strip()}"
+        p.text = f"Commentaire : {comment}"
         p.style = "Normal"
         p.alignment = docx.enum.text.WD_PARAGRAPH_ALIGNMENT.LEFT
 
