@@ -10,7 +10,7 @@ from openpyxl.worksheet.worksheet import Worksheet
 
 from c3hm.commands.generate_rubric import scale_color_schemes
 from c3hm.data.config import Config
-from c3hm.data.rubric import CTHM_OMNIVOX, max_grade_weight
+from c3hm.data.rubric import CTHM_GLOBAL_COMMENT, CTHM_OMNIVOX, max_grade_weight
 from c3hm.data.student import Student
 from c3hm.utils import decimal_to_number
 
@@ -51,7 +51,7 @@ def add_student_sheet(ws: Worksheet, config: Config, student: Student) -> None:
     cell.style = "Title"
     ws.append([])
 
-    # Info étudiant
+    # Info étudiant + commentaire général
     ws.append(["Étudiant", f"{student.first_name} {student.last_name}"])
 
     ws.append(["Code omnivox", f"{student.omnivox_code}"])
@@ -61,6 +61,15 @@ def add_student_sheet(ws: Worksheet, config: Config, student: Student) -> None:
         attr_text=f"{quote_sheetname(ws.title)}!{absolute_coordinate(cell.coordinate)}",
     )
     ws.defined_names.add(dn)
+
+    ws.append(["Commentaire général"])
+    cell = ws.cell(row=ws.max_row, column=2)
+    dn = DefinedName(
+        name=CTHM_GLOBAL_COMMENT,
+        attr_text=f"{quote_sheetname(ws.title)}!{absolute_coordinate(cell.coordinate)}",
+    )
+    ws.defined_names.add(dn)
+
     ws.append([])
 
     # Total sur X pts
