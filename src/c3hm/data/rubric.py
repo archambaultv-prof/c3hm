@@ -415,6 +415,13 @@ class Rubric(BaseModel):
                             "n'a pas de pondération. Aucune pondération par défaut n'est "
                             "définie pour le critère ou la grille."
                         )
+                else:
+                    if len(indicator.grade_weights) != nb_of_levels:
+                        raise ValueError(
+                            f"La pondération de l'indicateur '{indicator.name}' du critère "
+                            f"'{criterion.name}' ne correspond pas au nombre de niveaux "
+                            f"({nb_of_levels})."
+                        )
                 if (indicator.descriptors and
                     len(indicator.descriptors) != nb_of_levels):
                     raise ValueError(
@@ -422,6 +429,7 @@ class Rubric(BaseModel):
                         f"du critère '{criterion.name}' ne correspond pas au nombre de niveaux "
                         f"({nb_of_levels})."
                     )
+
 
     def to_yaml(self, filepath: str | Path) -> None:
         """
