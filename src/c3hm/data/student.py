@@ -34,10 +34,17 @@ class Student(BaseModel):
         """
         Crée une instance de Student à partir d'un dictionnaire.
         """
+        def one_of(*args):
+            for s in args:
+                if s in data:
+                    return data[s]
+            raise KeyError(
+                f"Un des champs suivants est requis: {', '.join(args)}"
+            )
         return cls(
-            first_name=data["prénom"],
-            last_name=data["nom de famille"],
-            omnivox_code=data["code omnivox"],
+            first_name=one_of("prénom", "Prénom de l'étudiant"),
+            last_name=one_of("nom de famille", "Nom de l'étudiant"),
+            omnivox_code=one_of("code omnivox", "No de dossier"),
             alias=data["alias"],
         )
 
