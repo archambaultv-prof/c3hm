@@ -19,6 +19,14 @@ def gradebook_path() -> Path:
     return d / "grille_gradebook.xlsx"
 
 @pytest.fixture
+def config_bug_1() -> Path:
+    """
+    Retourne le chemin vers le fichier grille_bug_1.yaml
+    """
+    d = Path(__file__).parent / "fixtures"
+    return d / "grille_bug_1.yaml"
+
+@pytest.fixture
 def config_template_path() -> Path:
     """
     Retourne le chemin vers le fichier de la grille d'évaluation config_5_levels.yaml

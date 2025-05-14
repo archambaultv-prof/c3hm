@@ -195,12 +195,12 @@ def add_student_sheet(ws: Worksheet, config: Config, student: Student) -> None:
                 return f"{pyxl_utils.get_column_letter(i + weight_col)}{r}"
             # one_cell est un test pour vérifier si uniquement une cellule est non vide
             one_cell = [f"IF(ISBLANK({cell_addr(i)}),0,1)"
-                        for i in range(len(indicator.descriptors))]
+                        for i in range(len(indicator.grade_weights))]
             one_cell = f"{' + '.join(one_cell)} = 1"
             # la note. Soit un nombre, soit la note maximale du niveau
             val = [f"IF(ISBLANK({cell_addr(i)}),0,"
                    f"IF(ISNUMBER({cell_addr(i)}),{cell_addr(i)},{thr_addr(i)}))"
-                   for i in range(len(indicator.descriptors))]
+                   for i in range(len(indicator.grade_weights))]
             val = f"{' + '.join(val)}"
             # Check si la note est supérieure à la note maximale
             # du niveau.
