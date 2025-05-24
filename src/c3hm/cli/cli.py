@@ -1,9 +1,9 @@
 import click
-from c3hm.click.clean import clean_command
-from c3hm.click.feedback import feedback_command
-from c3hm.click.gradebook import gradebook_command
-from c3hm.click.statement import statement_rubric_command
-from c3hm.click.template import template_command
+from c3hm.cli.clean import clean_command
+from c3hm.cli.feedback import feedback_command
+from c3hm.cli.gradebook import gradebook_command
+from c3hm.cli.statement import statement_rubric_command
+from c3hm.cli.template import template_command
 
 
 @click.group(help="c3hm — Corriger à 3 heures du matin")

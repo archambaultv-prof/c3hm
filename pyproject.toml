@@ -19,7 +19,7 @@ dependencies = [
 windows-export = ["pywin32>=310"]
 
 [project.scripts]
-c3hm = "c3hm.cli:main"
+c3hm = "c3hm.cli.cli:main"
 
 [build-system]
 requires = ["hatchling"]
