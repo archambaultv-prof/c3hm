@@ -69,7 +69,8 @@ grille:
   - [69, 60, 60]
   - [59, 0, 30]
 
-  # Optionnel, descripteur par défaut. La valeur par défaut est celle-ci :
+  # Optionnel, descripteur par défaut. Si non précisé, tous les indicateurs
+  # doivent avoir un descripteur.
   descripteur par défaut:
   - "Aucune erreur notable."
   - "Quelques erreurs mineures."
@@ -203,8 +204,8 @@ grille:
     orientation: paysage # portrait ou paysage
 
     # Optionnel. true par défaut.
-    # Lorsque vrai, la grille est affichée sans le poids relatif des indicateurs.
-    masquer la pondération des indicateurs: true
+    # Lorsque vrai, la grille est affichée avec le poids relatif des indicateurs.
+    afficher la pondération des indicateurs: false
 
 # La liste des étudiants
 # Il est aussi possible de mettre un lien vers un fichier CSV (utf-8) contenant la liste des étudiants.
