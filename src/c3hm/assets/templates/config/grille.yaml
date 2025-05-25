@@ -220,16 +220,18 @@ grille:
     largeur des colonnes: []
 
 # La liste des étudiants
-# Il est aussi possible de mettre un lien vers un fichier CSV (utf-8) ou Excel contenant la liste des étudiants.
+# Il est aussi possible de mettre un lien vers un fichier CSV (utf-8) contenant la liste des étudiants.
 # Attention, Omnivox fournit une liste avec encodage iso-8859-1 (latin-1) et des '="' en trop.
-# L'entête du fichier CSV doit être identique à celui de la liste ci-dessous : code omnivox, prénom, nom de famille, alias
+# L'entête du fichier CSV doit être identique à celui de la liste ci-dessous ou l'entête Omnivox :
+#  - code omnivox, prénom, nom de famille, alias
+#  - No de dossier,Prénom de l'étudiant,Nom de l'étudiant, alias
 
 # étudiants: ma_liste.csv
 étudiants:
   - prénom: Timonière
     nom de famille: Houle
     code omnivox: 314159
-    # Utiliser pour le nom de la feuille correspondante dans le fichier Excel de correction
+    # Utilisé pour le nom de la feuille correspondante dans le fichier Excel de correction
     alias: houle
   - prénom: Moussaillon
     nom de famille: ArchiBord
