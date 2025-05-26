@@ -29,5 +29,9 @@ def test_config(
     d = config.to_dict()
     d["étudiants"] = student_list_path
     config2 = Config.from_dict(d)
-
     assert config2.students == config.students
+
+    # Test without Format
+    d = config.to_dict()
+    d["grille"].pop("format", None)
+    Config.from_dict(d)
