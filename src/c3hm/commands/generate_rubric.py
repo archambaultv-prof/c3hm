@@ -150,7 +150,7 @@ def generate_rubric(
     # Modifier l'orientation de la page au besoin
     if rubric.format.orientation:
         set_orientation(doc, rubric.format.orientation)
-    elif rubric.nb_criteria() >= 4:
+    elif len(rubric.grade_levels) >= 4:
         set_orientation(doc, "landscape")
     else:
         set_orientation(doc, "portrait")
