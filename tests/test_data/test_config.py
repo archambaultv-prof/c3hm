@@ -1,12 +1,13 @@
 from pathlib import Path
 
-from c3hm.data.config import Config, read_student_csv
+from c3hm.data.config import Config, read_student
 from c3hm.data.student import Student
 
 
 def test_config(
         config_template_path: Path,
-        student_list_path: Path
+        student_list_csv_path: Path,
+        student_list_xl_path: Path,
     ) -> None:
     """
     Teste la génération d'un document Word à partir d'une grille d'évaluation.
@@ -18,8 +19,15 @@ def test_config(
     # Test avec le gabarit
     config = Config.from_yaml(config_template_path)
 
-    # Test read_student_csv
-    students_dict = read_student_csv(student_list_path)
+    # Test read_student csv
+    students_dict = read_student(student_list_csv_path)
+    students = [
+        Student.from_dict(student) for student in students_dict
+    ]
+    assert config.students == students
+
+    # Test read_student csv
+    students_dict = read_student(student_list_xl_path)
     students = [
         Student.from_dict(student) for student in students_dict
     ]
@@ -27,7 +35,7 @@ def test_config(
 
     # Test from_dict
     d = config.to_dict()
-    d["étudiants"] = student_list_path
+    d["étudiants"] = student_list_csv_path
     config2 = Config.from_dict(d)
     assert config2.students == config.students
 

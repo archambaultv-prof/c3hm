@@ -217,6 +217,7 @@ grille:
 #  - code omnivox,prénom,nom de famille,alias
 # ou
 #  - No de dossier,Prénom de l'étudiant,Nom de l'étudiant,alias
+# Il est aussi possible de mettre un lien vers un fichier excel avec les mêmes entêtes.
 
 # étudiants: ma_liste.csv
 étudiants:

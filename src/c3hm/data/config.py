@@ -1,4 +1,3 @@
-import csv
 from pathlib import Path
 
 import yaml
@@ -6,7 +5,7 @@ from pydantic import BaseModel
 
 from c3hm.data.evaluation import Evaluation
 from c3hm.data.rubric import Rubric
-from c3hm.data.student import Student
+from c3hm.data.student import Student, read_student
 
 
 class Config(BaseModel):
@@ -33,7 +32,7 @@ class Config(BaseModel):
         Crée une instance validée de Config à partir d'un dictionnaire.
         """
         if isinstance(data["étudiants"], str | Path):
-            data["étudiants"] = read_student_csv(data["étudiants"])
+            data["étudiants"] = read_student(data["étudiants"])
         config = cls(
             evaluation=Evaluation.from_dict(data["évaluation"]),
             rubric=Rubric.from_dict(data["grille"]),
@@ -108,15 +107,3 @@ class Config(BaseModel):
             rubric=self.rubric.copy(),
             students=[student.copy() for student in self.students],
         )
-
-def read_student_csv(path: str | Path) -> list[dict[str, str]]:
-    """
-    Lit un fichier CSV contenant des informations sur les étudiants et retourne
-    une liste d'instances de Student.
-    """
-    students = []
-    with open(path, encoding="utf-8") as file:
-        csv_data = csv.DictReader(file)
-        for row in csv_data:
-            students.append(row)
-    return students
