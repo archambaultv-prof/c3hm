@@ -7,10 +7,10 @@ from openpyxl import Workbook
 from openpyxl.cell.cell import Cell
 from openpyxl.worksheet.worksheet import Worksheet
 
-from c3hm.commands.generate_rubric import generate_rubric
+from c3hm.commands.generate_rubric import generate_rubric, total_grade
 from c3hm.data.config import Config
 from c3hm.data.rubric import CTHM_GLOBAL_COMMENT, CTHM_OMNIVOX
-from c3hm.utils.decimal import round_to_nearest_quantum
+from c3hm.utils.decimal import decimal_to_number, round_to_nearest_quantum
 
 
 def grades_from_wb(
@@ -84,8 +84,11 @@ def grades_from_ws(ws: Worksheet, config: Config) -> dict[str, Any]:
         if grade_cell is None:
             raise ValueError(f"La cellule nommée '{criterion.xl_grade_overwrite_cell_id()}'"
                              " n'existe pas dans la feuille.")
-        grade = round_to_nearest_quantum(Decimal(str(grade_cell.value)),
-                                         rubric.precision)
+        if grade_cell.value is None:
+            grade = None
+        else:
+            grade = round_to_nearest_quantum(Decimal(str(grade_cell.value)),
+                                            rubric.precision)
         d[criterion.xl_grade_overwrite_cell_id()] = grade
 
         # Récupère les commentaires
@@ -177,8 +180,7 @@ def generate_xl_for_omnivox(
 
     # Remplit le tableau avec les notes et les commentaires
     for grade in grades:
-        note = sum(grade[criterion.xl_grade_overwrite_cell_id()]
-                   for criterion in config.rubric.criteria)
+        note = decimal_to_number(total_grade(config.rubric, grade))
         comment = grade.get(CTHM_GLOBAL_COMMENT, "")
         ws.append([grade[CTHM_OMNIVOX], note, comment]) # type: ignore
 

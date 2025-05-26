@@ -36,7 +36,7 @@ class Rubric(BaseModel):
 
     grade_thresholds : list[tuple[Decimal, Decimal, Decimal]]
 
-    default_descriptors: list[str] = Field(..., min_length=1,)
+    default_descriptors: list[str]
 
     criteria: list[Criterion] = Field(..., min_length=1)
 
@@ -114,6 +114,10 @@ class Rubric(BaseModel):
         Valide la grille d'évaluation. Remplace les valeurs manquantes par
         des valeurs par défaut.
         """
+        if self.default_descriptors and len(self.default_descriptors) != len(self.grade_levels):
+                raise ValueError(
+                    "Le nombre de descripteurs par défaut ne correspond pas au nombre de niveaux."
+                )
         _validate_criteria_percentage(self)
         _validate_thresholds(self)
         _validate_criteria(self)
@@ -168,9 +172,11 @@ def _validate_criteria_percentage(rubric: Rubric) -> None:
                 "La somme des pourcentages des critères est supérieure à 100%"
             )
         parts = split_decimal(rest, nb_missing, Decimal(1))
-        for i, criterion in enumerate(rubric.criteria):
+        i = 0
+        for criterion in rubric.criteria:
             if criterion.percentage is None:
                 criterion.percentage = parts[i]
+                i += 1
 
 def _validate_indicators_percentage(criteriron: Criterion) -> None:
     if criteriron.percentage is None:
@@ -202,9 +208,11 @@ def _validate_indicators_percentage(criteriron: Criterion) -> None:
                 " du critère."
             )
         parts = split_decimal(rest, nb_missing, Decimal(1))
-        for i, indicator in enumerate(criteriron.indicators):
+        i = 0
+        for indicator in criteriron.indicators:
             if indicator.percentage is None:
                 indicator.percentage = parts[i]
+                i += 1
 
 def _validate_thresholds(rubric: Rubric) -> None:
     """
@@ -218,12 +226,12 @@ def _validate_thresholds(rubric: Rubric) -> None:
             "Le nombre de seuils ne correspond pas au nombre de niveaux "
             f"({nb_of_levels})."
         )
-    for i, (min_threshold, max_threshold, default_threshold) in enumerate(
+    for i, (max_threshold, min_threshold, default_threshold) in enumerate(
         rubric.grade_thresholds
     ):
-        if min_threshold >= max_threshold:
+        if min_threshold > max_threshold:
             raise ValueError(
-                f"Le seuil minimum ({min_threshold}) est supérieur ou égal au seuil "
+                f"Le seuil minimum ({min_threshold}) est supérieur au seuil "
                 f"maximum ({max_threshold}) pour le niveau {rubric.grade_levels[i]}."
             )
         if default_threshold < min_threshold or default_threshold > max_threshold:

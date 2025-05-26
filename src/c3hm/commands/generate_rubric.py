@@ -1,4 +1,5 @@
 import sys
+from decimal import Decimal
 from importlib import resources
 from pathlib import Path
 from typing import Any
@@ -10,7 +11,7 @@ from docx.enum.section import WD_ORIENT
 from docx.enum.text import WD_COLOR_INDEX, WD_PARAGRAPH_ALIGNMENT
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
-from docx.shared import Cm, RGBColor
+from docx.shared import Cm
 from docx.table import Table
 
 from c3hm.data.rubric import (
@@ -181,10 +182,10 @@ def generate_rubric(
     )
     if grades and has_criteria_comments:
         col_width = rubric.format.columns_width_comments
-        nb_columns = rubric.nb_criteria() + 2
+        nb_columns = len(rubric.grade_levels) + 2
     else:
         col_width = rubric.format.columns_width
-        nb_columns = rubric.nb_criteria() + 1
+        nb_columns = len(rubric.grade_levels) + 1
     table = add_word_table(doc, nb_columns, col_width)
 
     # Remplir la première ligne avec le barème
@@ -257,28 +258,17 @@ def add_criterion(table: Table,
     Ajoute un critère et ses indicateurs à la table.
     """
     row = table.add_row()
-    percent_gray = RGBColor(0x80, 0x80, 0x80)
     narrow_nbsp = "\u202F"
 
     # Critère
     p = row.cells[0].paragraphs[0]
-    p.text = criterion.name.strip()
+    txt = criterion.name.strip()
+    txt += f" ({decimal_to_number(criterion.percentage)}{narrow_nbsp}%)" # type: ignore
+    p.text = txt
     p.style = "Heading 3"
-    run = p.add_run(f" ({decimal_to_number(criterion.percentage)}{narrow_nbsp}%)") # type: ignore
-    run.style = "Heading 3"
-    run.font.color.rgb = percent_gray
 
     if grades:
-        if grades[criterion.xl_grade_overwrite_cell_id()] is not None:
-            # Si la note est écrasée manuellement, on l'utilise
-            c_grade = grades[criterion.xl_grade_overwrite_cell_id()]
-        else:
-            # Sinon, on calcule la note du critère
-            c_grade = sum(
-                grades[ind.xl_grade_cell_id()] * ind.percentage
-                for ind in criterion.indicators
-            ) / criterion.percentage # type: ignore
-            c_grade = round_to_nearest_quantum(c_grade, rubric.precision)
+        c_grade = criterion_grade(criterion, grades, rubric)
         # Find the position according to the grades_thresholds
         grade_pos = len(rubric.grade_thresholds)  # Default to last position
         for i, (_, min_grade, _) in enumerate(rubric.grade_thresholds):
@@ -289,19 +279,25 @@ def add_criterion(table: Table,
         p.text = f"{decimal_to_number(c_grade)}"
         p.style = "Heading 3"
 
+        # Ajoute le commentaire du critère si disponible
+        comment = grades[criterion.xl_comment_cell_id()]
+        if comment and comment.strip():
+            comment_cell = row.cells[-1]
+            p = comment_cell.paragraphs[0]
+            p.text = comment.strip()
+
     # Indicateurs
     for indicator in criterion.indicators:
         row = table.add_row()
         p = row.cells[0].paragraphs[0]
-        run = p.add_run(indicator.name)
-        run.style = "Emphasis"
+        run = p.add_run()
+        txt = indicator.name.strip()
         if rubric.format.show_indicators_percent:
             # Afficher le pourcentage de l'indicateur
-            run = p.add_run(f" ({decimal_to_number(indicator.percentage)}{narrow_nbsp}%)") # type: ignore
-            run.style = "Emphasis"
-            run.font.color.rgb = percent_gray
+            txt += f" ({decimal_to_number(indicator.percentage)}{narrow_nbsp}%)" # type: ignore
+        run.text = txt
+        run.style = "Emphasis"
 
-        # Descripteurs alignés avec les niveaux de barème
         if grades:
             i_grade = grades[indicator.xl_grade_cell_id()]
             grade_pos = len(rubric.grade_thresholds)  # Default to last position
@@ -309,6 +305,14 @@ def add_criterion(table: Table,
                 if i_grade >= min_grade:
                     grade_pos = i + 1
                     break
+
+            # Ajoute le commentaire de l'indicateur si disponible
+            comment = grades[indicator.xl_comment_cell_id()]
+            if comment and comment.strip():
+                comment_cell = row.cells[-1]
+                p = comment_cell.paragraphs[0]
+                p.text = comment.strip()
+
         else:
             grade_pos = None
 
@@ -323,7 +327,6 @@ def add_criterion(table: Table,
                 i_grade = grades[indicator.xl_grade_cell_id()]
                 run = cell.paragraphs[0].add_run(f" ({decimal_to_number(i_grade)})")
                 run.style = "Emphasis"
-                run.font.color.rgb = percent_gray
                 if color_schemes:
                     set_cell_background(cell, color_schemes[i])
                 else:
@@ -331,6 +334,29 @@ def add_criterion(table: Table,
                     for paragraph in cell.paragraphs:
                         for run in paragraph.runs:
                             run.font.highlight_color = WD_COLOR_INDEX.YELLOW
+
+def criterion_grade(criterion: Criterion,
+                    grades: dict[str, Any],
+                    rubric: Rubric) -> Decimal:
+    """
+    Calcule la note d'un critère à partir des notes de ses indicateurs.
+    Si la note est écrasée manuellement, elle est utilisée telle quelle.
+    """
+    if grades[criterion.xl_grade_overwrite_cell_id()] is not None:
+        return grades[criterion.xl_grade_overwrite_cell_id()]
+
+    total = Decimal(0)
+    for indicator in criterion.indicators:
+        ind_grade = grades[indicator.xl_grade_cell_id()]
+        total += ind_grade * indicator.percentage
+
+    return round_to_nearest_quantum(total / criterion.percentage, rubric.precision) # type: ignore
+
+def total_grade(rubric: Rubric, grades: dict[str, Any]) -> Decimal:
+    total = Decimal(0)
+    for criterion in rubric.criteria:
+        total += criterion_grade(criterion, grades, rubric) * criterion.percentage # type: ignore
+    return round_to_nearest_quantum(total / 100, rubric.precision)
 
 def set_first_row(rubric: Rubric, table: Table, grades: dict[str, Any] | None):
     """
@@ -346,7 +372,8 @@ def set_first_row(rubric: Rubric, table: Table, grades: dict[str, Any] | None):
     total_cell = hdr_cells[0]
     p = total_cell.paragraphs[0]
     if grades:
-        total = sum(grades[c.xl_grade_overwrite_cell_id()] for c in rubric.criteria)
+        total = total_grade(rubric, grades)
+        total = decimal_to_number(total)
         p.text = f"Note : {total}"
         p.style = "Heading 3"
 

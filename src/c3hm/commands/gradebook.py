@@ -129,7 +129,7 @@ def add_student_sheet(ws: Worksheet, config: Config, student: Student) -> None:
         for i, ind in enumerate(criterion.indicators):
             s = f"{decimal_to_number(ind.percentage)} * {computed_letter}{cr+1+i}" # type: ignore
             all_s.append(s)
-        cell.value = f"=({" + ".join(all_s)}) / {decimal_to_number(criterion.percentage)}" # type: ignore
+        cell.value = f"=({' + '.join(all_s)}) / {decimal_to_number(criterion.percentage)}" # type: ignore
         cell.style = "Calculation"
         cell.number_format = "0.0"
 
@@ -223,5 +223,5 @@ def add_student_sheet(ws: Worksheet, config: Config, student: Student) -> None:
     f = "=sum("
     f += ",".join([f"{final_letter}{r}*{decimal_to_number(rubric.criteria[i].percentage)}" # type: ignore
                    for i, r in enumerate(criterion_rows)])
-    f += ")"
+    f += ")/100"
     ws.cell(row=total_row, column=total_cell).value = f

@@ -50,7 +50,7 @@ class Criterion(BaseModel):
             "critère": self.name,
             "xl id": self.xl_cell_id,
             "indicateurs": [indicator.to_dict() for indicator in self.indicators],
-            "percentage": decimal_to_number(self.percentage) if self.percentage else None,
+            "pourcentage": decimal_to_number(self.percentage) if self.percentage else None,
         }
 
     @classmethod
@@ -60,7 +60,7 @@ class Criterion(BaseModel):
         """
         return cls(
             name=data["critère"],
-            percentage=data.get("percentage"),
+            percentage=data.get("pourcentage"),
             indicators=[Indicator.from_dict(ind) for ind in data["indicateurs"]],
             xl_cell_id=data.get("xl id"),
         )
