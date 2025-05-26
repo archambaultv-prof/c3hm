@@ -11,7 +11,7 @@ class Criterion(BaseModel):
     Représente un critère d'évaluation. Ce dernière est formée d'une liste d'indicateurs.
     """
     name: str = Field(..., min_length=1)
-    total: Decimal | None = Field(..., gt=Decimal(0))
+    percentage: Decimal | None = Field(..., gt=Decimal(0))
     indicators: list[Indicator] = Field(..., min_length=1)
     xl_cell_id: str | None = Field(
         default=None,
@@ -49,7 +49,7 @@ class Criterion(BaseModel):
             "critère": self.name,
             "xl id": self.xl_cell_id,
             "indicateurs": [indicator.to_dict() for indicator in self.indicators],
-            "total": decimal_to_number(self.total) if self.total else None,
+            "percentage": decimal_to_number(self.percentage) if self.percentage else None,
         }
 
     @classmethod
@@ -59,7 +59,7 @@ class Criterion(BaseModel):
         """
         return cls(
             name=data["critère"],
-            total=data.get("total"),
+            percentage=data.get("percentage"),
             indicators=[Indicator.from_dict(ind) for ind in data["indicateurs"]],
             xl_cell_id=data.get("xl id"),
         )
@@ -72,6 +72,6 @@ class Criterion(BaseModel):
         return Criterion(
             name=self.name,
             xl_cell_id=self.xl_cell_id,
-            total=self.total,
+            percentage=self.percentage,
             indicators=[indicator.copy() for indicator in self.indicators],
         )

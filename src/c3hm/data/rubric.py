@@ -6,7 +6,11 @@ from pydantic import BaseModel, Field
 
 from c3hm.data.criterion import Criterion
 from c3hm.data.format import Format
-from c3hm.utils import decimal_to_number, round_to_nearest_quantum, split_decimal
+from c3hm.utils import (
+    decimal_to_number,
+    is_multiple_of_quantum,
+    split_decimal,
+)
 
 GradeLevels = list[str]
 
@@ -23,9 +27,7 @@ class Rubric(BaseModel):
     Une grille est formée de niveaux (Excellent, Très bien, ...) et d'une liste de critères.
     Il est possible d'ajouter des seuils pour chaque critère.
     """
-    total: Decimal | None = Field(..., gt=0)
-
-    total_precision: Decimal = Field(
+    precision: Decimal = Field(
         default=Decimal("1"),
         description="Précision de la note totale. Par défaut, 1."
     )
@@ -40,13 +42,20 @@ class Rubric(BaseModel):
 
     format: Format
 
+    def max_grade(self) -> Decimal:
+        """
+        Retourne la note maximale de la grille d'évaluation.
+        """
+        if not self.grade_thresholds:
+            raise ValueError("La grille d'évaluation n'a pas de seuils définis.")
+        return self.grade_thresholds[0][0]
+
     def to_dict(self) -> dict:
         """
         Retourne un dictionnaire représentant la grille d'évaluation.
         """
         return {
-            "total": decimal_to_number(self.total) if self.total is not None else None,
-            "total précision": decimal_to_number(self.total_precision),
+            "précision": decimal_to_number(self.precision),
             "niveaux": self.grade_levels.copy(),
             "seuils par niveau": map(
                 lambda tup: map(decimal_to_number, tup),
@@ -63,8 +72,7 @@ class Rubric(BaseModel):
         Crée une instance de Rubric à partir d'un dictionnaire.
         """
         return cls(
-            total=data["total"],
-            total_precision=data.get("total précision", Decimal("1")),
+            precision=data.get("précision", Decimal("1")),
             grade_levels=data["niveaux"],
             grade_thresholds=data["seuils par niveau"],
             default_descriptors=data.get("descripteurs par défaut", []),
@@ -78,22 +86,12 @@ class Rubric(BaseModel):
         """
         return len(self.criteria)
 
-
-    def nb_columns(self) -> int:
-        """
-        Retourne le nombre total de colonnes dans la grille.
-
-        Cela inclut une colonne pour les critères/descripteurs et une colonne
-        pour chaque niveau de barème.
-        """
-        return 1 + len(self.grade_levels)
-
     def validate(self) -> None: # type: ignore
         """
         Valide la grille d'évaluation. Remplace les valeurs manquantes par
         des valeurs par défaut.
         """
-        _validate_total(self)
+        _validate_criteria_percentage(self)
         _validate_thresholds(self)
         _validate_criteria(self)
 
@@ -113,8 +111,7 @@ class Rubric(BaseModel):
         Retourne une copie de la grille d'évaluation.
         """
         return Rubric(
-            total=self.total,
-            total_precision=self.total_precision,
+            precision=self.precision,
             grade_levels=self.grade_levels.copy(),
             grade_thresholds=self.grade_thresholds.copy(),
             default_descriptors=self.default_descriptors.copy(),
@@ -123,53 +120,68 @@ class Rubric(BaseModel):
         )
 
 
-def _validate_total(rubric: Rubric) -> None:
-    # Vérification des totaux
-    # Si total est None, on le remplace par la somme des totaux des critères
-    # Si total n'est pas None:
-    #   - on vérifie que la somme des totaux des critères est égale à total s'ils
-    #     sont tous définis
-    #   - on vérifie que la somme des totaux des critères est inférieure à total
-    #     s'ils ne sont pas tous définis et on répartie également le reste entre les critères
-    #     non définis
-    for c in rubric.criteria:
-        if c.total:
-            x = round_to_nearest_quantum(c.total, rubric.total_precision)
-            if x != c.total:
+def _validate_criteria_percentage(rubric: Rubric) -> None:
+    total = Decimal(100)
+    nb_missing = len([criterion for criterion in rubric.criteria if criterion.percentage is None])
+    criteria_total = Decimal(0)
+    for criterion in rubric.criteria:
+        if criterion.percentage:
+            if not is_multiple_of_quantum(criterion.percentage, Decimal(1)):
                 raise ValueError(
-                    f"Le total du critère '{c.name}' ({c.total}) n'est pas un multiple de "
-                    f"la précision totale ({rubric.total_precision})."
+                    f"Le pourcentage du critère '{criterion.name}' "
+                    f"({criterion.percentage}) n'est pas un multiple de 1%."
                 )
-    nb_missing = len([criterion for criterion in rubric.criteria if criterion.total is None])
-    criteria_total = sum((criterion.total for criterion in rubric.criteria
-                            if criterion.total is not None),
-                            start=Decimal(0))
-    if rubric.total is None:
-        if nb_missing != 0:
+            criteria_total += criterion.percentage
+    if nb_missing == 0:
+        if criteria_total != total:
             raise ValueError(
-                "La grille d'évaluation n'a pas de total défini. "
-                "Tous les critères doivent avoir un total défini."
+                "La somme des pourcentages des critères n'est pas égale à 100%"
             )
-        rubric.total = criteria_total
     else:
-        if nb_missing == 0:
-            if criteria_total != rubric.total:
-                raise ValueError(
-                    "La somme des totaux des critères ne correspond pas au total de la grille."
-                )
-        else:
-            # Répartition du reste entre les critères non définis
-            rest = rubric.total - criteria_total
-            if rest <= 0:
-                raise ValueError(
-                    "La somme des totaux des critères est supérieure "
-                    "ou égale au total de la grille."
-                )
-            parts = split_decimal(rest, nb_missing, rubric.total_precision)
-            for i, criterion in enumerate(rubric.criteria):
-                if criterion.total is None:
-                    criterion.total = parts[i]
+        # Répartition du reste entre les critères non définis
+        rest = total - criteria_total
+        if rest <= 0:
+            raise ValueError(
+                "La somme des pourcentages des critères est supérieure à 100%"
+            )
+        parts = split_decimal(rest, nb_missing, Decimal(1))
+        for i, criterion in enumerate(rubric.criteria):
+            if criterion.percentage is None:
+                criterion.percentage = parts[i]
 
+def _validate_indicators_percentage(criteriron: Criterion) -> None:
+    if criteriron.percentage is None:
+        raise ValueError(
+            f"Le critère '{criteriron.name}' n'a pas de pourcentage défini."
+        )
+    total = criteriron.percentage
+    nb_missing = len([ind for ind in criteriron.indicators if ind.percentage is None])
+    indicators_total = Decimal(0)
+    for indicator in criteriron.indicators:
+        if indicator.percentage:
+            if not is_multiple_of_quantum(indicator.percentage, Decimal(1)):
+                raise ValueError(
+                    f"Le pourcentage de l'indicateur '{indicator.name}' "
+                    f"({indicator.percentage}) n'est pas un multiple de 1%."
+                )
+            indicators_total += indicator.percentage
+    if nb_missing == 0:
+        if indicators_total != total:
+            raise ValueError(
+                "La somme des pourcentages des critères n'est pas égale au pourcentage du critère."
+            )
+    else:
+        # Répartition du reste entre les critères non définis
+        rest = total - indicators_total
+        if rest <= 0:
+            raise ValueError(
+                "La somme des pourcentages des indicateurs est supérieure au pourcentage"
+                " du critère."
+            )
+        parts = split_decimal(rest, nb_missing, Decimal(1))
+        for i, indicator in enumerate(criteriron.indicators):
+            if indicator.percentage is None:
+                indicator.percentage = parts[i]
 
 def _validate_thresholds(rubric: Rubric) -> None:
     """
@@ -215,6 +227,7 @@ def _validate_criteria(rubric: Rubric) -> None:
         # Vérification des indicateurs
         if not criterion.indicators:
             raise ValueError(f"Le critère '{criterion.name}' n'a pas d'indicateurs.")
+        _validate_indicators_percentage(criterion)
         for i, indicator in enumerate(criterion.indicators):
             if indicator.xl_cell_id is None:
                 prefix = criterion.xl_cell_id

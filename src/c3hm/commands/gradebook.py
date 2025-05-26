@@ -123,7 +123,7 @@ def add_student_sheet(ws: Worksheet, config: Config, student: Student) -> None:
 
         # Pondération du critère
         cell = ws.cell(row=ws.max_row, column=weight_col)
-        cell.value = decimal_to_number(criterion.total)
+        cell.value = decimal_to_number(criterion.percentage)
 
         # note calculée
         cell = ws.cell(row=ws.max_row, column= computed_col)

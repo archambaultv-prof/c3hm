@@ -2,6 +2,8 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field
 
+from c3hm.utils import decimal_to_number
+
 
 class Indicator(BaseModel):
     """
@@ -9,9 +11,11 @@ class Indicator(BaseModel):
     """
     name: str = Field(..., min_length=1)
     descriptors: list[str]
-    weight: Decimal = Field(
-        default=Decimal(1),
-        description="Poids de l'indicateur dans le critère.",
+    percentage: Decimal | None = Field(
+        ...,
+        description="Pourcentage de l'indicateur dans la note finale",
+        gt=Decimal(0),
+        le=Decimal(100),
     )
     xl_cell_id: str | None = Field(
         default=None,
@@ -42,7 +46,7 @@ class Indicator(BaseModel):
         return {
             "nom": self.name,
             "xl id": self.xl_cell_id,
-            "poids": self.weight,
+            "pourcentage": decimal_to_number(self.percentage) if self.percentage else None,
             "descripteurs": self.descriptors,
         }
 
@@ -54,7 +58,7 @@ class Indicator(BaseModel):
         return cls(
             name=data["nom"],
             xl_cell_id=data.get("xl id"),
-            weight=data.get("poids", Decimal(1)),
+            percentage=data.get("pourcentage"),
             descriptors=data.get("descripteurs", []),
         )
 
@@ -65,6 +69,6 @@ class Indicator(BaseModel):
         return Indicator(
             name=self.name,
             xl_cell_id=self.xl_cell_id,
-            weight=self.weight,
+            percentage=self.percentage,
             descriptors=self.descriptors.copy(),
         )

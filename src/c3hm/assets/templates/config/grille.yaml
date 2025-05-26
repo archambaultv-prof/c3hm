@@ -15,45 +15,33 @@
 # plusieurs critères. Chaque critère est divisé en indicateurs qui sont notés
 # selon une échelle de notation. Tous les critères et indicateurs partagent la
 # même échelle (par exemple : Excellent, Très bien, etc.). Cependant, la
-# pondération (ou le pointage) peut être différente pour chaque indicateur ou
+# pondération (% de la note finale) peut être différente pour chaque indicateur ou
 # critère pour refléter l'importance relative de chaque élément.
 
 # La grille de ce fichier peut être représentée de façon simplifiée comme suit
-# (les descripteurs sont omis et remplacés par des "...", le total est sur 50 points 
-# divisé en 3 critères et le poids relatif des indicateurs est omis.)
+# (les descripteurs sont omis et remplacés par des "...")
 #
-# +------------------------------------------+-----------+-----------+---------+----------+--------------+
-# | Total sur 50 pts                         | Excellent | Très bien | Bien    | Passable | Insuffisant  | <- Niveaux
-# |                                          | 100 à 90  | 89 à 80   | 79 à 70 | 69 à 60  | 59 et moins  | <- Seuils
-# +------------------------------------------+-----------+-----------+---------+----------+--------------+
-# | Grand lessivage du pont (15 pts)         |           |           |         |          |              | <- Critère
-# |  – Balai brandi comme un sabre           | ...       | ...       | ...     | ...      | ...          | <- Indicateur
-# |  – Seau d’eau salée renversé             | ...       | ...       | ...     | ...      | ...          | <- Indicateur
-# |  – Mousse digne d’un kraken              | ...       | ...       | ...     | ...      | ...          | <- Indicateur
-# |  – Chant marin entonné en chœur          | ...       | ...       | ...     | ...      | ...          | <- Indicateur
-# +------------------------------------------+-----------+-----------+---------+----------+--------------+
-# | Hissage du pavillon noir (20 pts)        |           |           |         |          |              | <- Critère
-# |  – Cordage enroulé en huit impeccable    | ...       | ...       | ...     | ...      | ...          | <- Indicateur
-# |  – Pavillon solidement fixé au mât       | ...       | ...       | ...     | ...      | ...          | <- Indicateur
-# |  – Drisse tendue sans nœud lâche         | ...       | ...       | ...     | ...      | ...          | <- Indicateur
-# +------------------------------------------+-----------+-----------+---------+----------+--------------+
-# | Distribution du rhum (15 pts)            |           |           |         |          |              | <- Critère
-# |  – Gobelets remplis jusqu’à ras bord     | ...       | ...       | ...     | ...      | ...          | <- Indicateur
-# |  – File d’attente respectée              | ...       | ...       | ...     | ...      | ...          | <- Indicateur
-# |  – Toast improvisé incluant le capitaine | ...       | ...       | ...     | ...      | ...          | <- Indicateur
-# +------------------------------------------+-----------+-----------+---------+----------+--------------+
+# +------------------------------------------------+-----------+-----------+---------+----------+--------------+
+# |                                                | Excellent | Très bien | Bien    | Passable | Insuffisant  | <- Niveaux
+# |                                                | 100 à 90  | 89 à 80   | 79 à 70 | 69 à 60  | 59 et moins  | <- Seuils
+# +------------------------------------------------+-----------+-----------+---------+----------+--------------+
+# | Grand lessivage du pont (30 %)                 |           |           |         |          |              | <- Critère
+# |  – Balai brandi comme un sabre (10%)           | ...       | ...       | ...     | ...      | ...          | <- Indicateur
+# |  – Seau d’eau salée renversé (10%)             | ...       | ...       | ...     | ...      | ...          | <- Indicateur
+# |  – Mousse digne d’un kraken (5%)               | ...       | ...       | ...     | ...      | ...          | <- Indicateur
+# |  – Chant marin entonné en chœur (5%)           | ...       | ...       | ...     | ...      | ...          | <- Indicateur
+# +------------------------------------------------+-----------+-----------+---------+----------+--------------+
+# | Hissage du pavillon noir (40 %)                |           |           |         |          |              | <- Critère
+# |  – Cordage enroulé en huit impeccable (14 %)   | ...       | ...       | ...     | ...      | ...          | <- Indicateur
+# |  – Pavillon solidement fixé au mât (13 %)      | ...       | ...       | ...     | ...      | ...          | <- Indicateur
+# |  – Drisse tendue sans nœud lâche (13%)         | ...       | ...       | ...     | ...      | ...          | <- Indicateur
+# +------------------------------------------------+-----------+-----------+---------+----------+--------------+
+# | Distribution du rhum (30 %)                    |           |           |         |          |              | <- Critère
+# |  – Gobelets remplis jusqu’à ras bord (10%)     | ...       | ...       | ...     | ...      | ...          | <- Indicateur
+# |  – File d’attente respectée (10%)              | ...       | ...       | ...     | ...      | ...          | <- Indicateur
+# |  – Toast improvisé incluant le capitaine (10%) | ...       | ...       | ...     | ...      | ...          | <- Indicateur
+# +------------------------------------------------+-----------+-----------+---------+----------+--------------+
 grille:
-
-  # Optionnel. Le total de l'évaluation. Par défaut, cette valeur correspond
-  # à la somme des totaux de chaque critère. Si précisé, la somme des totaux
-  # des critères doit être égale au total de l'évaluation ou si certains
-  # critères n'ont pas de total, les points restant sont répartis
-  # également entre les critères sans total.
-  total: 50
-
-  # Optionnel. Le degré de précision de la note finale.
-  # Par défaut, la valeur est 1.
-  total précision: 0.5
 
   # Une liste de niveaux de notation.
   niveaux: [Excellent, Très bien, Bien, Passable, Insuffisant]
@@ -62,12 +50,17 @@ grille:
   # La troisième valeur indique la note
   # par défaut lorsqu'on coche un niveau dans la grille de correction sans
   # préciser de note.
+  # La note maximale de l'évaluation est le maximum du premier niveau.
   seuils par niveau:
   - [100, 90, 100]
   - [89, 80, 85]
   - [79, 70, 70]
   - [69, 60, 60]
   - [59, 0, 30]
+
+  # Optionnel. Le quantum (plus petite variation) pour les seuils de notation.
+  # Par défaut, la valeur est 1.
+  précision: 1
 
   # Optionnel, descripteur par défaut. Si non précisé, tous les indicateurs
   # doivent avoir un descripteur.
@@ -84,8 +77,9 @@ grille:
     # Nom du critère
   - critère: Grand lessivage du pont
 
-    # Optionnel, note totale du critère.
-    total: 15
+    # Optionnel, pourcentage de la note finale. Si non précisé, la valeur
+    # est calculée automatiquement pour que la somme des critères soit 100%.
+    pourcentage: 30
 
     # Optionnel, le nom de cellule de la feuille Excel où le critère est noté.
     # Si non spécifié, le nom est généré selon l'ordre des critères (C1, C2, C3, etc.)
@@ -99,11 +93,9 @@ grille:
     # Nom de l'indicateur
     - nom: Balai brandi comme un sabre en pleine mêlée
 
-      # Optionnel, valeur de 1 par défaut.
-      # Le poids de l'indicateur par rapport aux autres indicateurs du même critère.
-      # Par exemple, s'il y a 4 indicateurs avec poids 1, 2, 3 et 4, le pts pour chaque indicateur
-      # sera respectivement 1/10, 2/10, 3/10 et 4/10 du total du critère.
-      poids: 1
+      # Optionnel, pourcentage de la note finale. Si non précisé, la valeur
+      # est calculée automatiquement pour que la somme des indicateurs soit celle du critère.
+      pourcentage: 10
 
       # Optionnel, le nom de cellule de la feuille Excel où le critère est noté.
       # Si non spécifié, le nom est généré selon l'ordre des critères (C1, C2, C3, etc.)
@@ -121,6 +113,7 @@ grille:
 
     # Autres indicateurs
     - nom: Seau d’eau salée renversé avec panache
+      pourcentage: 10
       descripteurs:
         - Eau jaillissante en gerbes, digne d’une tempête de kraken !
         - Renversement propre, quelques gouttes hors cible.
@@ -144,7 +137,7 @@ grille:
 
   # 2e critère
   - critère: Hissage du pavillon noir
-    total: 20
+    pourcentage: 40
 
     indicateurs:
     - nom: Cordage enroulé en huit impeccable
@@ -171,7 +164,7 @@ grille:
     
   # 3e critère
   - critère: Distribution du rhum
-    total: 15
+    pourcentage: 30
 
     indicateurs:
     - nom: Gobelets remplis jusqu’à ras bord
@@ -204,15 +197,26 @@ grille:
     orientation: paysage # portrait ou paysage
 
     # Optionnel. true par défaut.
-    # Lorsque vrai, la grille est affichée avec le poids relatif des indicateurs.
-    afficher la pondération des indicateurs: false
+    # Lorsque vrai, la grille est affichée avec le pourcentage des indicateurs.
+    afficher le pourcentage des indicateurs: false
+
+    # Optionnel. Largeur des colonnes de la grille en centimètres.
+    # Si vide, la largeur des colonnes est calculée automatiquement.
+    # Doit être de la même longueur que le nombre de niveaux + 1.
+    # Inscrire null pour une colonne de largeur automatique.
+    largeur des colonnes: []
+
+    # Optionnel. Idem, mais avec une colonne de plus pour les commentaires.
+    largeur des colonnes avec commentaires: []
 
 # La liste des étudiants
-# Il est aussi possible de mettre un lien vers un fichier CSV (utf-8) contenant la liste des étudiants.
+# Il est aussi possible de mettre un lien relatif ou absolu vers un fichier CSV (utf-8) contenant la liste des étudiants.
+# étudiants: ../ma_liste.csv
 # Attention, Omnivox fournit une liste avec encodage iso-8859-1 (latin-1) et des '="' en trop.
 # L'entête du fichier CSV doit être identique à celui de la liste ci-dessous ou l'entête Omnivox :
-#  - code omnivox, prénom, nom de famille, alias
-#  - No de dossier,Prénom de l'étudiant,Nom de l'étudiant, alias
+#  - code omnivox,prénom,nom de famille,alias
+# ou
+#  - No de dossier,Prénom de l'étudiant,Nom de l'étudiant,alias
 
 # étudiants: ma_liste.csv
 étudiants:
