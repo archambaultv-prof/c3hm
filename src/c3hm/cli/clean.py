@@ -35,6 +35,12 @@ from c3hm.commands.clean import PATHS_TO_DELETE, remove_unwanted_dirs
     help="Simulation : affiche ce qui serait supprimé sans rien toucher. Active le mode verbose."
 )
 @click.option(
+    "--git", "-g",
+    is_flag=True,
+    default=False,
+    help="Supprimer les dossiers .git et .gitignore en plus des autres fichiers indésirables."
+)
+@click.option(
     "--keep",
     multiple=True,
     help=(
@@ -78,6 +84,7 @@ def clean_command(
     path: Path,
     dryrun: bool,
     keep: tuple[str, ...],
+    git: bool,
     exclude_dir: tuple[str, ...],
     delete: tuple[str, ...],
     verbose: bool,
@@ -86,13 +93,17 @@ def clean_command(
     """
     Supprime les fichiers et dossiers indésirables (ex. .git, node_modules)
     """
-    to_delete = PATHS_TO_DELETE.extend(delete) if delete else PATHS_TO_DELETE
+    to_delete = PATHS_TO_DELETE
+    if delete:
+        to_delete.extend(delete)
+    if git:
+        to_delete.extend([".git", ".gitignore"])
     if keep:
         to_delete = [path for path in to_delete if path not in keep]
     remove_unwanted_dirs(
         root_path=path,
         dryrun=dryrun,
-        exclude_dir= exclude_dir,
+        exclude_dir=list(exclude_dir),
         paths_to_delete=to_delete,
         verbose=verbose,
         scan_all=scan_all,
