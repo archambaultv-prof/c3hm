@@ -7,7 +7,6 @@ from c3hm.utils.omnivox import is_student_folder
 PATHS_TO_DELETE = [
     "__pycache__",
     ".DS_Store",
-    ".git",
     ".idea",
     ".pytest_cache",
     ".venv",

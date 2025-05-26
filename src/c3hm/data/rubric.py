@@ -94,13 +94,14 @@ class Rubric(BaseModel):
         """
         Crée une instance de Rubric à partir d'un dictionnaire.
         """
+        format = Format() if "format" not in data else Format.from_dict(data["format"])
         return cls(
             precision=data.get("précision", Decimal("1")),
             grade_levels=data["niveaux"],
             grade_thresholds=data["seuils par niveau"],
             default_descriptors=data.get("descripteurs par défaut", []),
             criteria=[Criterion.from_dict(criterion) for criterion in data["critères"]],
-            format=Format.from_dict(data["format"]),
+            format=format,
         )
 
     def nb_criteria(self) -> int:
