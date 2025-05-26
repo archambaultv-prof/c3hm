@@ -10,9 +10,9 @@ from openpyxl.worksheet.worksheet import Worksheet
 
 from c3hm.commands.generate_rubric import scale_color_schemes
 from c3hm.data.config import Config
-from c3hm.data.rubric import CTHM_GLOBAL_COMMENT, CTHM_OMNIVOX, max_grade_weight
+from c3hm.data.rubric import CTHM_GLOBAL_COMMENT, CTHM_OMNIVOX
 from c3hm.data.student import Student
-from c3hm.utils import decimal_to_number
+from c3hm.utils.decimal import decimal_to_number
 
 
 def generate_gradebook(config: Config, output_path: Path | str) -> None:
@@ -73,8 +73,7 @@ def add_student_sheet(ws: Worksheet, config: Config, student: Student) -> None:
     ws.append([])
 
     # Total sur X pts
-    pts = "pt" if config.rubric.total == 1 else "pts"
-    ws.append([f"Total sur {config.rubric.total} {pts}"])
+    ws.append([f"Total sur {config.rubric.max_grade()}"])
     cell = ws.cell(row=ws.max_row, column=1)
     cell.style = "Headline 2"
 
@@ -90,9 +89,14 @@ def add_student_sheet(ws: Worksheet, config: Config, student: Student) -> None:
 
     # En-tête - barème
     col_before_scale = 1
+    t_str = [rubric.threshold_str(i) for i in range(len(rubric.grade_levels))]
+    ws.append([''] * col_before_scale + t_str)
+    for i in range(2, len(t_str) + 2):
+        cell = ws.cell(row=ws.max_row, column=i)
+        cell.style = "Explanatory Text"
+
     scale_colors = scale_color_schemes(len(rubric.grade_levels))
-    extra_cols = ["note calculée", "note manuelle", "note", "commentaires",
-                  "Poids critère / Note maximale par niveau"]
+    extra_cols = ["note calculée", "note manuelle", "note", "commentaires"]
     ws.append([''] * col_before_scale + rubric.grade_levels + extra_cols)
     for i in range(col_before_scale + 1,
                    len(rubric.grade_levels) + col_before_scale + 1 + len(extra_cols)):
@@ -111,8 +115,6 @@ def add_student_sheet(ws: Worksheet, config: Config, student: Student) -> None:
     final_col = col_before_scale + len(rubric.grade_levels) + 3
     final_letter = pyxl_utils.get_column_letter(final_col)
     comment_col = col_before_scale + len(rubric.grade_levels) + 4
-    weight_col = col_before_scale + len(rubric.grade_levels) + 5
-    weight_letter = pyxl_utils.get_column_letter(weight_col)
     for criterion in rubric.criteria:
         # Critère
         ws.append([criterion.name])
@@ -121,18 +123,13 @@ def add_student_sheet(ws: Worksheet, config: Config, student: Student) -> None:
         cell = ws.cell(row=ws.max_row, column=1)
         cell.style = "Headline 3"
 
-        # Pondération du critère
-        cell = ws.cell(row=ws.max_row, column=weight_col)
-        cell.value = decimal_to_number(criterion.total)
-
         # note calculée
         cell = ws.cell(row=ws.max_row, column= computed_col)
-        computed_range = (f"{computed_letter}{cr+1}:"
-                          f"{computed_letter}{cr+len(criterion.indicators)}")
-        criterion_weight_cell = (f"{weight_letter}{cr}")
-        weight_range = (f"{weight_letter}{cr+1}:"
-                        f"{weight_letter}{cr+len(criterion.indicators)}")
-        cell.value = (f"=sum({computed_range})/sum({weight_range}) * {criterion_weight_cell}")
+        all_s = []
+        for i, ind in enumerate(criterion.indicators):
+            s = f"{decimal_to_number(ind.percentage)} * {computed_letter}{cr+1+i}" # type: ignore
+            all_s.append(s)
+        cell.value = f"=({' + '.join(all_s)}) / {decimal_to_number(criterion.percentage)}" # type: ignore
         cell.style = "Calculation"
         cell.number_format = "0.0"
 
@@ -140,6 +137,11 @@ def add_student_sheet(ws: Worksheet, config: Config, student: Student) -> None:
         cell = ws.cell(row=ws.max_row, column= manual_col)
         cell.style = "Input"
         cell.number_format = "0.0"
+        dn = DefinedName(
+            name=criterion.xl_grade_overwrite_cell_id(),
+            attr_text=f"{quote_sheetname(ws.title)}!{absolute_coordinate(cell.coordinate)}",
+        )
+        ws.defined_names.add(dn)
 
         # note en pts
         cell = ws.cell(row=ws.max_row, column= col_before_scale + len(rubric.grade_levels) + 3)
@@ -148,11 +150,6 @@ def add_student_sheet(ws: Worksheet, config: Config, student: Student) -> None:
         cell.value = computed_or_manual
         cell.style = "Calculation"
         cell.number_format = "0.0"
-        dn = DefinedName(
-            name=criterion.xl_grade_cell_id(),
-            attr_text=f"{quote_sheetname(ws.title)}!{absolute_coordinate(cell.coordinate)}",
-        )
-        ws.defined_names.add(dn)
 
         # Commentaire
         cell = ws.cell(row=ws.max_row, column=comment_col)
@@ -165,10 +162,8 @@ def add_student_sheet(ws: Worksheet, config: Config, student: Student) -> None:
         # Indicateurs
         for indicator in criterion.indicators:
             ws.append([indicator.name])
-
-            for i in range(2):
-                cell = ws.cell(row=ws.max_row, column=i+1)
-                cell.style = "Explanatory Text"
+            cell = ws.cell(row=ws.max_row, column=1)
+            cell.style = "Explanatory Text"
 
             # Affichage conditionnel pour les indicateurs
             for i in range(len(indicator.descriptors)):
@@ -186,12 +181,6 @@ def add_student_sheet(ws: Worksheet, config: Config, student: Student) -> None:
                     rule
                 )
 
-            # Ajout de la pondération de l'indicateur
-            for i, gw in enumerate(indicator.grade_weights):
-                cell = ws.cell(row=ws.max_row, column=i + weight_col)
-                cell.value = decimal_to_number(max_grade_weight(gw))
-                cell.style = "Explanatory Text"
-
             # Note pour l'indicateur.
             # Si on utilise une formule trop avancée, Excel
             # va ajouter un @ sur certains ranges, ce qui va casser la formule.
@@ -200,20 +189,18 @@ def add_student_sheet(ws: Worksheet, config: Config, student: Student) -> None:
             r = ws.max_row
             def cell_addr(i, r=r):
                 return f"{pyxl_utils.get_column_letter(i + col_before_scale + 1)}{r}"
-            def thr_addr(i, r=r):
-                return f"{pyxl_utils.get_column_letter(i + weight_col)}{r}"
             # one_cell est un test pour vérifier si uniquement une cellule est non vide
             one_cell = [f"IF(ISBLANK({cell_addr(i)}),0,1)"
-                        for i in range(len(indicator.grade_weights))]
+                        for i in range(len(rubric.grade_levels))]
             one_cell = f"{' + '.join(one_cell)} = 1"
-            # la note. Soit un nombre, soit la note maximale du niveau
+            # la note. Soit un nombre, soit la note par défaut du niveau.
             val = [f"IF(ISBLANK({cell_addr(i)}),0,"
-                   f"IF(ISNUMBER({cell_addr(i)}),{cell_addr(i)},{thr_addr(i)}))"
-                   for i in range(len(indicator.grade_weights))]
+                   f"IF(ISNUMBER({cell_addr(i)}),{cell_addr(i)},{decimal_to_number(rubric.threshold_default(i))}))"
+                   for i in range(len(rubric.grade_levels))]
             val = f"{' + '.join(val)}"
             # Check si la note est supérieure à la note maximale
             # du niveau.
-            val_check = f"IF({val} > {thr_addr(0)}, NA(), {val})"
+            val_check = f"IF({val} > {decimal_to_number(rubric.max_grade())}, NA(), {val})"
             cell = ws.cell(row=ws.max_row, column=computed_col)
             cell.value = (f"=IF({one_cell},{val_check},NA())")
             cell.style = "Output"
@@ -234,6 +221,7 @@ def add_student_sheet(ws: Worksheet, config: Config, student: Student) -> None:
 
     # Formule pour le total
     f = "=sum("
-    f += ",".join([f"{final_letter}{r}" for r in criterion_rows])
-    f += ")"
+    f += ",".join([f"{final_letter}{r}*{decimal_to_number(rubric.criteria[i].percentage)}" # type: ignore
+                   for i, r in enumerate(criterion_rows)])
+    f += ")/100"
     ws.cell(row=total_row, column=total_cell).value = f

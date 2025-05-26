@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from c3hm.utils import is_multiple_of_quantum, round_to_nearest_quantum, split_decimal
+from c3hm.utils.decimal import is_multiple_of_quantum, round_to_nearest_quantum, split_decimal
 
 
 def test_is_multiple_of_quantum():

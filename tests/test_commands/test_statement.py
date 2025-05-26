@@ -25,39 +25,26 @@ def test_generate_word_from_rubric(
 
     # Test avec le gabarit sans pondération des indicateurs
     c_1 = config.copy()
-    c_1.rubric.format.hide_indicators_weight = True
+    c_1.rubric.format.show_indicators_percent = False
+    c_1.rubric.validate()
     doc_file = tmp_path / f"{config_template_path.stem}_no_weights.docx"
     generate_rubric(doc_file, output_dir, c_1)
 
-    # Retire les descripteurs
-    c_no_descriptors = config.copy()
-    for criterion in c_no_descriptors.rubric.criteria:
-        for ind in criterion.indicators:
-            ind.descriptors = []
-    c_no_descriptors.rubric.validate()
-    docfile = tmp_path / f"{config_template_path.stem}_no_descriptors.docx"
-    generate_rubric(docfile, output_dir, c_no_descriptors)
-
     # Avec deux niveaux
-    c_2_levels = c_no_descriptors.copy()
+    c_2_levels = c_1.copy()
     c_2_levels.rubric.format.orientation = "portrait"
     c_2_levels.rubric.grade_levels = ["✅", "❌"]
-    c_2_levels.rubric.default_grade_weights = [Decimal(1), Decimal(0)]
-    c_2_levels.rubric.format.columns_width = [None, 3, 3]
+    c_2_levels.rubric.grade_thresholds = [(Decimal(1), Decimal(1), Decimal(1)),
+                                          (Decimal(0), Decimal(0), Decimal(0))]
+    c_2_levels.rubric.default_descriptors = ["", ""]
     for criterion in c_2_levels.rubric.criteria:
-        criterion.default_grade_weights = [Decimal(1), Decimal(0)]
-        for ind in criterion.indicators:
-            ind.grade_weights = [Decimal(1), Decimal(0)]
-    c_no_descriptors.rubric.validate()
+        for indicator in criterion.indicators:
+            indicator.descriptors = []
+    c_2_levels.rubric.format.columns_width = [None, 3, 3]
+    c_2_levels.rubric.validate()
     docfile = tmp_path / f"{config_template_path.stem}_2_levels.docx"
     generate_rubric(docfile, output_dir, c_2_levels)
 
-    # Deux niveaux sans la pondération des indicateurs
-    c_2_levels_no_weights = c_2_levels.copy()
-    c_2_levels_no_weights.rubric.format.hide_indicators_weight = True
-    c_2_levels_no_weights.rubric.validate()
-    docfile = tmp_path / f"{config_template_path.stem}_2_levels_no_weights.docx"
-    generate_rubric(docfile, output_dir, c_2_levels_no_weights)
 
 def generate_rubric(doc_file: Path, output_dir: Path, config: Config):
     generate_statement_rubric(config.rubric, doc_file, title=config.title())

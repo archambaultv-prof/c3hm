@@ -11,19 +11,16 @@ from docx.enum.section import WD_ORIENT
 from docx.enum.text import WD_COLOR_INDEX, WD_PARAGRAPH_ALIGNMENT
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
-from docx.shared import Cm, RGBColor
+from docx.shared import Cm
 from docx.table import Table
 
 from c3hm.data.rubric import (
     CTHM_GLOBAL_COMMENT,
     Criterion,
-    GradeWeight,
     Rubric,
-    max_grade_weight,
-    min_grade_weight,
 )
 from c3hm.data.student import Student
-from c3hm.utils import decimal_to_number
+from c3hm.utils.decimal import decimal_to_number, round_to_nearest_quantum
 
 PERFECT_GREEN    = "C8FFC8"  # RGB(200, 255, 200)
 VERY_GOOD_GREEN  = "F0FFB0"  # RGB(240, 255, 176)
@@ -74,7 +71,7 @@ def set_cell_background(cell, color_hex: str):
         tc_pr.remove(old)
     tc_pr.append(shd)
 
-def set_row_borders(row, top=0.5, bottom=0.5):
+def set_row_borders(row, top: float | None =0.5, bottom: float | None =0.5):
     """
     Définit les bordures hautes et basses d'une ligne dans un tableau Word.
     """
@@ -109,7 +106,7 @@ def set_orientation(doc: Document, orientation: str):
         if orientation == "paysage":
             section.orientation = WD_ORIENT.LANDSCAPE
             # Échanger la largeur et la hauteur de la page
-            if section.page_width < section.page_height:
+            if section.page_width < section.page_height: # type: ignore
                 section.page_width, section.page_height = (
                     section.page_height,
                     section.page_width,
@@ -117,7 +114,7 @@ def set_orientation(doc: Document, orientation: str):
         elif orientation == "portrait":
             section.orientation = WD_ORIENT.PORTRAIT
             # Échanger la largeur et la hauteur de la page
-            if section.page_width > section.page_height:
+            if section.page_width > section.page_height: # type: ignore
                 section.page_width, section.page_height = (
                     section.page_height,
                     section.page_width,
@@ -148,12 +145,12 @@ def generate_rubric(
     # Ce dernier contient déjà le formatage et les styles nécessaires
     template = resources.files("c3hm.assets.templates.word").joinpath("rubric-default.docx")
     with resources.as_file(template) as path:
-        doc = docx.Document(path)
+        doc = docx.Document(str(path))
 
     # Modifier l'orientation de la page au besoin
     if rubric.format.orientation:
         set_orientation(doc, rubric.format.orientation)
-    elif rubric.nb_columns() > 4:
+    elif rubric.nb_criteria() >= 4:
         set_orientation(doc, "landscape")
     else:
         set_orientation(doc, "portrait")
@@ -165,20 +162,31 @@ def generate_rubric(
     p.alignment = docx.enum.text.WD_PARAGRAPH_ALIGNMENT.CENTER
 
     # insérer le nom de l'étudiant
-    if student:
+    if grades and student:
         p = doc.add_paragraph()
         p.text = f"{student.first_name} {student.last_name}"
 
     # Insérer le commentaire général
-    if grades and CTHM_GLOBAL_COMMENT in grades and grades[CTHM_GLOBAL_COMMENT]:
+    if grades and CTHM_GLOBAL_COMMENT in grades:
         comment = str(grades[CTHM_GLOBAL_COMMENT]).strip()
-        p = doc.add_paragraph()
-        p.text = f"Commentaire : {comment}"
-        p.style = "Normal"
-        p.alignment = docx.enum.text.WD_PARAGRAPH_ALIGNMENT.LEFT
+        if comment:
+            p = doc.add_paragraph()
+            p.text = f"Commentaire : {comment}"
+            p.style = "Normal"
+            p.alignment = docx.enum.text.WD_PARAGRAPH_ALIGNMENT.LEFT
 
     # insérer la table pour la grille
-    table = add_word_table(doc, rubric.nb_columns(), rubric.format.columns_width)
+    has_criteria_comments = any(
+        criterion_has_comments(criterion, grades)
+        for criterion in rubric.criteria
+    )
+    if grades and has_criteria_comments:
+        col_width = rubric.format.columns_width_comments
+        nb_columns = len(rubric.grade_levels) + 2
+    else:
+        col_width = rubric.format.columns_width
+        nb_columns = len(rubric.grade_levels) + 1
+    table = add_word_table(doc, nb_columns, col_width)
 
     # Remplir la première ligne avec le barème
     set_first_row(rubric, table, grades)
@@ -191,11 +199,8 @@ def generate_rubric(
     last_row = table.rows[-1]
     set_row_borders(last_row, top=None, bottom=1.0)
 
-    # Ajoute des commentaires (pour la correction)
-    add_comments(doc, rubric, grades)
-
     # enregistrer le fichier
-    doc.save(output_path)
+    doc.save(str(output_path))
 
 def add_word_table(doc: Document, n_cols: int, column_widths_cm: list[float|None]):
     """
@@ -214,7 +219,7 @@ def add_word_table(doc: Document, n_cols: int, column_widths_cm: list[float|None
     sect = doc.sections[0]
     avail_width_emu = (
         sect.page_width
-        - sect.left_margin
+        - sect.left_margin # type: ignore
         - sect.right_margin
     )
 
@@ -233,14 +238,14 @@ def add_word_table(doc: Document, n_cols: int, column_widths_cm: list[float|None
     # 4) Assignation de la largeur à chaque colonne
     for idx, col in enumerate(table.columns):
         w = column_widths_cm[idx]
-        col.width = Cm(w) if w is not None else emu_auto
+        col.width = Cm(w) if w is not None else emu_auto # type: ignore
 
     # 5) Assignation de la largeur à chaque cellule
     # (yep ... c'est comme ça dans Word)
     for row in table.rows:
         for idx, cell in enumerate(row.cells):
             w = column_widths_cm[idx]
-            cell.width = Cm(w) if w is not None else emu_auto
+            cell.width = Cm(w) if w is not None else emu_auto # type: ignore
 
     return table
 
@@ -251,84 +256,107 @@ def add_criterion(table: Table,
                   grades: dict[str, Any] | None = None):
     """
     Ajoute un critère et ses indicateurs à la table.
-    Le dernier paramètre est la grille, mais elle n'est pas utilisée ici.
     """
     row = table.add_row()
+    narrow_nbsp = "\u202F"
+
     # Critère
     p = row.cells[0].paragraphs[0]
-    pts = "pt" if criterion.total == 1 else "pts"
-    p.text = f"{criterion.name} ({criterion.total} {pts})"
+    txt = criterion.name.strip()
+    txt += f" ({decimal_to_number(criterion.percentage)}{narrow_nbsp}%)" # type: ignore
+    p.text = txt
     p.style = "Heading 3"
 
     if grades:
-        p = row.cells[1].paragraphs[0]
-        p.text = f"{grades[criterion.xl_grade_cell_id()]} / {criterion.total}"
+        c_grade = criterion_grade(criterion, grades, rubric)
+        # Find the position according to the grades_thresholds
+        grade_pos = len(rubric.grade_thresholds)  # Default to last position
+        for i, (_, min_grade, _) in enumerate(rubric.grade_thresholds):
+            if c_grade >= min_grade:
+                grade_pos = i + 1
+                break
+        p = row.cells[grade_pos].paragraphs[0]
+        p.text = f"{decimal_to_number(c_grade)}"
         p.style = "Heading 3"
+
+        # Ajoute le commentaire du critère si disponible
+        comment = grades[criterion.xl_comment_cell_id()]
+        if comment and comment.strip():
+            comment_cell = row.cells[-1]
+            p = comment_cell.paragraphs[0]
+            p.text = comment.strip()
 
     # Indicateurs
     for indicator in criterion.indicators:
         row = table.add_row()
         p = row.cells[0].paragraphs[0]
-        run = p.add_run(indicator.name)
+        run = p.add_run()
+        txt = indicator.name.strip()
+        if rubric.format.show_indicators_percent:
+            # Afficher le pourcentage de l'indicateur
+            txt += f" ({decimal_to_number(indicator.percentage)}{narrow_nbsp}%)" # type: ignore
+        run.text = txt
         run.style = "Emphasis"
 
-        # Descripteurs alignés avec les niveaux de barème
-        found_grade_indicator = False
-        skip_highlight = False
-        perfect_grade = max_grade_weight(indicator.grade_weights[0])
-        for i, grade_weight in enumerate(indicator.grade_weights):
-            # Vérifie si l'indicateur est celui correspondant à la note
-            min_weight = min_grade_weight(grade_weight)
-            found_grade_indicator = (
-                found_grade_indicator or
-                (grades and grades[indicator.xl_grade_cell_id()] >= min_weight)
-                )
+        if grades:
+            i_grade = grades[indicator.xl_grade_cell_id()]
+            grade_pos = len(rubric.grade_thresholds)  # Default to last position
+            for i, (_, min_grade, _) in enumerate(rubric.grade_thresholds):
+                if i_grade >= min_grade:
+                    grade_pos = i + 1
+                    break
 
+            # Ajoute le commentaire de l'indicateur si disponible
+            comment = grades[indicator.xl_comment_cell_id()]
+            if comment and comment.strip():
+                comment_cell = row.cells[-1]
+                p = comment_cell.paragraphs[0]
+                p.text = comment.strip()
+
+        else:
+            grade_pos = None
+
+        color_schemes = scale_color_schemes(len(rubric.grade_levels))
+        for i, descriptor in enumerate(indicator.descriptors):
             # Descripteur
-            if indicator.descriptors:
-                row.cells[i + 1].text = indicator.descriptors[i]
-                desc_skip = "\n"
-            else:
-                desc_skip = ""
+            cell = row.cells[i + 1]
+            cell.text = descriptor
 
-            if not rubric.format.hide_indicators_weight:
-                p = row.cells[i + 1].paragraphs[0]
-                if found_grade_indicator and not skip_highlight:
-                    run = p.add_run(
-                        f"{desc_skip}{grades[indicator.xl_grade_cell_id()]} / {perfect_grade}")
-                elif not grades:
-                    run = p.add_run(f"{desc_skip}{grade_weight_to_str(grade_weight)}")
+            # Ajoute la note de l'indicateur si disponible
+            if grades and i+1 == grade_pos:
+                i_grade = grades[indicator.xl_grade_cell_id()]
+                run = cell.paragraphs[0].add_run(f" ({decimal_to_number(i_grade)})")
+                run.style = "Emphasis"
+                if color_schemes:
+                    set_cell_background(cell, color_schemes[i])
                 else:
-                    run = None
-                if run:
-                    run.style = "Emphasis"
-                    run.font.color.rgb = RGBColor(0x80, 0x80, 0x80)
-                    if not indicator.descriptors:
-                        # Si pas de descripteur, on aligne la pondération au centre
-                        p.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+                    # On met en surbrillance le descripteur
+                    for paragraph in cell.paragraphs:
+                        for run in paragraph.runs:
+                            run.font.highlight_color = WD_COLOR_INDEX.YELLOW
 
-            if found_grade_indicator and not skip_highlight:
-                # On met en surbrillance le descripteur
-                for paragraph in row.cells[i + 1].paragraphs:
-                    for run in paragraph.runs:
-                        run.font.highlight_color = WD_COLOR_INDEX.YELLOW
-                skip_highlight = True
+def criterion_grade(criterion: Criterion,
+                    grades: dict[str, Any],
+                    rubric: Rubric) -> Decimal:
+    """
+    Calcule la note d'un critère à partir des notes de ses indicateurs.
+    Si la note est écrasée manuellement, elle est utilisée telle quelle.
+    """
+    if grades[criterion.xl_grade_overwrite_cell_id()] is not None:
+        return grades[criterion.xl_grade_overwrite_cell_id()]
 
-def grade_weight_to_str(grade_weight: GradeWeight) -> str:
-    endash = "\u2013"
-    if isinstance(grade_weight, Decimal):
-        return str(decimal_to_number(grade_weight))
-    elif isinstance(grade_weight, int):
-        return str(grade_weight)
-    elif isinstance(grade_weight, list):
-        ls = [str(decimal_to_number(w)) for w in grade_weight]
-        return f" {endash} ".join(ls)
-    elif isinstance(grade_weight, dict):
-        start = decimal_to_number(grade_weight["début"])
-        end = decimal_to_number(grade_weight["fin"])
-        return f"{end} {endash} {start}"
-    else:
-        raise TypeError(f"Type de grade_weight non pris en charge : {type(grade_weight)}")
+    total = Decimal(0)
+    for indicator in criterion.indicators:
+        ind_grade = grades[indicator.xl_grade_cell_id()]
+        total += ind_grade * indicator.percentage
+
+    return round_to_nearest_quantum(total / criterion.percentage, rubric.precision) # type: ignore
+
+def total_grade(rubric: Rubric, grades: dict[str, Any]) -> Decimal:
+    total = Decimal(0)
+    for criterion in rubric.criteria:
+        total += criterion_grade(criterion, grades, rubric) * criterion.percentage # type: ignore
+    return round_to_nearest_quantum(total / 100, rubric.precision)
 
 def set_first_row(rubric: Rubric, table: Table, grades: dict[str, Any] | None):
     """
@@ -344,16 +372,21 @@ def set_first_row(rubric: Rubric, table: Table, grades: dict[str, Any] | None):
     total_cell = hdr_cells[0]
     p = total_cell.paragraphs[0]
     if grades:
-        total = sum(grades[c.xl_grade_cell_id()] for c in rubric.criteria)
-        p.text = f"Note : {total} / {rubric.total}"
-        p.style = "Heading 3"
-    else:
-        pts = "pt" if rubric.total == 1 else "pts"
-        p.text = f"Total sur {rubric.total} {pts}"
+        total = total_grade(rubric, grades)
+        total = decimal_to_number(total)
+        p.text = f"Note : {total}"
         p.style = "Heading 3"
 
     # Barème et seuils
     set_grade_levels(rubric, hdr_cells)
+
+    # Commentaires
+    if grades:
+        comment_cell = hdr_cells[-1]
+        p = comment_cell.paragraphs[0]
+        p.text = "Commentaire"
+        p.style = "Heading 3"
+        p.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
 
 def set_grade_levels(rubric: Rubric, hdr_cells):
     color_schemes = scale_color_schemes(len(rubric.grade_levels))
@@ -361,55 +394,19 @@ def set_grade_levels(rubric: Rubric, hdr_cells):
         cell = hdr_cells[i + 1]
         if color_schemes:
             set_cell_background(cell, color_schemes[i])
+        t_str = rubric.threshold_str(i)
+        txt = f"{label}\n({t_str})"
         p = cell.paragraphs[0]
-        p.text = label
+        p.text = txt
         p.style = "Heading 3"
         p.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
 
-def add_comments(doc: Document,
-                 rubric: Rubric,
-                 grades: dict[str, Any] | None):
-        """
-        Ajoute les commentaires de l'évaluateur à la fin du document.
-        """
-        if not grades:
-            return
-
-        if not any(criterion_has_comments(c, grades) for c in rubric.criteria):
-            return
-
-        heading = doc.add_heading("Commentaires", level=1)
-        heading.alignment = docx.enum.text.WD_PARAGRAPH_ALIGNMENT.LEFT
-        # Ajoute les commentaires de chaque critère
-        for criterion in rubric.criteria:
-            # Vérifie si le critère a des commentaires
-            has_comments = criterion_has_comments(criterion, grades)
-            if not has_comments:
-                continue
-
-            # Si le critère a des commentaires, on les ajoute
-            heading = doc.add_heading(criterion.name, level=3)
-            heading.alignment = docx.enum.text.WD_PARAGRAPH_ALIGNMENT.LEFT
-
-            if criterion.xl_comment_cell_id() in grades:
-                comment: str = grades[criterion.xl_comment_cell_id()]
-                if comment.strip():
-                    doc.add_paragraph(comment.strip())
-
-            for indicator in criterion.indicators:
-                if indicator.xl_comment_cell_id() in grades:
-                    comment: str = grades[indicator.xl_comment_cell_id()]
-                    if not comment.strip():
-                        continue
-                    p = doc.add_paragraph(f"{indicator.name} : ")
-                    run = p.runs[0]
-                    run.style = "Emphasis"
-                    p.add_run(comment.strip())
-
-def criterion_has_comments(criterion: Criterion, grades: dict[str, Any]) -> bool:
+def criterion_has_comments(criterion: Criterion, grades: dict[str, Any] | None) -> bool:
     """
     Vérifie si un critère a des commentaires.
     """
+    if not grades:
+        return False
     has_comments = False
     id = criterion.xl_comment_cell_id()
     if id in grades and grades[id].strip():

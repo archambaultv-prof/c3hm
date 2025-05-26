@@ -7,10 +7,10 @@ from openpyxl import Workbook
 from openpyxl.cell.cell import Cell
 from openpyxl.worksheet.worksheet import Worksheet
 
-from c3hm.commands.generate_rubric import generate_rubric
+from c3hm.commands.generate_rubric import generate_rubric, total_grade
 from c3hm.data.config import Config
 from c3hm.data.rubric import CTHM_GLOBAL_COMMENT, CTHM_OMNIVOX
-from c3hm.utils import round_to_nearest_quantum
+from c3hm.utils.decimal import decimal_to_number, round_to_nearest_quantum
 
 
 def grades_from_wb(
@@ -80,12 +80,16 @@ def grades_from_ws(ws: Worksheet, config: Config) -> dict[str, Any]:
 
     # Récupère les notes et commentaires
     for criterion in rubric.criteria:
-        grade_cell = find_named_cell(ws, criterion.xl_grade_cell_id())
+        grade_cell = find_named_cell(ws, criterion.xl_grade_overwrite_cell_id())
         if grade_cell is None:
-            raise ValueError(f"La cellule nommée '{criterion.xl_grade_cell_id()}'"
+            raise ValueError(f"La cellule nommée '{criterion.xl_grade_overwrite_cell_id()}'"
                              " n'existe pas dans la feuille.")
-        grade = round_to_nearest_quantum(Decimal(str(grade_cell.value)), criterion.total_precision)
-        d[criterion.xl_grade_cell_id()] = grade
+        if grade_cell.value is None:
+            grade = None
+        else:
+            grade = round_to_nearest_quantum(Decimal(str(grade_cell.value)),
+                                            rubric.precision)
+        d[criterion.xl_grade_overwrite_cell_id()] = grade
 
         # Récupère les commentaires
         comment_cell = find_named_cell(ws, criterion.xl_comment_cell_id())
@@ -101,7 +105,8 @@ def grades_from_ws(ws: Worksheet, config: Config) -> dict[str, Any]:
             if ind_grade_cell is None:
                 raise ValueError(f"La cellule nommée '{indicator.xl_grade_cell_id()}'"
                                  " n'existe pas dans la feuille.")
-            ind_grade = Decimal(str(ind_grade_cell.value))
+            ind_grade = round_to_nearest_quantum(Decimal(str(ind_grade_cell.value)),
+                                                 rubric.precision)
             d[indicator.xl_grade_cell_id()] = ind_grade
 
             # Récupère le commentaire de l'indicateur
@@ -137,15 +142,19 @@ def generate_feedback(
     # Génère le document Word
     for grade in grades:
         student = config.find_student(grade[CTHM_OMNIVOX])
+        if student is None:
+            raise ValueError(f"Étudiant avec code omnivox '{grade[CTHM_OMNIVOX]}' "
+                             "non trouvé dans la configuration.")
         # Génère le fichier dans le répertoire de sortie pour inspection manuelle
         feedback_path = output_dir / f"{student.omnivox_code}-{student.alias}.docx"
         feedback_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Génère le document Word
+        course = config.evaluation.course or ""
         title = (student.first_name + " " +
                  student.last_name + " - " +
                  config.evaluation.name + " - " +
-                 config.evaluation.course)
+                 course)
         generate_rubric(config.rubric, feedback_path, title=title, grades=grade)
 
     # Génère le fichier Excel pour charge les notes dans Omnivox
@@ -164,16 +173,16 @@ def generate_xl_for_omnivox(
     omnivox_path = output_dir / "omnivox.xlsx"
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = "Notes"
+    ws.title = "Notes" # type: ignore
 
     # En-têtes
-    ws.append(["Code omnivox", "Note", "Commentaire"])
+    ws.append(["Code omnivox", "Note", "Commentaire"]) # type: ignore
 
     # Remplit le tableau avec les notes et les commentaires
     for grade in grades:
-        note = sum(grade[criterion.xl_grade_cell_id()] for criterion in config.rubric.criteria)
+        note = decimal_to_number(total_grade(config.rubric, grade))
         comment = grade.get(CTHM_GLOBAL_COMMENT, "")
-        ws.append([grade[CTHM_OMNIVOX], note, comment])
+        ws.append([grade[CTHM_OMNIVOX], note, comment]) # type: ignore
 
     # Sauvegarde le fichier Excel
     wb.save(omnivox_path)

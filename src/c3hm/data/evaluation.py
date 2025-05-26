@@ -27,7 +27,7 @@ class Evaluation(BaseModel):
             course=data.get("cours")
         )
 
-    def copy(self) -> "Evaluation":
+    def copy(self) -> "Evaluation": # type: ignore
         """
         Retourne une copie de l'évaluation.
         """

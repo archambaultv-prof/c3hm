@@ -48,7 +48,7 @@ class Student(BaseModel):
             alias=data["alias"],
         )
 
-    def copy(self) -> "Student":
+    def copy(self) -> "Student": # type: ignore
         """
         Retourne une copie de l'étudiant.
         """

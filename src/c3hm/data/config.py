@@ -99,7 +99,7 @@ class Config(BaseModel):
                 return student
         return None
 
-    def copy(self) -> "Config":
+    def copy(self) -> "Config": # type: ignore
         """
         Retourne une copie de la configuration.
         """
