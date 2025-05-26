@@ -26,8 +26,7 @@ from c3hm.commands.clean import PATHS_TO_DELETE, remove_unwanted_dirs
         dir_okay=True,
         path_type=Path
     ),
-    default=Path.cwd(),
-    required=False
+    required=True
 )
 @click.option(
     "--dryrun", "-n",
