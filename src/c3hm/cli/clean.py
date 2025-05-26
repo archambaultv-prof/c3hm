@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import click
+
 from c3hm.commands.clean import PATHS_TO_DELETE, remove_unwanted_dirs
 
 
