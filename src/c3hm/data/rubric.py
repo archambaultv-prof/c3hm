@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 from c3hm.data.criterion import Criterion
 from c3hm.data.format import Format
-from c3hm.utils import (
+from c3hm.utils.decimal import (
     decimal_to_number,
     is_multiple_of_quantum,
     split_decimal,
@@ -49,6 +49,29 @@ class Rubric(BaseModel):
         if not self.grade_thresholds:
             raise ValueError("La grille d'évaluation n'a pas de seuils définis.")
         return self.grade_thresholds[0][0]
+
+    def threshold_default(self, i: int) -> Decimal:
+        """
+        Retourne le seuil par défaut pour le niveau i.
+        """
+        if i < 0 or i >= len(self.grade_levels):
+            raise IndexError(f"Index {i} hors des limites pour les niveaux de la grille.")
+        return self.grade_thresholds[i][2]
+
+    def threshold_str(self, i: int) -> str:
+        """
+        Retourne une chaîne de caractères représentant le seuil pour le niveau i.
+        """
+        if i < 0 or i >= len(self.grade_levels):
+            raise IndexError(f"Index {i} hors des limites pour les niveaux de la grille.")
+        max_grade = self.grade_thresholds[i][0]
+        min_grade = self.grade_thresholds[i][1]
+        if min_grade == max_grade:
+            return f"{min_grade}"
+        else:
+            if min_grade == Decimal("0"):
+                return f"{max_grade} et moins"
+            return f"{max_grade} à {min_grade}"
 
     def to_dict(self) -> dict:
         """

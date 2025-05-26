@@ -3,7 +3,7 @@ from decimal import Decimal
 from pydantic import BaseModel, Field
 
 from c3hm.data.indicator import Indicator
-from c3hm.utils import decimal_to_number
+from c3hm.utils.decimal import decimal_to_number
 
 
 class Criterion(BaseModel):
@@ -19,13 +19,14 @@ class Criterion(BaseModel):
         min_length=1
     )
 
-    def xl_grade_cell_id(self) -> str:
+    def xl_grade_overwrite_cell_id(self) -> str:
         """
-        Retourne l'identifiant de la cellule pour la note du critère.
+        Retourne l'identifiant de la cellule pour la note du critère
+        losque la note est écrasée manuellement.
         """
         if self.xl_cell_id is None:
             raise ValueError("xl_cell_id n'est pas défini.")
-        return f"{self.xl_cell_id}_grade"
+        return f"{self.xl_cell_id}_grade_overwrite"
 
     def xl_comment_cell_id(self) -> str:
         """

@@ -19,7 +19,7 @@ from c3hm.data.rubric import (
     Rubric,
 )
 from c3hm.data.student import Student
-from c3hm.utils import decimal_to_number
+from c3hm.utils.decimal import decimal_to_number, round_to_nearest_quantum
 
 PERFECT_GREEN    = "C8FFC8"  # RGB(200, 255, 200)
 VERY_GOOD_GREEN  = "F0FFB0"  # RGB(240, 255, 176)
@@ -269,7 +269,16 @@ def add_criterion(table: Table,
     run.font.color.rgb = percent_gray
 
     if grades:
-        c_grade = grades[criterion.xl_grade_cell_id()]
+        if grades[criterion.xl_grade_overwrite_cell_id()] is not None:
+            # Si la note est écrasée manuellement, on l'utilise
+            c_grade = grades[criterion.xl_grade_overwrite_cell_id()]
+        else:
+            # Sinon, on calcule la note du critère
+            c_grade = sum(
+                grades[ind.xl_grade_cell_id()] * ind.percentage
+                for ind in criterion.indicators
+            ) / criterion.percentage # type: ignore
+            c_grade = round_to_nearest_quantum(c_grade, rubric.precision)
         # Find the position according to the grades_thresholds
         grade_pos = len(rubric.grade_thresholds)  # Default to last position
         for i, (_, min_grade, _) in enumerate(rubric.grade_thresholds):
@@ -277,7 +286,7 @@ def add_criterion(table: Table,
                 grade_pos = i + 1
                 break
         p = row.cells[grade_pos].paragraphs[0]
-        p.text = f"{c_grade}"
+        p.text = f"{decimal_to_number(c_grade)}"
         p.style = "Heading 3"
 
     # Indicateurs
@@ -312,7 +321,7 @@ def add_criterion(table: Table,
             # Ajoute la note de l'indicateur si disponible
             if grades and i+1 == grade_pos:
                 i_grade = grades[indicator.xl_grade_cell_id()]
-                run = cell.paragraphs[0].add_run(f" ({i_grade})")
+                run = cell.paragraphs[0].add_run(f" ({decimal_to_number(i_grade)})")
                 run.style = "Emphasis"
                 run.font.color.rgb = percent_gray
                 if color_schemes:
@@ -337,7 +346,7 @@ def set_first_row(rubric: Rubric, table: Table, grades: dict[str, Any] | None):
     total_cell = hdr_cells[0]
     p = total_cell.paragraphs[0]
     if grades:
-        total = sum(grades[c.xl_grade_cell_id()] for c in rubric.criteria)
+        total = sum(grades[c.xl_grade_overwrite_cell_id()] for c in rubric.criteria)
         p.text = f"Note : {total}"
         p.style = "Heading 3"
 
@@ -358,12 +367,8 @@ def set_grade_levels(rubric: Rubric, hdr_cells):
         cell = hdr_cells[i + 1]
         if color_schemes:
             set_cell_background(cell, color_schemes[i])
-        max_grade = rubric.grade_thresholds[i][0]
-        min_grade = rubric.grade_thresholds[i][1]
-        if min_grade == max_grade:
-            txt = f"{label}\n({min_grade})"
-        else:
-            txt = f"{label}\n({max_grade} à {min_grade})"
+        t_str = rubric.threshold_str(i)
+        txt = f"{label}\n({t_str})"
         p = cell.paragraphs[0]
         p.text = txt
         p.style = "Heading 3"

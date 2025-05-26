@@ -1,4 +1,4 @@
-from c3hm.commands.omnivox import extract_student_info
+from c3hm.utils.omnivox import extract_student_info
 
 
 def test_extract_student_info():

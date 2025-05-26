@@ -7,27 +7,21 @@
 
 grille:
 
-  total: 100
-
-  total précision: 0.5
-
   niveaux: [Excellent, Très bien, Bien, Passable, Insuffisant]
 
   pondération par défaut:
-  - [20, 19, 18]
-  - [17, 16]
-  - [15, 14]
-  - [13, 12]
-  - début: 0 
-    fin: 11
-    pas: 1
+  - [20, 18, 20]
+  - [17, 16, 17]
+  - [15, 14, 14]
+  - [13, 12, 12]
+  - [11, 0, 3]
+
+  précision: 1
 
   critères:
 
   - critère: C1
-    total: 35
-
-    total précision: 0.5
+    pourcentage: 35
 
     indicateurs:
 
@@ -37,8 +31,7 @@ grille:
 
 
   - critère: C2
-    total: 35
-    total précision: 0.5
+    pourcentage: 35
 
 
     indicateurs:
@@ -48,8 +41,7 @@ grille:
   
 
   - critère: C3
-    total: 30
-    total précision: 0.5
+    pourcentage: 30
 
     indicateurs:
     - nom: C3_I1
@@ -60,9 +52,7 @@ grille:
 
     orientation: paysage
 
-    masquer les indicateurs: false
-
-    masquer la pondération des indicateurs: false
+    afficher le pourcentage des indicateurs: false
 
     largeur des colonnes: []
 

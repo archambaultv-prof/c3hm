@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field
 
-from c3hm.utils import decimal_to_number
+from c3hm.utils.decimal import decimal_to_number
 
 
 class Indicator(BaseModel):

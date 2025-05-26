@@ -2,7 +2,7 @@ import os
 import shutil
 from pathlib import Path
 
-from c3hm.commands.omnivox import is_student_folder
+from c3hm.utils.omnivox import is_student_folder
 
 PATHS_TO_DELETE = [
     "__pycache__",
