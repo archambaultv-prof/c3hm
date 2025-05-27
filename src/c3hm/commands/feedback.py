@@ -153,14 +153,15 @@ def grades_from_ws(ws: Worksheet,
             if ind_grade_cell is None:
                 raise ValueError(f"La cellule nommée '{indicator.xl_grade_cell_id()}'"
                                  " n'existe pas dans la feuille.")
-            if ind_grade_cell.value is None and rindicator is not None:
+            if cell_none_or_error(ind_grade_cell) and rindicator is not None:
                 ind_grade = rindicator.grade
-            elif ind_grade_cell.value is not None:
+            elif not cell_none_or_error(ind_grade_cell):
                 ind_grade = round_to_nearest_quantum(Decimal(str(ind_grade_cell.value)),
                                                  rubric.precision)
             else:
                 raise ValueError(
-                    f"La note de l'indicateur '{indicator.name}' n'est pas définie."
+                    f"La note de l'indicateur '{indicator.name}' n'est pas définie"
+                    f" pour l'étudiant '{student.alias}'."
                 )
             i = IndicatorGrade(
                 grade=ind_grade,
@@ -185,6 +186,9 @@ def grades_from_ws(ws: Worksheet,
         s.criteria.append(c)
 
     return s
+
+def cell_none_or_error(cell: Cell) -> bool:
+    return cell.value is None or str(cell.value).strip().upper() == "#N/A"
 
 
 def generate_feedback(
