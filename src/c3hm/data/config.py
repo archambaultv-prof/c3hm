@@ -88,6 +88,22 @@ class Config(BaseModel):
         Voir la méthode validate de Rubric pour les détails de la validation.
         """
         self.rubric.validate()
+        # Check that all students alias are unique
+        aliases = {student.alias for student in self.students}
+        if len(aliases) != len(self.students):
+            raise ValueError(
+                "Les alias des étudiants doivent être uniques. "
+                "Vérifiez la liste des étudiants."
+            )
+        # Check that all teams have a team reference and that the team reference is unique
+        teams = {student.team for student in self.students if student.team}
+        teams_ref = [student.team for student in self.students
+                     if student.team and student.is_team_reference]
+        if sorted(teams_ref) != sorted(list(teams)):
+            raise ValueError(
+                "Chaque équipe doit avoir un étudiant référent unique. "
+                "Vérifiez la liste des étudiants."
+            )
 
     def find_student(self, omnivox_code: str) -> Student | None:
         """
@@ -97,6 +113,18 @@ class Config(BaseModel):
             if student.omnivox_code == omnivox_code:
                 return student
         return None
+
+    def find_other_team_members(self, student: Student) -> list[Student]:
+        """
+        Trouve les autres membres de l'équipe d'un étudiant.
+
+        Retourne une liste d'étudiants qui sont dans la même équipe que l'étudiant
+        donné, à l'exception de l'étudiant lui-même.
+        """
+        return [
+            s for s in self.students
+            if s.team == student.team and s.omnivox_code != student.omnivox_code
+        ]
 
     def copy(self) -> "Config": # type: ignore
         """

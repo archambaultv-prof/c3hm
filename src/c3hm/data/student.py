@@ -7,7 +7,11 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class Student(BaseModel):
     """
-    Représente un étudiant avec un nom, prénom et code Omnivox.
+    Représente un étudiant avec un nom, prénom, code Omnivox et alias.
+    Possibilité d'être associé à une équipe. Si l'étudiant est la référence
+    pour son équipe, cela implique que la note attribuée à l'étudiant
+    sera également pour les coéquipiers, sauf si une note est spécifiquement
+    attribuée à un coéquipier.
     """
     model_config = ConfigDict(coerce_numbers_to_str=True)
 
@@ -15,6 +19,14 @@ class Student(BaseModel):
     last_name: str = Field(..., min_length=1)
     omnivox_code: str = Field(..., min_length=1)
     alias: str = Field(..., min_length=1)
+    team: str | None = None
+    is_team_reference: bool = False
+
+    def has_team(self) -> bool:
+        """
+        Vérifie si l'étudiant est associé à une équipe.
+        """
+        return self.team is not None and self.team.strip() != ""
 
     def ws_name(self) -> str:
         """
@@ -31,6 +43,8 @@ class Student(BaseModel):
             "prénom": self.first_name,
             "nom de famille": self.last_name,
             "alias": self.alias,
+            "équipe": self.team,
+            "référence d'équipe": self.is_team_reference,
         }
 
     @classmethod
@@ -50,6 +64,8 @@ class Student(BaseModel):
             last_name=one_of("nom de famille", "Nom de l'étudiant"),
             omnivox_code=one_of("code omnivox", "No de dossier"),
             alias=data["alias"],
+            team=data.get("équipe"),
+            is_team_reference=data.get("référence d'équipe", False),
         )
 
     def copy(self) -> "Student": # type: ignore
@@ -61,6 +77,8 @@ class Student(BaseModel):
             last_name=self.last_name,
             omnivox_code=self.omnivox_code,
             alias=self.alias,
+            team=self.team,
+            is_team_reference=self.is_team_reference,
         )
 
 def read_student(path: str | Path) -> list[dict[str, str]]:

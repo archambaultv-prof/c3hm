@@ -27,16 +27,34 @@ def grades_from_wb(
     """
     graded_rubrics = []
 
-    for ws in wb.worksheets:
-        # Test si on a un nom de cellule "cthm_omnivox" dans la feuille
-        cell = find_named_cell(ws, CTHM_OMNIVOX)
-        if cell is None:
-            continue
-        gr = grades_from_ws(ws, config)
-        graded_rubrics.append(gr)
-
+    # Si un étudiant est une référence d'équipe, on lit la feuille de calcul
+    # de l'équipe et on ajoute les notes pour tous les membres de l'équipe.
+    # Sinon on lit la feuille de calcul de l'étudiant seulement.
+    for student in config.students:
+        if student.is_team_reference:
+            ws = find_worksheet(wb, student.alias)
+            ref_grade = grades_from_ws(ws, config, None)
+            graded_rubrics.append(ref_grade)
+            ls = config.find_other_team_members(student)
+            for member in ls:
+                ws = find_worksheet(wb, member.alias)
+                grade = grades_from_ws(ws, config, ref_grade)
+                graded_rubrics.append(grade)
+        elif not student.has_team():
+            ws = find_worksheet(wb, student.alias)
+            ref_grade = grades_from_ws(ws, config, None)
+            graded_rubrics.append(ref_grade)
     return graded_rubrics
 
+def find_worksheet(wb: Workbook, alias: str) -> Worksheet:
+    """
+    Trouve la feuille de calcul correspondant à l'alias de l'étudiant.
+    Si la feuille n'existe pas, lève une erreur.
+    """
+    for ws in wb.worksheets:
+        if ws.title == alias:
+            return ws
+    raise ValueError(f"La feuille de calcul pour l'alias '{alias}' n'existe pas.")
 
 def find_named_cell(ws: Worksheet, named_cell: str) -> Cell | None:
     """
@@ -57,7 +75,9 @@ def find_named_cell(ws: Worksheet, named_cell: str) -> Cell | None:
     return None
 
 
-def grades_from_ws(ws: Worksheet, config: Config) -> StudentGrade:
+def grades_from_ws(ws: Worksheet,
+                   config: Config,
+                   reference: StudentGrade | None) -> StudentGrade:
     """
     Lit une feuille de calcul et retourne un dictionnaire contenant
     les informations sur les grilles d'évaluation.
@@ -82,10 +102,16 @@ def grades_from_ws(ws: Worksheet, config: Config) -> StudentGrade:
     if cell is None:
         raise ValueError(f"La cellule nommée '{CTHM_GLOBAL_COMMENT}' "
                          "n'existe pas dans la feuille.")
-    s.comment = str(cell.value) if cell.value is not None else ""
+    if cell.value is None and reference is not None:
+        s.comment = reference.comment
+    elif cell.value is not None:
+        s.comment = str(cell.value)
+    else:
+        s.comment = ""
 
     # Récupère les notes et commentaires
-    for criterion in rubric.criteria:
+    cs = reference.criteria if reference is not None else [None] * len(rubric.criteria)
+    for criterion, creference in zip(rubric.criteria, cs, strict=True):
         c = CriterionGrade(
             indicators=[],
             manual_grade=None,
@@ -97,6 +123,8 @@ def grades_from_ws(ws: Worksheet, config: Config) -> StudentGrade:
             raise ValueError(f"La cellule nommée '{criterion.xl_grade_overwrite_cell_id()}'"
                              " n'existe pas dans la feuille.")
         if grade_cell.value is None:
+            if creference is not None:
+                grade = creference.manual_grade
             grade = None
         else:
             grade = round_to_nearest_quantum(Decimal(str(grade_cell.value)),
@@ -108,17 +136,32 @@ def grades_from_ws(ws: Worksheet, config: Config) -> StudentGrade:
         if comment_cell is None:
             raise ValueError(f"La cellule nommée '{criterion.xl_comment_cell_id()}'"
                              " n'existe pas dans la feuille.")
-        comment = "" if comment_cell.value is None else str(comment_cell.value).strip()
+        if comment_cell.value is None and creference is not None:
+            comment = creference.comment
+        elif comment_cell.value is not None:
+            comment = str(comment_cell.value).strip()
+        else:
+            comment = ""
         c.comment = comment
 
-        for indicator in criterion.indicators:
+        iss = (creference.indicators
+               if creference is not None
+               else [None] * len(criterion.indicators))
+        for indicator, rindicator in zip(criterion.indicators, iss, strict=True):
             # Récupère la note de l'indicateur
             ind_grade_cell = find_named_cell(ws, indicator.xl_grade_cell_id())
             if ind_grade_cell is None:
                 raise ValueError(f"La cellule nommée '{indicator.xl_grade_cell_id()}'"
                                  " n'existe pas dans la feuille.")
-            ind_grade = round_to_nearest_quantum(Decimal(str(ind_grade_cell.value)),
+            if ind_grade_cell.value is None and rindicator is not None:
+                ind_grade = rindicator.grade
+            elif ind_grade_cell.value is not None:
+                ind_grade = round_to_nearest_quantum(Decimal(str(ind_grade_cell.value)),
                                                  rubric.precision)
+            else:
+                raise ValueError(
+                    f"La note de l'indicateur '{indicator.name}' n'est pas définie."
+                )
             i = IndicatorGrade(
                 grade=ind_grade,
                 percentage=indicator.percentage,  # type: ignore
@@ -130,8 +173,12 @@ def grades_from_ws(ws: Worksheet, config: Config) -> StudentGrade:
             if ind_comment_cell is None:
                 raise ValueError(f"La cellule nommée '{indicator.xl_comment_cell_id()}'"
                                  " n'existe pas dans la feuille.")
-            ind_comment = (""  if ind_comment_cell.value is None
-                           else str(ind_comment_cell.value).strip())
+            if ind_comment_cell.value is None and rindicator is not None:
+                ind_comment = rindicator.comment
+            elif ind_comment_cell.value is not None:
+                ind_comment = str(ind_comment_cell.value).strip()
+            else:
+                ind_comment = ""
             i.comment = ind_comment
             c.indicators.append(i)
         # Ajoute le critère à la note de l'étudiant
