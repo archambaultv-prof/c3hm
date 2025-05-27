@@ -59,13 +59,18 @@ class Student(BaseModel):
             raise KeyError(
                 f"Un des champs suivants est requis: {', '.join(args)}"
             )
+        if "référence d'équipe" in data:
+            r = data["référence d'équipe"]
+            r = False if isinstance(r, str) and r.strip() == "" or r is None else str(r)
+        else:
+            r = False
         return cls(
             first_name=one_of("prénom", "Prénom de l'étudiant"),
             last_name=one_of("nom de famille", "Nom de l'étudiant"),
             omnivox_code=one_of("code omnivox", "No de dossier"),
             alias=data["alias"],
             team=data.get("équipe"),
-            is_team_reference=data.get("référence d'équipe", False),
+            is_team_reference=r, # type: ignore
         )
 
     def copy(self) -> "Student": # type: ignore
@@ -124,5 +129,13 @@ def read_student_excel(path: str | Path) -> list[dict[str, str]]:
     for row in rows[1:]:
         student = {headers[i]: (str(cell) if cell is not None else "")
                    for i, cell in enumerate(row)}
+        if is_empty_row(student):
+            continue
         students.append(student)
     return students
+
+def is_empty_row(row: dict[str, str]) -> bool:
+    """
+    Vérifie si une ligne de données d'étudiant est vide.
+    """
+    return all(value.strip() == "" for value in row.values())
