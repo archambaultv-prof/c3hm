@@ -1,0 +1,51 @@
+évaluation:
+
+  nom: 
+
+  cours: 
+
+grille:
+
+  niveaux: [Excellent, Très bien, Bien, Passable, Insuffisant]
+
+  seuils par niveau:
+  - [100, 90, 100]
+  - [89, 80, 85]
+  - [79, 70, 70]
+  - [69, 60, 60]
+  - [59, 0, 30]
+
+  précision: 1
+
+  descripteurs par défaut:
+  - "Aucune erreur notable."
+  - "Quelques erreurs mineures."
+  - "Une erreur significative."
+  - "Plusieurs erreurs significatives."
+  - "Lacunes importantes ou travail incomplet."
+
+  critères:
+
+  - critère: 
+
+    pourcentage: 
+
+    indicateurs:
+
+    - nom: 
+
+    - nom: 
+
+    - nom: 
+
+  format:
+
+    orientation: paysage # portrait ou paysage
+
+    afficher le pourcentage des indicateurs: true
+
+    largeur des colonnes: []
+
+    largeur des colonnes avec commentaires: []
+
+étudiants:
