@@ -13,6 +13,7 @@ PATHS_TO_DELETE = [
     "venv",
     ".vscode",
     "node_modules",
+    "__MACOSX",
 ]
 
 def is_excluded_dir(path: Path, exclude_dir: list[str]) -> bool:
