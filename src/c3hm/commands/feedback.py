@@ -6,7 +6,7 @@ from openpyxl import Workbook
 from openpyxl.cell.cell import Cell
 from openpyxl.worksheet.worksheet import Worksheet
 
-from c3hm.commands.generate_rubric import generate_rubric
+from c3hm.commands.generate_rubric import generate_rubric, word_to_pdf
 from c3hm.data.config import Config
 from c3hm.data.rubric import CTHM_GLOBAL_COMMENT, CTHM_OMNIVOX
 from c3hm.data.studentgrade import CriterionGrade, IndicatorGrade, StudentGrade
@@ -69,7 +69,12 @@ def find_named_cell(ws: Worksheet, named_cell: str) -> Cell | None:
 
     for title, coord in defn.destinations:
         if title == ws.title:
-            cell = ws[coord]
+            try:
+                cell = ws[coord]
+            except IndexError as e:
+                print(f"Erreur lors de la récupération de la cellule '{named_cell}'")
+                print(f"Feuille : {ws.title}")
+                raise e
             return cell
 
     return None
@@ -223,6 +228,9 @@ def generate_feedback(
                  config.evaluation.name + " - " +
                  course)
         generate_rubric(config.rubric, feedback_path, title=title, grades=grade)
+        # # Generate the PDF file
+        # pdf_path = feedback_path.with_suffix(".pdf")
+        # word_to_pdf(feedback_path, pdf_path)
 
     # Génère le fichier Excel pour charge les notes dans Omnivox
     generate_xl_for_omnivox(config, grades, output_dir)
