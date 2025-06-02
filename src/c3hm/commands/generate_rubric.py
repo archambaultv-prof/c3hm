@@ -361,7 +361,7 @@ def set_first_row(rubric: Rubric, table: Table, grades: StudentGrade | None):
     set_grade_levels(rubric, hdr_cells)
 
     # Commentaires
-    if grades:
+    if grades and grades.has_criteria_comments():
         comment_cell = hdr_cells[-1]
         p = comment_cell.paragraphs[0]
         p.text = "Commentaire"
