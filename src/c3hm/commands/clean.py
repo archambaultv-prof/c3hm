@@ -1,5 +1,6 @@
 import os
 import shutil
+import stat
 from pathlib import Path
 
 from c3hm.utils.omnivox import is_student_folder
@@ -27,6 +28,13 @@ def is_path_to_delete(path: Path, paths_to_delete: list[str]) -> bool:
     Vérifie si le chemin donné correspond à un des motifs de suppression.
     """
     return any(path.match(pat) for pat in paths_to_delete)
+
+def remove_readonly(func, path, _):
+    """
+    Change le mode de lecture/écriture d'un fichier ou dossier.
+    """
+    os.chmod(path, stat.S_IWRITE)
+    func(path)
 
 def remove_unwanted_dirs(root_path: Path | str = None,
                          paths_to_delete: list[str] = None,
@@ -89,7 +97,7 @@ def remove_unwanted_dirs(root_path: Path | str = None,
                     if verbose:
                         print(f"Deleting directory: {d_path}")
                     if not dryrun:
-                        shutil.rmtree(d_path)
+                        shutil.rmtree(d_path, onerror=remove_readonly)
                     # Remove it from dirs to prevent os.walk from descending into it.
                     dirs.remove(d)
             # Process files that match the deletion criteria.
