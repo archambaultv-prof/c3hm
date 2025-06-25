@@ -57,11 +57,14 @@ class StudentGrade(BaseModel):
     student: Student
     criteria: list[CriterionGrade]
     comment: str = ""
+    manual_grade: Decimal | None = None
 
     def rounded_grade(self, quantum: Decimal) -> Decimal:
         """
         Calcule la note totale de l'étudiant en fonction des notes des critères.
         """
+        if self.manual_grade is not None:
+            return round_to_nearest_quantum(self.manual_grade, quantum)
         if not self.criteria:
             raise ValueError("Aucun critère n'est défini pour cet étudiant.")
         s = sum((criterion.rounded_grade(quantum) * criterion.percentage

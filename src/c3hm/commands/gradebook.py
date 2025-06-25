@@ -10,7 +10,7 @@ from openpyxl.worksheet.worksheet import Worksheet
 
 from c3hm.commands.generate_rubric import scale_color_schemes
 from c3hm.data.config import Config
-from c3hm.data.rubric import CTHM_GLOBAL_COMMENT, CTHM_OMNIVOX
+from c3hm.data.rubric import CTHM_GLOBAL_COMMENT, CTHM_GLOBAL_GRADE, CTHM_OMNIVOX
 from c3hm.data.student import Student
 from c3hm.utils.decimal import decimal_to_number
 
@@ -71,6 +71,11 @@ def add_student_sheet(ws: Worksheet, config: Config, student: Student) -> None:
     ws.defined_names.add(dn)
 
     ws.append([])
+    ws.append(['', "note calculée", "note manuelle"])
+    cell = ws.cell(row=ws.max_row, column=2)
+    cell.style = "Headline 4"
+    cell = ws.cell(row=ws.max_row, column=3)
+    cell.style = "Headline 4"
 
     # Total sur X pts
     ws.append([f"Total sur {config.rubric.max_grade()}"])
@@ -82,6 +87,16 @@ def add_student_sheet(ws: Worksheet, config: Config, student: Student) -> None:
     cell = ws.cell(row=ws.max_row, column=2)
     cell.style = "Calculation"
     cell.number_format = "0.0"
+
+    # Cellule pour la note globale manuelle
+    cell = ws.cell(row=ws.max_row, column=3)
+    cell.style = "Input"
+    dn = DefinedName(
+        name=CTHM_GLOBAL_GRADE,
+        attr_text=f"{quote_sheetname(ws.title)}!{absolute_coordinate(cell.coordinate)}",
+    )
+    ws.defined_names.add(dn)
+
     ws.append([])
 
     # Grille
@@ -220,8 +235,10 @@ def add_student_sheet(ws: Worksheet, config: Config, student: Student) -> None:
             ws.defined_names.add(dn)
 
     # Formule pour le total
-    f = "=sum("
+    manual_addr = f"{pyxl_utils.get_column_letter(total_cell+1)}{total_row}"
+    f = f"=IF(ISBLANK({manual_addr}),sum("
     f += ",".join([f"{final_letter}{r}*{decimal_to_number(rubric.criteria[i].percentage)}" # type: ignore
                    for i, r in enumerate(criterion_rows)])
     f += ")/100"
+    f += f", {manual_addr})"
     ws.cell(row=total_row, column=total_cell).value = f

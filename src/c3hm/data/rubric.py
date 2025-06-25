@@ -18,6 +18,7 @@ GradeThresholds = list[tuple[Decimal, Decimal, Decimal]]
 
 CTHM_OMNIVOX = "cthm_omnivox"
 CTHM_GLOBAL_COMMENT = "cthm_global_comment"
+CTHM_GLOBAL_GRADE = "cthm_global_grade"
 
 
 class Rubric(BaseModel):

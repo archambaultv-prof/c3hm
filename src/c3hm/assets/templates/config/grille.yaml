@@ -198,7 +198,7 @@ grille:
 
     # Optionnel. true par défaut.
     # Lorsque vrai, la grille est affichée avec le pourcentage des indicateurs.
-    afficher le pourcentage des indicateurs: true
+    afficher le pourcentage des indicateurs: false
 
     # Optionnel. Largeur des colonnes de la grille en centimètres.
     # Si vide, la largeur des colonnes est calculée automatiquement.

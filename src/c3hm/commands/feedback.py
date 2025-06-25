@@ -8,7 +8,7 @@ from openpyxl.worksheet.worksheet import Worksheet
 
 from c3hm.commands.generate_rubric import generate_rubric
 from c3hm.data.config import Config
-from c3hm.data.rubric import CTHM_GLOBAL_COMMENT, CTHM_OMNIVOX
+from c3hm.data.rubric import CTHM_GLOBAL_COMMENT, CTHM_GLOBAL_GRADE, CTHM_OMNIVOX
 from c3hm.data.studentgrade import CriterionGrade, IndicatorGrade, StudentGrade
 from c3hm.utils.decimal import round_to_nearest_quantum
 
@@ -113,6 +113,18 @@ def grades_from_ws(ws: Worksheet,
         s.comment = str(cell.value)
     else:
         s.comment = ""
+
+    # Récupère la note globale
+    grade_cell = find_named_cell(ws, CTHM_GLOBAL_GRADE)
+    if grade_cell is None:
+        raise ValueError(f"La cellule nommée '{CTHM_GLOBAL_GRADE}' n'existe pas dans la feuille.")
+    if cell_none_or_error(grade_cell) and reference is not None:
+        s.manual_grade = reference.manual_grade
+    elif not cell_none_or_error(grade_cell):
+        s.manual_grade = round_to_nearest_quantum(Decimal(str(grade_cell.value)),
+                                                  rubric.precision)
+    else:
+        s.manual_grade = None
 
     # Récupère les notes et commentaires
     cs = reference.criteria if reference is not None else [None] * len(rubric.criteria)
