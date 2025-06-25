@@ -38,11 +38,23 @@ grille:
 
     - nom: 
 
+  - critère: 
+
+    pourcentage: 
+
+    indicateurs:
+
+    - nom: 
+
+    - nom: 
+
+    - nom: 
+
   format:
 
     orientation: paysage # portrait ou paysage
 
-    afficher le pourcentage des indicateurs: true
+    afficher le pourcentage des indicateurs: false
 
     largeur des colonnes: []
 

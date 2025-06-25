@@ -12,7 +12,7 @@ class Format(BaseModel):
         description="Orientation de la grille d'évaluation. Peut être 'portrait' ou 'paysage'."
     )
     show_indicators_percent: bool = Field(
-        default=True,
+        default=False,
         description="Indique si le poids des indicateurs doit être affiché."
     )
 
@@ -44,7 +44,7 @@ class Format(BaseModel):
         """
         return cls(
             orientation=data.get("orientation"),
-            show_indicators_percent=data.get("afficher le pourcentage des indicateurs", True),
+            show_indicators_percent=data.get("afficher le pourcentage des indicateurs", False),
             columns_width=data.get("largeur des colonnes", []),
             columns_width_comments=data.get("largeur des colonnes avec commentaires", []),
         )
