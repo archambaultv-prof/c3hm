@@ -1,8 +1,9 @@
 from decimal import Decimal
 from pathlib import Path
+from typing import Self
 
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from c3hm.data.criterion import Criterion
 from c3hm.data.format import Format
@@ -111,7 +112,16 @@ class Rubric(BaseModel):
         """
         return len(self.criteria)
 
-    def validate(self) -> None: # type: ignore
+    @model_validator(mode="after")
+    def _validate(self) -> Self:
+        """
+        Valide la grille d'évaluation après la création de l'instance.
+        Cette méthode est appelée automatiquement par Pydantic après la validation des champs.
+        """
+        self.validate_rubric()
+        return self
+
+    def validate_rubric(self) -> None:
         """
         Valide la grille d'évaluation. Remplace les valeurs manquantes par
         des valeurs par défaut.

@@ -1,7 +1,8 @@
 from pathlib import Path
+from typing import Self
 
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from c3hm.data.evaluation import Evaluation
 from c3hm.data.rubric import Rubric
@@ -81,13 +82,24 @@ class Config(BaseModel):
             yaml.dump(self.to_dict(), file, allow_unicode=True,
                       sort_keys=False)
 
+    @model_validator(mode="after")
+    def _validate_after(self) -> Self:
+        """
+        Valide la configuration après la création de l'instance.
+
+        Cette méthode est appelée automatiquement après la validation des champs
+        pour s'assurer que la configuration est cohérente.
+        """
+        self.validate_config()
+        return self
+
     def validate_config(self) -> None:
         """
         Valide la grille d'évaluation et les étudiants.
 
         Voir la méthode validate de Rubric pour les détails de la validation.
         """
-        self.rubric.validate()
+        self.rubric.validate_rubric()
         # Check that all students alias are unique
         aliases = {student.alias for student in self.students}
         if len(aliases) != len(self.students):

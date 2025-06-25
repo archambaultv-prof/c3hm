@@ -24,7 +24,7 @@ def test_generate_word_from_rubric(
     # Test avec le gabarit sans pondération des indicateurs
     c_1 = config.copy()
     c_1.rubric.format.show_indicators_percent = False
-    c_1.rubric.validate()
+    c_1.rubric.validate_rubric()
     doc_file = tmp_path / f"{config_template_path.stem}_no_weights.docx"
     generate_rubric(doc_file, output_dir, c_1)
 
@@ -39,7 +39,7 @@ def test_generate_word_from_rubric(
         for indicator in criterion.indicators:
             indicator.descriptors = []
     c_2_levels.rubric.format.columns_width = [None, 3, 3]
-    c_2_levels.rubric.validate()
+    c_2_levels.rubric.validate_rubric()
     docfile = tmp_path / f"{config_template_path.stem}_2_levels.docx"
     generate_rubric(docfile, output_dir, c_2_levels)
 
