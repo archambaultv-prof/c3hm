@@ -399,39 +399,39 @@ def criterion_has_comments(criterion: Criterion, grades: dict[str, Any] | None) 
                 break
     return has_comments
 
-def word_to_pdf(docx_path: Path, pdf_path: Path):
-    """
-    Convertit un document Word (.docx) en PDF sur Windows.
-    Utilise l'API COM de Word pour effectuer la conversion.
-    """
-    if sys.platform != "win32":
-        raise NotImplementedError("Word to PDF conversion is only available on Windows.")
+# def word_to_pdf(docx_path: Path, pdf_path: Path):
+#     """
+#     Convertit un document Word (.docx) en PDF sur Windows.
+#     Utilise l'API COM de Word pour effectuer la conversion.
+#     """
+#     if sys.platform != "win32":
+#         raise NotImplementedError("Word to PDF conversion is only available on Windows.")
 
-    import win32com.client
+#     import win32com.client
 
-    # Launch Word
-    try:
-        # Try to connect to an already running Word instance
-        word = win32com.client.GetActiveObject("Word.Application")
-        created = False
-    except Exception:
-        # Start a new one if not found
-        word = win32com.client.Dispatch("Word.Application")
-        created = True
-        word.Visible = False
+#     # Launch Word
+#     try:
+#         # Try to connect to an already running Word instance
+#         word = win32com.client.GetActiveObject("Word.Application")
+#         created = False
+#     except Exception:
+#         # Start a new one if not found
+#         word = win32com.client.Dispatch("Word.Application")
+#         created = True
+#         word.Visible = False
 
-    try:
-        doc = word.Documents.Open(str(docx_path))
-        # ExportAsFixedFormat: https://learn.microsoft.com/en-us/office/vba/api/word.document.exportasfixedformat
-        doc.ExportAsFixedFormat(
-            OutputFileName=str(pdf_path),
-            ExportFormat=17,  # wdExportFormatPDF
-            OpenAfterExport=False,
-            OptimizeFor=0,    # wdExportOptimizeForPrint
-            CreateBookmarks=1 # wdExportCreateHeadingBookmarks
-        )
-        doc.Close(False)
-    finally:
-        if created:
-            # Quitter Word seulement si on l'a créé
-            word.Quit()
+#     try:
+#         doc = word.Documents.Open(str(docx_path))
+#         # ExportAsFixedFormat: https://learn.microsoft.com/en-us/office/vba/api/word.document.exportasfixedformat
+#         doc.ExportAsFixedFormat(
+#             OutputFileName=str(pdf_path),
+#             ExportFormat=17,  # wdExportFormatPDF
+#             OpenAfterExport=False,
+#             OptimizeFor=0,    # wdExportOptimizeForPrint
+#             CreateBookmarks=1 # wdExportCreateHeadingBookmarks
+#         )
+#         doc.Close(False)
+#     finally:
+#         if created:
+#             # Quitter Word seulement si on l'a créé
+#             word.Quit()

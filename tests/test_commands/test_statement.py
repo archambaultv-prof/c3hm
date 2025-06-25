@@ -1,8 +1,6 @@
-import sys
 from decimal import Decimal
 from pathlib import Path
 
-from c3hm.commands.generate_rubric import word_to_pdf
 from c3hm.commands.statement import generate_statement_rubric
 from c3hm.data.config import Config
 
@@ -55,7 +53,7 @@ def generate_rubric(doc_file: Path, output_dir: Path, config: Config):
     output_path.parent.mkdir(parents=True, exist_ok=True)
     doc_file.replace(output_path)
 
-    # Sur windows, on test aussi la convertion en PDF
-    if sys.platform == "win32":
-        word_to_pdf(output_path, output_path.with_suffix(".pdf"))
-        assert output_path.with_suffix(".pdf").exists()
+    # # Sur windows, on test aussi la convertion en PDF
+    # if sys.platform == "win32":
+    #     word_to_pdf(output_path, output_path.with_suffix(".pdf"))
+    #     assert output_path.with_suffix(".pdf").exists()

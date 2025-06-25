@@ -6,7 +6,7 @@ from openpyxl import Workbook
 from openpyxl.cell.cell import Cell
 from openpyxl.worksheet.worksheet import Worksheet
 
-from c3hm.commands.generate_rubric import generate_rubric, word_to_pdf
+from c3hm.commands.generate_rubric import generate_rubric
 from c3hm.data.config import Config
 from c3hm.data.rubric import CTHM_GLOBAL_COMMENT, CTHM_OMNIVOX
 from c3hm.data.studentgrade import CriterionGrade, IndicatorGrade, StudentGrade
