@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from c3hm.data.config import Config, read_student
-from c3hm.data.student import Student
+from c3hm.data.student.student import Student
 
 
 def test_config(

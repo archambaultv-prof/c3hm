@@ -11,7 +11,7 @@ from openpyxl.worksheet.worksheet import Worksheet
 from c3hm.commands.generate_rubric import scale_color_schemes
 from c3hm.data.config import Config
 from c3hm.data.rubric import CTHM_GLOBAL_COMMENT, CTHM_GLOBAL_GRADE, CTHM_OMNIVOX
-from c3hm.data.student import Student
+from c3hm.data.student.student import Student
 from c3hm.utils.decimal import decimal_to_number
 
 
@@ -142,9 +142,9 @@ def add_student_sheet(ws: Worksheet, config: Config, student: Student) -> None:
         cell = ws.cell(row=ws.max_row, column= computed_col)
         all_s = []
         for i, ind in enumerate(criterion.indicators):
-            s = f"{decimal_to_number(ind.percentage)} * {computed_letter}{cr+1+i}" # type: ignore
+            s = f"{decimal_to_number(ind.points)} * {computed_letter}{cr+1+i}" # type: ignore
             all_s.append(s)
-        cell.value = f"=({' + '.join(all_s)}) / {decimal_to_number(criterion.percentage)}" # type: ignore
+        cell.value = f"=({' + '.join(all_s)}) / {decimal_to_number(criterion.points)}" # type: ignore
         cell.style = "Calculation"
         cell.number_format = "0.0"
 
@@ -237,7 +237,7 @@ def add_student_sheet(ws: Worksheet, config: Config, student: Student) -> None:
     # Formule pour le total
     manual_addr = f"{pyxl_utils.get_column_letter(total_cell+1)}{total_row}"
     f = f"=IF(ISBLANK({manual_addr}),sum("
-    f += ",".join([f"{final_letter}{r}*{decimal_to_number(rubric.criteria[i].percentage)}" # type: ignore
+    f += ",".join([f"{final_letter}{r}*{decimal_to_number(rubric.criteria[i].points)}" # type: ignore
                    for i, r in enumerate(criterion_rows)])
     f += ")/100"
     f += f", {manual_addr})"

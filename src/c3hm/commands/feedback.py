@@ -132,7 +132,7 @@ def grades_from_ws(ws: Worksheet,
         c = CriterionGrade(
             indicators=[],
             manual_grade=None,
-            percentage=criterion.percentage, # type: ignore
+            percentage=criterion.points, # type: ignore
             comment=""
         )
         grade_cell = find_named_cell(ws, criterion.xl_grade_overwrite_cell_id())
@@ -182,7 +182,7 @@ def grades_from_ws(ws: Worksheet,
                 )
             i = IndicatorGrade(
                 grade=ind_grade,
-                percentage=indicator.percentage,  # type: ignore
+                percentage=indicator.points,  # type: ignore
                 comment=""
             )
 

@@ -2,15 +2,6 @@
 # Utilisé par C3HM : Corriger à 3 heures du matin
 # https://github.com/archambaultv-prof/c3hm
 
-#  Information générale sur l'évaluation
-évaluation:
-
-  # ex: Travail pratique 1, Exercice 2, etc.
-  nom: Le Grand Carénage des Flibustiers
-
-  # Le nom ou sigle du cours
-  cours: 420-C3HM-MA
-
 # Une grille d'évaluation est un outil qui permet d'évaluer les étudiants sur
 # plusieurs critères. Chaque critère est divisé en indicateurs qui sont notés
 # selon une échelle de notation. Tous les critères et indicateurs partagent la
@@ -43,24 +34,29 @@
 # +------------------------------------------------+-----------+-----------+---------+----------+--------------+
 grille:
 
-  # Une liste de niveaux de notation.
-  niveaux: [Excellent, Très bien, Bien, Passable, Insuffisant]
+  #  Information générale sur l'évaluation
+  évaluation:
 
-  # La liste des notes pour chaque niveau. [Max, Min, Note par défaut]
-  # La troisième valeur indique la note
-  # par défaut lorsqu'on coche un niveau dans la grille de correction sans
-  # préciser de note.
-  # La note maximale de l'évaluation est le maximum du premier niveau.
-  seuils par niveau:
-  - [100, 90, 100]
-  - [89, 80, 85]
-  - [79, 70, 70]
-  - [69, 60, 60]
-  - [59, 0, 30]
+    # ex: Travail pratique 1, Exercice 2, etc.
+    nom: Le Grand Carénage des Flibustiers
 
-  # Optionnel. Le quantum (plus petite variation) pour les seuils de notation.
-  # Par défaut, la valeur est 1.
-  précision: 1
+    # Le nom ou sigle du cours
+    cours: 420-C3HM-MA
+
+  # Optionnel. Le niveau de précision pour la notation.
+  niveaux précision: 1
+
+  # La liste des niveaux de notation.
+  # Chaque niveau a un nom, une valeur par défaut, un maximum et un minimum.
+  # La valeur par défaut est utilisée lorsque l'évaluateur "coche" le niveau
+  # sans préciser de note.
+  niveaux: [
+    {nom: "Excellent", maximum: 100, minimum: 90, valeur par défaut: 100},
+    {nom: "Très bien", maximum: 89, minimum: 80, valeur par défaut: 85},
+    {nom: "Bien", maximum: 79, minimum: 70, valeur par défaut: 70},
+    {nom: "Passable", maximum: 69, minimum: 60, valeur par défaut: 60},
+    {nom: "Insuffisant", maximum: 59, minimum: 0, valeur par défaut: 30}
+  ]
 
   # Optionnel, descripteur par défaut. Si non précisé, tous les indicateurs
   # doivent avoir un descripteur.
@@ -196,7 +192,7 @@ grille:
     # Optionnel. Paysage par défaut si 4 niveaux ou plus, portrait sinon.
     orientation: paysage # portrait ou paysage
 
-    # Optionnel. true par défaut.
+    # Optionnel. faux par défaut.
     # Lorsque vrai, la grille est affichée avec le pourcentage des indicateurs.
     afficher le pourcentage des indicateurs: false
 

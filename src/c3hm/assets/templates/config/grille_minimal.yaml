@@ -1,21 +1,21 @@
-évaluation:
-
-  nom: 
-
-  cours: 
-
 grille:
 
-  niveaux: [Excellent, Très bien, Bien, Passable, Insuffisant]
+  évaluation:
 
-  seuils par niveau:
-  - [100, 90, 100]
-  - [89, 80, 85]
-  - [79, 70, 70]
-  - [69, 60, 60]
-  - [59, 0, 30]
+    nom: 
 
-  précision: 1
+    cours: 
+
+  niveaux précision: 1
+
+  niveaux: [
+    {nom: "Excellent", maximum: 100, minimum: 90, valeur par défaut: 100},
+    {nom: "Très bien", maximum: 89, minimum: 80, valeur par défaut: 85},
+    {nom: "Bien", maximum: 79, minimum: 70, valeur par défaut: 70},
+    {nom: "Passable", maximum: 69, minimum: 60, valeur par défaut: 60},
+    {nom: "Insuffisant", maximum: 59, minimum: 0, valeur par défaut: 30}
+  ]
+
 
   descripteurs par défaut:
   - "Aucune erreur notable."
@@ -38,7 +38,7 @@ grille:
 
     - nom: 
 
-  - critère: 
+  - critère:
 
     pourcentage: 
 

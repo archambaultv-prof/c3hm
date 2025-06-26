@@ -1,5 +1,6 @@
-from c3hm.cli import cli
 from click.testing import CliRunner
+
+from c3hm.cli import cli
 
 
 def test_help(runner: CliRunner):
