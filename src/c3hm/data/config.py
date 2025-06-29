@@ -60,9 +60,14 @@ class Config(BaseModel):
         with open(path, encoding="utf-8") as file:
             data = yaml.safe_load(file)
 
+        return cls.from_user_dict(path, data)
+
+    @classmethod
+    def from_user_dict(cls, data,  path: str | Path | None) -> "Config":
         if "étudiants" not in data:
             s= Students(students=[])
         else:
+            path = Path(path) if isinstance(path, str) else path
             s = _normalize_students(data["étudiants"], path)
         r = _normalize_rubric(data["grille"])
 
@@ -71,11 +76,11 @@ class Config(BaseModel):
             students=s
         )
 
-def _normalize_students(students: str  | dict , path: Path) -> Students:
+def _normalize_students(students: str  | dict , root: Path | None) -> Students:
     if isinstance(students, str):
         p = Path(students)
-        if not p.is_absolute():
-            p = Path(path).parent / p
+        if not p.is_absolute() and root is not None:
+            p = Path(root).parent / p
         xs = read_student(p)
         return Students(students=xs)
     return Students(students=[Student.from_dict(student)
@@ -95,8 +100,8 @@ def _normalize_descriptors(rubric: dict) -> None:
     Normalise les descripteurs dans la grille d'évaluation.
     Assure que chaque descripteur est défini pour chaque indicateur et niveau de grade.
     """
-    if "descripteurs par défaut" in rubric:
-        default = rubric["descripteurs par défaut"]
+    if "descripteurs par défaut" in rubric["évaluation"]:
+        default = rubric["évaluation"]["descripteurs par défaut"]
         if len(default) != len(rubric["niveaux"]):
             raise ValueError(
                 "Le nombre de descripteurs par défaut doit correspondre au nombre de niveaux."
