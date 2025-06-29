@@ -44,6 +44,7 @@ def test_generate_word_from_rubric(
             min_percentage=Decimal(0)
         )])
     c_2_levels.rubric.format.show_level_descriptions = False
+    c_2_levels.rubric.format.show_indicators_points = True
     for criterion in c_2_levels.rubric.evaluation.criteria:
         for indicator in criterion.indicators:
             for level in c_2_levels.rubric.grade_levels.levels:
