@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from c3hm.models.generate_rubric import generate_rubric
+from c3hm.commands.export.generate_rubric import generate_rubric
 
 
 def export_rubric(

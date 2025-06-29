@@ -33,6 +33,17 @@ class GradeLevels(BaseModel):
                 return level
         return self.levels[-1]  # Retourne le niveau le plus bas si aucun autre ne correspond
 
+    def get_index_by_percentage(self, percentage: Decimal) -> int:
+        """
+        Retourne le niveau de note correspondant à une note donnée.
+        """
+        if not (Decimal(0) <= percentage <= Decimal(100)):
+            raise ValueError("Le pourcentage doit être compris entre 0 et 100.")
+        for i, level in enumerate(self.levels):
+            if percentage >= level.min_percentage:
+                return i
+        return len(self.levels) - 1  # Retourne l'index du niveau le plus bas
+
     def to_dict(self, convert_decimal: bool = False) -> dict:
         """
         Retourne un dictionnaire représentant les niveaux de notes.

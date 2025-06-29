@@ -32,6 +32,13 @@ class Criterion(BaseModel):
         """
         return self.override_grade is not None
 
+    @property
+    def has_comments(self) -> bool:
+        """
+        Indique si le critère a un commentaire.
+        """
+        return bool(self.comment) or any(indicator.comment for indicator in self.indicators)
+
     def get_grade(self) -> Decimal:
         """
         Retourne la note du critère, en tenant compte de l'override si présent.

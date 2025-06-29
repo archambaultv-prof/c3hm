@@ -26,6 +26,12 @@ class Descriptors(BaseModel):
         """
         return self.descriptors[(indicator.id, level.name)]
 
+    def set_descriptor(self, indicator: Indicator, level: GradeLevel, descriptor: str) -> None:
+        """
+        Définit le descripteur pour un niveau et un indicateur donnés.
+        """
+        self.descriptors[(indicator.id, level.name)] = descriptor
+
     def to_dict(self) -> dict:
         """
         Retourne un dictionnaire représentant les descripteurs.
@@ -38,3 +44,9 @@ class Descriptors(BaseModel):
         Crée une instance de Descriptors à partir d'un dictionnaire.
         """
         return cls(descriptors=data)
+
+    def copy(self) -> "Descriptors":  # type: ignore
+        """
+        Retourne une copie des descripteurs.
+        """
+        return Descriptors(descriptors=self.descriptors.copy())

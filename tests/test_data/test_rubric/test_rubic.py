@@ -11,6 +11,7 @@ from c3hm.data.rubric.format import Format
 from c3hm.data.rubric.grade_level import GradeLevel
 from c3hm.data.rubric.grade_levels import GradeLevels
 from c3hm.data.rubric.rubric import Rubric
+from c3hm.data.student.student import Student
 
 
 def make_indicator(id="ind1", grade=Decimal("2"), points=Decimal("2")):
@@ -41,6 +42,14 @@ def make_grade_level(name="Excellent", max_percentage=Decimal("20"), min_percent
         min_percentage=min_percentage
     )
 
+def make_student():
+
+    return Student(
+        first_name="John",
+        last_name="Doe",
+        omnivox_code="123456",
+        alias="JD")
+
 def make_evaluation(name="Test Evaluation", criteria=None):
     if criteria is None:
         criteria = [make_criterion()]
@@ -49,6 +58,7 @@ def make_evaluation(name="Test Evaluation", criteria=None):
         grade_step=Decimal("1"),
         criteria=criteria,
         override_grade=None,
+        evaluated_student=make_student(),
         comment=""
     )
 

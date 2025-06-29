@@ -5,7 +5,7 @@ import pytest
 from c3hm.data.evaluation.criterion import Criterion
 from c3hm.data.evaluation.evaluation import Evaluation
 from c3hm.data.evaluation.indicator import Indicator
-
+from c3hm.data.student.student import Student
 
 def make_indicator(id="ind1", grade: Decimal | None = Decimal("2"), points=Decimal("2")):
     return Indicator(
@@ -28,6 +28,14 @@ def make_criterion(id="crit1", name="Critère 1", indicators=None, override_grad
         comment=comment
     )
 
+def make_student():
+
+    return Student(
+        first_name="John",
+        last_name="Doe",
+        omnivox_code="123456",
+        alias="JD")
+
 def test_evaluation_title():
     criteria = [make_criterion()]
     e = Evaluation(
@@ -35,6 +43,7 @@ def test_evaluation_title():
         grade_step=Decimal("1"),
         criteria=criteria,
         override_grade=None,
+        evaluated_student=make_student(),
         comment="Test"
     )
     assert "Grille d'évaluation" in e.title()
@@ -50,6 +59,7 @@ def test_evaluation_points_property():
         grade_step=Decimal("1"),
         criteria=criteria,
         override_grade=None,
+        evaluated_student=make_student(),
         comment="Test"
     )
     assert e.points == Decimal("5")
@@ -80,6 +90,7 @@ def test_evaluation_duplicate_criterion_ids_raises():
             grade_step=Decimal("1"),
             criteria=criteria,
             override_grade=None,
+            evaluated_student=make_student(),
             comment="Test"
         )
 
@@ -91,6 +102,7 @@ def test_evaluation_override_grade_greater_than_points_raises():
             grade_step=Decimal("1"),
             criteria=criteria,
             override_grade=Decimal("5"),
+            evaluated_student=make_student(),
             comment="Test"
         )
 
@@ -104,6 +116,7 @@ def test_evaluation_override_grade_requires_all_criteria_graded():
             grade_step=Decimal("1"),
             criteria=criteria,
             override_grade=Decimal("1"),
+            evaluated_student=make_student(),
             comment="Test"
         )
 
@@ -116,6 +129,7 @@ def test_evaluation_indicator_points_not_multiple_of_grade_step_raises():
             grade_step=Decimal("1"),
             criteria=criteria,
             override_grade=None,
+            evaluated_student=make_student(),
             comment="Test"
         )
 
@@ -126,6 +140,7 @@ def test_evaluation_comment_is_stripped():
         grade_step=Decimal("1"),
         criteria=criteria,
         override_grade=None,
+        evaluated_student=make_student(),
         comment="   Test comment   "
     )
     assert e.comment == "Test comment"

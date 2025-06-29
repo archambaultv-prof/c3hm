@@ -7,26 +7,26 @@ from c3hm.data.rubric.format import Format
 def test_format_valid_creation():
     fmt = Format(
         orientation="portrait",
-        show_indicators_percent=True,
+        show_indicators_points=True,
         columns_width=[10.0, 20.5, None],
         columns_width_comments=[15.0, None]
     )
     assert fmt.orientation == "portrait"
-    assert fmt.show_indicators_percent is True
+    assert fmt.show_indicators_points is True
     assert fmt.columns_width == [10.0, 20.5, None]
     assert fmt.columns_width_comments == [15.0, None]
 
 def test_format_default_values():
     fmt = Format()
     assert fmt.orientation is None
-    assert fmt.show_indicators_percent is False
+    assert fmt.show_indicators_points is False
     assert fmt.columns_width == []
     assert fmt.columns_width_comments == []
 
 def test_format_to_dict():
     fmt = Format(
         orientation="paysage",
-        show_indicators_percent=True,
+        show_indicators_points=True,
         columns_width=[12.0, None],
         columns_width_comments=[8.0]
     )
@@ -45,7 +45,7 @@ def test_format_from_dict():
     }
     fmt = Format.from_dict(d)
     assert fmt.orientation == "portrait"
-    assert fmt.show_indicators_percent is False
+    assert fmt.show_indicators_points is False
     assert fmt.columns_width == [5.0, 10.0]
     assert fmt.columns_width_comments == [7.0]
 
@@ -53,14 +53,14 @@ def test_format_from_dict_missing_keys():
     d = {}
     fmt = Format.from_dict(d)
     assert fmt.orientation is None
-    assert fmt.show_indicators_percent is False
+    assert fmt.show_indicators_points is False
     assert fmt.columns_width == []
     assert fmt.columns_width_comments == []
 
 def test_format_copy():
     fmt = Format(
         orientation="paysage",
-        show_indicators_percent=True,
+        show_indicators_points=True,
         columns_width=[1.0, 2.0],
         columns_width_comments=[3.0]
     )

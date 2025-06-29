@@ -2,7 +2,7 @@ from pathlib import Path
 
 import click
 
-from c3hm.commands.export import export_rubric
+from c3hm.commands.export.export import export_rubric
 from c3hm.data.config import Config
 
 

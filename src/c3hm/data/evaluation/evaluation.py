@@ -4,6 +4,7 @@ from typing import ClassVar, Self
 from pydantic import BaseModel, Field, model_validator
 
 from c3hm.data.evaluation.criterion import Criterion
+from c3hm.data.student.student import Student
 from c3hm.utils.decimal import decimal_to_number, is_multiple_of_quantum, round_to_nearest_quantum
 
 
@@ -19,6 +20,7 @@ class Evaluation(BaseModel):
     )
     criteria: list[Criterion] = Field(..., min_length=1)
     override_grade: Decimal | None = Field(..., ge=Decimal(0))
+    evaluated_student: Student | None
     comment: str
 
     grade_step_default: ClassVar[Decimal] = Decimal("1")
@@ -31,6 +33,34 @@ class Evaluation(BaseModel):
         title = "Grille d'évaluation"
         title += f" {endash} {self.name}"
         return title
+
+    @property
+    def has_grade(self) -> bool:
+        """
+        Indique si le critère est noté.
+        """
+        return self.override_grade is not None or self.criteria[0].has_grade
+
+    @property
+    def has_criteria_comments(self) -> bool:
+        """
+        Indique si au moins un critère a un commentaire.
+        """
+        return any(criterion.has_comments for criterion in self.criteria)
+
+    def get_grade(self) -> Decimal:
+        """
+        Retourne la note de l'évaluation, en tenant compte de l'override si présent.
+        """
+        if not self.has_grade:
+            raise ValueError(
+                "L'évaluation n'est pas notée."
+            )
+        if self.override_grade is None:
+            return sum((criterion.get_grade() for criterion in self.criteria), # type: ignore
+                       start=Decimal(0))
+        else:
+            return self.override_grade
 
     @model_validator(mode="after")
     def validate_evaluation(self) -> Self:
@@ -64,6 +94,21 @@ class Evaluation(BaseModel):
             if not is_multiple_of_quantum(self.override_grade, self.grade_step):
                 self.override_grade = round_to_nearest_quantum(self.override_grade,
                                                                self.grade_step)
+        else:
+            # Soit tous les critères sont notés, soit aucun
+            if (any(criterion.has_grade for criterion in self.criteria) and
+                not all(criterion.has_grade for criterion in self.criteria)):
+                raise ValueError(
+                    "Tous les critères de l'évaluation doivent être notés ou aucun ne doit l'être "
+                )
+        if self.has_grade and self.evaluated_student is None:
+            raise ValueError(
+                "Une évaluation notée doit être associée à un étudiant évalué."
+            )
+        if not self.has_grade and self.evaluated_student is not None:
+            raise ValueError(
+                "Une évaluation non notée ne doit pas être associée à un étudiant évalué."
+            )
         for criterion in self.criteria:
             if (criterion.override_grade and
                 not is_multiple_of_quantum(criterion.override_grade, self.grade_step)):
@@ -76,6 +121,9 @@ class Evaluation(BaseModel):
                     indicator.grade = round_to_nearest_quantum(
                         indicator.grade, self.grade_step
                     )
+
+        # Has
+
         # Id unique pour les critères
         ids = {}
         for criterion in self.criteria:
@@ -125,6 +173,8 @@ class Evaluation(BaseModel):
             "critères": [criterion.to_dict(convert_decimal=convert_decimal)
                          for criterion in self.criteria],
             "note manuelle": grade,
+            "étudiant évalué": (self.evaluated_student.to_dict()
+                                if self.evaluated_student else None),
             "commentaire": self.comment,
         }
 
@@ -133,11 +183,16 @@ class Evaluation(BaseModel):
         """
         Crée une instance de Evaluation à partir d'un dictionnaire.
         """
+        if "étudiant évalué" in data and data["étudiant évalué"] is not None:
+            evaluated_student = Student.from_dict(data["étudiant évalué"])
+        else:
+            evaluated_student = None
         return cls(
             name=data["nom"],
             grade_step=data.get("pas de notation", Decimal("1")),
             criteria=[Criterion.from_dict(criterion) for criterion in data["critères"]],
             override_grade=data.get("note manuelle"),
+            evaluated_student=evaluated_student,
             comment=data.get("commentaire", ""),
         )
 
@@ -150,5 +205,6 @@ class Evaluation(BaseModel):
             grade_step=self.grade_step,
             criteria=[criterion.copy() for criterion in self.criteria],
             override_grade=self.override_grade,
+            evaluated_student=self.evaluated_student.copy() if self.evaluated_student else None,
             comment=self.comment
         )
