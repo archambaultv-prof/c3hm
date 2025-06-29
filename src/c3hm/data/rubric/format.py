@@ -32,7 +32,7 @@ class Format(BaseModel):
         """
         return {
             "orientation": self.orientation,
-            "afficher le pourcentage des indicateurs": self.show_indicators_percent,
+            "afficher les points des indicateurs": self.show_indicators_percent,
             "largeur des colonnes": self.columns_width,
             "largeur des colonnes avec commentaires": self.columns_width_comments,
         }
@@ -44,7 +44,7 @@ class Format(BaseModel):
         """
         return cls(
             orientation=data.get("orientation"),
-            show_indicators_percent=data.get("afficher le pourcentage des indicateurs", False),
+            show_indicators_percent=data.get("afficher les points des indicateurs", False),
             columns_width=data.get("largeur des colonnes", []),
             columns_width_comments=data.get("largeur des colonnes avec commentaires", []),
         )

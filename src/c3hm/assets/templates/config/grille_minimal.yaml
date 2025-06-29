@@ -1,60 +1,66 @@
 grille:
 
+  niveaux: [
+    {nom: "Excellent", maximum: 100, minimum: 90},
+    {nom: "Très bien", maximum: 89, minimum: 80},
+    {nom: "Bien", maximum: 79, minimum: 70},
+    {nom: "Passable", maximum: 69, minimum: 60},
+    {nom: "Insuffisant", maximum: 59, minimum: 0}
+  ]
+
   évaluation:
 
     nom: 
 
-    cours: 
+    pas de notation: 1
 
-  niveaux précision: 1
+    total: 100
 
-  niveaux: [
-    {nom: "Excellent", maximum: 100, minimum: 90, valeur par défaut: 100},
-    {nom: "Très bien", maximum: 89, minimum: 80, valeur par défaut: 85},
-    {nom: "Bien", maximum: 79, minimum: 70, valeur par défaut: 70},
-    {nom: "Passable", maximum: 69, minimum: 60, valeur par défaut: 60},
-    {nom: "Insuffisant", maximum: 59, minimum: 0, valeur par défaut: 30}
-  ]
+    descripteurs par défaut:
+    - "Aucune erreur notable."
+    - "Quelques erreurs mineures."
+    - "Une erreur significative."
+    - "Plusieurs erreurs significatives."
+    - "Lacunes importantes ou travail incomplet."
 
+    critères:
 
-  descripteurs par défaut:
-  - "Aucune erreur notable."
-  - "Quelques erreurs mineures."
-  - "Une erreur significative."
-  - "Plusieurs erreurs significatives."
-  - "Lacunes importantes ou travail incomplet."
+    - critère: 
 
-  critères:
+      total: 
 
-  - critère: 
+      indicateurs:
 
-    pourcentage: 
+      - description: 
+        points: 
+        descripteurs:
+        - "Aucune erreur notable."
+        - "Quelques erreurs mineures."
+        - "Une erreur significative."
+        - "Plusieurs erreurs significatives."
+        - "Lacunes importantes ou travail incomplet."
 
-    indicateurs:
+      - description: 
 
-    - nom: 
+      - description: 
 
-    - nom: 
+    - critère:
 
-    - nom: 
+      total: 
 
-  - critère:
+      indicateurs:
 
-    pourcentage: 
+      - description: 
 
-    indicateurs:
+      - description: 
 
-    - nom: 
-
-    - nom: 
-
-    - nom: 
+      - description: 
 
   format:
 
     orientation: paysage # portrait ou paysage
 
-    afficher le pourcentage des indicateurs: false
+    afficher les points des indicateurs: false
 
     largeur des colonnes: []
 
