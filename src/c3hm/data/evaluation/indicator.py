@@ -12,7 +12,7 @@ class Indicator(BaseModel):
     Représente un indicateur d'évaluation pour un critère donné.
     """
     id: str = Field(..., min_length=1, description="Identifiant unique de l'indicateur.")
-    description: str = Field(..., min_length=1)
+    name: str = Field(..., min_length=1)
     points: Decimal = Field(
         ...,
         description="Nombre de points attribués à cet indicateur.",
@@ -57,7 +57,7 @@ class Indicator(BaseModel):
             grade = None
         return {
             "id": self.id,
-            "description": self.description,
+            "indicateur": self.name,
             "points": pts,
             "note": grade,
             "commentaire": self.comment,
@@ -70,7 +70,7 @@ class Indicator(BaseModel):
         """
         return cls(
             id=data["id"],
-            description=data["description"],
+            name=data["indicateur"],
             points=data["points"],
             grade=data.get("note"),  # type: ignore
             comment=data.get("commentaire", ""),
@@ -82,7 +82,7 @@ class Indicator(BaseModel):
         """
         return Indicator(
             id=self.id,
-            description=self.description,
+            name=self.name,
             points=self.points,
             grade=self.grade,  # type: ignore
             comment=self.comment

@@ -9,18 +9,18 @@ from click.testing import CliRunner
 def runner():
     return CliRunner()
 
-@pytest.fixture
-def gradebook_path() -> Path:
-    """
-    Retourne le chemin vers le fichier gradebook_1.yaml
-    """
-    d = Path(__file__).parent / "fixtures"
-    return d / "grille_gradebook.xlsx"
+# @pytest.fixture
+# def gradebook_path() -> Path:
+#     """
+#     Retourne le chemin vers le fichier gradebook_1.yaml
+#     """
+#     d = Path(__file__).parent / "fixtures"
+#     return d / "grille_gradebook.xlsx"
 
 @pytest.fixture
-def config_template_path() -> Path:
+def config_full_template_path() -> Path:
     """
-    Retourne le chemin vers le fichier de la grille d'évaluation config_5_levels.yaml
+    Retourne le chemin vers le fichier de la grille d'évaluation grille.yaml
     """
     d = Path(__file__).parent.parent / "src" / "c3hm" / "assets" / "templates" / "config"
     return d / "grille.yaml"

@@ -60,10 +60,10 @@ class Config(BaseModel):
         with open(path, encoding="utf-8") as file:
             data = yaml.safe_load(file)
 
-        return cls.from_user_dict(path, data)
+        return cls.from_user_dict(data, path)
 
     @classmethod
-    def from_user_dict(cls, data,  path: str | Path | None) -> "Config":
+    def from_user_dict(cls, data: dict,  path: str | Path | None) -> "Config":
         if "étudiants" not in data:
             s= Students(students=[])
         else:
@@ -89,7 +89,7 @@ def _normalize_students(students: str  | dict , root: Path | None) -> Students:
 def _normalize_rubric(rubric: dict) -> Rubric:
     if "format" not in rubric:
         rubric["format"] = {}
-    _normalize_id_name_description(rubric["évaluation"])
+    _normalize_id_name(rubric["évaluation"])
     _normalize_descriptors(rubric)
     _normalize_points(rubric["évaluation"])
     return Rubric.from_dict(rubric)
@@ -114,8 +114,8 @@ def _normalize_descriptors(rubric: dict) -> None:
             if "descripteurs" not in indicator:
                 if default is None:
                     raise ValueError(
-                        f"L'indicateur '{indicator['description']}' du critère "
-                        f"'{criterion['nom']}' n'a pas de descripteurs définis et "
+                        f"L'indicateur '{indicator['indicateur']}' du critère "
+                        f"'{criterion['critère']}' n'a pas de descripteurs définis et "
                         "aucun descripteur par défaut n'est spécifié."
                     )
                 indicator["descripteurs"] = default
@@ -125,8 +125,8 @@ def _normalize_descriptors(rubric: dict) -> None:
         for indicator in criterion["indicateurs"]:
             if len(indicator["descripteurs"]) != len(rubric["niveaux"]):
                 raise ValueError(
-                    f"L'indicateur '{indicator['description']}' du critère "
-                    f"'{criterion['nom']}' doit avoir le même nombre de descripteurs que "
+                    f"L'indicateur '{indicator['indicateur']}' du critère "
+                    f"'{criterion['critère']}' doit avoir le même nombre de descripteurs que "
                     "le nombre de niveaux dans la grille d'évaluation."
                 )
             for i, level in enumerate(rubric["niveaux"]):
@@ -134,13 +134,13 @@ def _normalize_descriptors(rubric: dict) -> None:
                 descriptors[key] = indicator["descripteurs"][i]
     rubric["descripteurs"] = descriptors
 
-def _normalize_id_name_description(evaluation: dict) -> None:
+def _normalize_id_name(evaluation: dict) -> None:
     """
     Normalise les identifiants des critères et des indicateurs dans la grille d'évaluation.
     Assure que chaque critère et indicateur a un identifiant unique.
     """
     for i, criterion in enumerate(evaluation["critères"]):
-        if "nom" not in criterion:
+        if "critère" not in criterion:
             raise ValueError(
                 f"Le critère {i+1} n'a pas de nom défini. "
                 "Chaque critère doit avoir un nom."
@@ -148,10 +148,10 @@ def _normalize_id_name_description(evaluation: dict) -> None:
         if "id" not in criterion:
             criterion["id"] = f"C{i+1}"
         for j, indicator in enumerate(criterion["indicateurs"]):
-            if "description" not in indicator:
+            if "indicateur" not in indicator:
                 raise ValueError(
-                    f"L'indicateur {j+1} du critère '{criterion['nom']}' n'a pas de description "
-                    "définie. Chaque indicateur doit avoir une description."
+                    f"L'indicateur {j+1} du critère '{criterion['critère']}' n'a pas de "
+                    "nom définie. Chaque indicateur doit avoir un champs 'indicateur'."
                 )
             if "id" not in indicator:
                 indicator["id"] = f"C{i+1}_I{j+1}"
@@ -206,8 +206,8 @@ def _normalize_points(evaluation: dict) -> None:
         for indicator in criterion["indicateurs"]:
             if indicator["points"] is None:
                 raise ValueError(
-                    f"L'indicateur '{indicator['description']}' du critère "
-                    f"'{criterion['nom']}' n'a pas de points définis "
+                    f"L'indicateur '{indicator['indicateur']}' du critère "
+                    f"'{criterion['critère']}' n'a pas de points définis "
                     "et ils ne peuvent pas être déduits de la grille d'évaluation."
                 )
 
@@ -279,7 +279,7 @@ def _criterion_indicators_total(evaluation, grade_step) -> bool:
                 modified = True
             elif criterion["total"] != total_points:
                 raise ValueError(
-                        f"Le total du critère '{criterion['nom']}' ({criterion['total']}) "
+                        f"Le total du critère '{criterion['critère']}' ({criterion['total']}) "
                         "ne correspond pas à la somme des points des "
                         f"indicateurs ({total_points})."
                     )
@@ -288,7 +288,7 @@ def _criterion_indicators_total(evaluation, grade_step) -> bool:
             missing_points = Decimal(str(criterion["total"])) - sum(pts)
             if missing_points < Decimal(0):
                 raise ValueError(
-                        f"Le total du critère '{criterion['nom']}' ({criterion['total']}) "
+                        f"Le total du critère '{criterion['critère']}' ({criterion['total']}) "
                         "est inférieur à la somme des points des indicateurs."
                     )
             missing_indicators = [indicator for indicator in criterion["indicateurs"]

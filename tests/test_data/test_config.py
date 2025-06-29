@@ -1,4 +1,5 @@
 from decimal import Decimal
+from pathlib import Path
 
 from c3hm.data.config import Config
 from c3hm.data.rubric.format import Format
@@ -28,18 +29,18 @@ def make_rubric_dict():
             "critères": [
                 {
                     "id": "C1",
-                    "nom": "Critère 1",
+                    "critère": "Critère 1",
                     "total": 30,
                     "indicateurs": [
                         {
                             "id": "C1_I1",
-                            "description": "Indicateur 1",
+                            "indicateur": "Indicateur 1",
                             "points": 20,
                             "descripteurs": ["desc1", "desc2"],
                         },
                         {
                             "id": "C1_I2",
-                            "description": "Indicateur 2",
+                            "indicateur": "Indicateur 2",
                             "points": 10,
                             "descripteurs": ["desc3", "desc4"],
                         }
@@ -47,18 +48,18 @@ def make_rubric_dict():
                 },
                 {
                     "id": "C2",
-                    "nom": "Critère 2",
+                    "critère": "Critère 2",
                     "total": 10,
                     "indicateurs": [
                         {
                             "id": "C2_I1",
-                            "description": "Indicateur 3",
+                            "indicateur": "Indicateur 3",
                             "points": 5,
                             "descripteurs": ["desc5", "desc6"],
                         },
                         {
                             "id": "C2_I2",
-                            "description": "Indicateur 4",
+                            "indicateur": "Indicateur 4",
                             "points": 5,
                             "descripteurs": ["desc7", "desc8"],
                         }
@@ -168,3 +169,6 @@ def test_config_default_descriptors2():
             for i, lvl in enumerate(config.rubric.grade_levels.levels):
                 assert config.rubric.descriptors.contains(indicator, lvl)
                 assert config.rubric.descriptors.get_descriptor(indicator, lvl) == f"D{i+1}"
+
+def test_config_full_template(config_full_template_path: Path):
+    Config.from_user_config(config_full_template_path)

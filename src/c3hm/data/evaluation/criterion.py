@@ -116,7 +116,7 @@ class Criterion(BaseModel):
             grade = None
         return {
             "id": self.id,
-            "nom": self.name,
+            "critère": self.name,
             "indicateurs": [indicator.to_dict(convert_decimal=convert_decimal)
                             for indicator in self.indicators],
             "note manuelle": grade,
@@ -130,7 +130,7 @@ class Criterion(BaseModel):
         """
         return cls(
             id=data["id"],
-            name=data["nom"],
+            name=data["critère"],
             indicators=[Indicator.from_dict(ind) for ind in data["indicateurs"]],
             override_grade=data.get("note manuelle"),
             comment=data.get("commentaire", ""),

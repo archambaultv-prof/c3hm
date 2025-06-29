@@ -36,7 +36,7 @@ class Rubric(BaseModel):
                 for level in self.grade_levels.levels:
                     if not self.descriptors.contains(indicator, level):
                         raise ValueError(
-                            f"Le descripteur pour l'indicateur '{indicator.description}' "
+                            f"Le descripteur pour l'indicateur '{indicator.name}' "
                             f"du critère '{criterion.name}' au niveau '{level.name}' "
                             "n'est pas défini dans la grille d'évaluation."
                         )

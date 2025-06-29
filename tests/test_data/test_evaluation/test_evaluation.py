@@ -10,7 +10,7 @@ from c3hm.data.evaluation.indicator import Indicator
 def make_indicator(id="ind1", grade: Decimal | None = Decimal("2"), points=Decimal("2")):
     return Indicator(
         id=id,
-        description="Test Indicator",
+        name="Test Indicator",
         grade=grade,
         points=points,
         comment="Test comment" if grade is not None else ""

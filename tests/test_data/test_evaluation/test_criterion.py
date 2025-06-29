@@ -11,7 +11,7 @@ def make_indicator(id="ind1", grade: Decimal | None =Decimal("2"), points=Decima
     # Minimal Indicator mock for testing
     return Indicator(
         id=id,
-        description="Test Indicator",
+        name="Test Indicator",
         grade=grade,
         points=points,
         comment="Test comment" if grade is not None else ""

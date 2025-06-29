@@ -31,7 +31,7 @@ grille:
 
       indicateurs:
 
-      - description: 
+      - indicateur: 
         points: 
         descripteurs:
         - "Aucune erreur notable."
@@ -40,9 +40,9 @@ grille:
         - "Plusieurs erreurs significatives."
         - "Lacunes importantes ou travail incomplet."
 
-      - description: 
+      - indicateur: 
 
-      - description: 
+      - indicateur: 
 
     - critère:
 
@@ -50,11 +50,11 @@ grille:
 
       indicateurs:
 
-      - description: 
+      - indicateur: 
 
-      - description: 
+      - indicateur: 
 
-      - description: 
+      - indicateur: 
 
   format:
 

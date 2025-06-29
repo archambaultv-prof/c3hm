@@ -88,7 +88,7 @@ grille:
       indicateurs:
 
       # Nom de l'indicateur
-      - nom: Balai brandi comme un sabre en pleine mêlée
+      - indicateur: Balai brandi comme un sabre en pleine mêlée
 
         # Optionnel, nombre de points attribués à l'indicateur. Si non précisé, la valeur
         # est calculée automatiquement pour que la somme des indicateurs soit celle du critère.
@@ -109,7 +109,7 @@ grille:
           - Le balai reste figé, le pont grince comme un vieux gréement.
 
       # Autres indicateurs
-      - nom: Seau d’eau salée renversé avec panache
+      - indicateur: Seau d’eau salée renversé avec panache
         points: 10
         descripteurs:
           - Eau jaillissante en gerbes, digne d’une tempête de kraken !
@@ -117,14 +117,16 @@ grille:
           - Seau basculé sans trop d’éclaboussures, mais le pont reste un peu sec.
           - Mauvais angle, le mât est mouillé mais le pont demeure aride.
           - Seau rebondit, éclaboussures désordonnées partout sauf au bon endroit.
-      - nom: Mousse digne d’un kraken en plein spasme
+
+      - indicateur: Mousse digne d’un kraken en plein spasme
         descripteurs:
           - Crée un tapis de mousse épais comme un nuage d’écume mythique.
           - Mousse généreuse, seuls quelques coins restent nus.
           - Une couche correcte de mousse, mais manque de volume.
           - Mousse clairsemée, opération bâclée.
           - À peine une trace de mousse, on dirait un désert maritime.
-      - nom: Chant marin entonné en chœur pour stimuler l’équipage
+
+      - indicateur: Chant marin entonné en chœur pour stimuler l’équipage
         descripteurs:
           - Harmonies parfaites ; mêmes les mouettes balancent la tête en rythme !
           - Voix solides, deux ou trois fausses notes anecdotiques.
@@ -137,21 +139,23 @@ grille:
       total: 40
 
       indicateurs:
-      - nom: Cordage enroulé en huit impeccable
+      - indicateur: Cordage enroulé en huit impeccable
         descripteurs:
           - Nœud huit parfait, digne d’un musée des beaux cordages !
           - Tours bien placés, un seul brin chevauche légèrement.
           - Structure correcte mais cordage un peu lâche.
           - Hésitations visibles, le huit part en vrille.
           - Corde en salade, impossible à démêler sans un bon couteau.
-      - nom: Pavillon solidement fixé au mât
+
+      - indicateur: Pavillon solidement fixé au mât
         descripteurs:
           - Le drapeau claque fièrement, aucun risque de le voir s’envoler.
           - Fixation robuste, léger flottement par grands vents.
           - Accroché convenablement, mais se relâche parfois.
           - Pavillon branlant, mauvais signe pour la détermination.
           - Pendouille misérablement, honneur entamé.
-      - nom: Drisse tendue sans nœud lâche
+
+      - indicateur: Drisse tendue sans nœud lâche
         descripteurs:
           - Tendue comme un étai prêt à affronter la plus rude tempête.
           - Bonne tension, un petit relâchement sous forte traction.
@@ -164,7 +168,7 @@ grille:
       total: 30
 
       indicateurs:
-      - nom: Gobelets remplis jusqu’à ras bord
+      - indicateur: Gobelets remplis jusqu’à ras bord
         descripteurs:
           - Débordement majestueux ; la mer de rhum pourrait engloutir tout l’équipage !
           - Presque plein, quelques gouttes s’échappent lors du toast.
@@ -172,7 +176,7 @@ grille:
           - Moitié vide, la vaillance s’étiole.
           - Verre désertique, le rhum reste prisonnier du tonneau.
 
-      - nom: File d’attente de matelots respectée
+      - indicateur: File d’attente de matelots respectée
         descripteurs:
           - Discipline militaire, file alignée comme un cortège royal.
           - Légèrement relâchée, mais aucun doublage flagrant.
@@ -180,7 +184,7 @@ grille:
           - Bousculades et murmures, mêlée digne d’un abordage improvisé.
           - Chaos total, chacun s’arrache son gobelet par la force.
 
-      - nom: Toast improvisé incluant le capitaine
+      - indicateur: Toast improvisé incluant le capitaine
         descripteurs:
           - Rime épique et verve flamboyante ; même Neptune essuie une larme.
           - Toast sincère, un ou deux blancs poétiques.

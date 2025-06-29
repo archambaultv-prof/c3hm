@@ -43,7 +43,7 @@ class Evaluation(BaseModel):
                 if not is_multiple_of_quantum(indicator.points, self.grade_step):
                     raise ValueError(
                         f"La valeur des points ({indicator.points}) de l'indicateur "
-                        f"'{indicator.description}' du critère '{criterion.name}' n'est pas un "
+                        f"'{indicator.name}' du critère '{criterion.name}' n'est pas un "
                         f"multiple du pas de notation ({self.grade_step})."
                     )
 

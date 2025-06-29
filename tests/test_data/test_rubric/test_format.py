@@ -32,7 +32,7 @@ def test_format_to_dict():
     )
     d = fmt.to_dict()
     assert d["orientation"] == "paysage"
-    assert d["afficher le pourcentage des indicateurs"] is True
+    assert d["afficher les points des indicateurs"] is True
     assert d["largeur des colonnes"] == [12.0, None]
     assert d["largeur des colonnes avec commentaires"] == [8.0]
 
