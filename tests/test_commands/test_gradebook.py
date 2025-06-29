@@ -5,7 +5,7 @@ from c3hm.data.config import Config
 
 
 def test_generate_gradebook(
-        config_template_path: Path,
+        config_full_template_path: Path,
         tmp_path: Path,
         output_dir: Path):
     """
@@ -15,15 +15,15 @@ def test_generate_gradebook(
     Recopie le fichier créé dans le répertoire tests/output pour inspection
     manuelle si nécessaire.
     """
-    config = Config.from_yaml(config_template_path)
+    config = Config.from_user_config(config_full_template_path)
 
-    create_gradebook_file(config_template_path, tmp_path, output_dir, config)
+    create_gradebook_file(config_full_template_path, tmp_path, output_dir, config)
 
 
-def create_gradebook_file(config_template_path: Path, tmp_path: Path,
+def create_gradebook_file(config_path: Path, tmp_path: Path,
                           output_dir: Path, config: Config):
-    name = config_template_path.with_name(
-            f"{config_template_path.stem}.xlsx")
+    name = config_path.with_name(
+            f"{config_path.stem}.xlsx")
     xl_file = tmp_path / name
     generate_gradebook(config, xl_file)
     assert xl_file.exists()

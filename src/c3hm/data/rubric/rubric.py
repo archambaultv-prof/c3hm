@@ -8,8 +8,6 @@ from c3hm.data.rubric.format import Format
 from c3hm.data.rubric.grade_level import GradeLevel
 from c3hm.data.rubric.grade_levels import GradeLevels
 
-CTHM_OMNIVOX = "cthm_omnivox"
-
 
 class Rubric(BaseModel):
     """
