@@ -8,7 +8,7 @@ from openpyxl.utils import absolute_coordinate, quote_sheetname
 from openpyxl.workbook.defined_name import DefinedName
 from openpyxl.worksheet.worksheet import Worksheet
 
-from c3hm.commands.generate_rubric import scale_color_schemes
+from c3hm.models.generate_rubric import scale_color_schemes
 from c3hm.data.config import Config
 from c3hm.data.rubric import CTHM_GLOBAL_COMMENT, CTHM_GLOBAL_GRADE, CTHM_OMNIVOX
 from c3hm.data.student.student import Student

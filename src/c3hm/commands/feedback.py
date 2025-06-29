@@ -6,10 +6,9 @@ from openpyxl import Workbook
 from openpyxl.cell.cell import Cell
 from openpyxl.worksheet.worksheet import Worksheet
 
-from c3hm.commands.generate_rubric import generate_rubric
 from c3hm.data.config import Config
 from c3hm.data.rubric import CTHM_GLOBAL_COMMENT, CTHM_GLOBAL_GRADE, CTHM_OMNIVOX
-from c3hm.data.studentgrade import CriterionGrade, IndicatorGrade, StudentGrade
+from c3hm.models.generate_rubric import generate_rubric
 from c3hm.utils.decimal import round_to_nearest_quantum
 
 

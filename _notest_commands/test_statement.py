@@ -1,7 +1,7 @@
 from decimal import Decimal
 from pathlib import Path
 
-from c3hm.commands.statement import generate_statement_rubric
+from c3hm.commands.export import export_rubric
 from c3hm.data.config import Config
 
 
@@ -45,7 +45,7 @@ def test_generate_word_from_rubric(
 
 
 def generate_rubric(doc_file: Path, output_dir: Path, config: Config):
-    generate_statement_rubric(config.rubric, doc_file, title=config.title())
+    export_rubric(config.rubric, doc_file, title=config.title())
     assert doc_file.exists()
 
     # Copie le fichier dans le répertoire de sortie pour inspection manuelle

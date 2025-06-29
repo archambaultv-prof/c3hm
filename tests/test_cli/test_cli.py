@@ -10,7 +10,7 @@ def test_help(runner: CliRunner):
     for command in [
         "clean",
         "template",
-        "rubric",
+        "export",
         "gradebook",
         "feedback",
     ]:

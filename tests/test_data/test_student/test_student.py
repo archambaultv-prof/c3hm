@@ -1,6 +1,6 @@
 import pytest
 
-from c3hm.data.student.student import Student, is_empty_row
+from c3hm.data.student.student import Student
 
 
 def test_student_creation_and_fields():
@@ -131,9 +131,3 @@ def test_student_copy():
     student_copy = student.copy()
     assert student_copy == student
     assert student_copy is not student
-
-def test_is_empty_row():
-    row = {"a": " ", "b": "", "c": "   "}
-    assert is_empty_row(row) is True
-    row2 = {"a": "x", "b": " ", "c": ""}
-    assert is_empty_row(row2) is False

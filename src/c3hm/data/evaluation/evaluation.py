@@ -1,5 +1,5 @@
 from decimal import Decimal
-from typing import Self
+from typing import ClassVar, Self
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -20,6 +20,8 @@ class Evaluation(BaseModel):
     criteria: list[Criterion] = Field(..., min_length=1)
     override_grade: Decimal | None = Field(..., ge=Decimal(0))
     comment: str
+
+    grade_step_default: ClassVar[Decimal] = Decimal("1")
 
     def title(self) -> str:
         """
@@ -133,7 +135,7 @@ class Evaluation(BaseModel):
         """
         return cls(
             name=data["nom"],
-            grade_step=data["pas de notation"],
+            grade_step=data.get("pas de notation", Decimal("1")),
             criteria=[Criterion.from_dict(criterion) for criterion in data["critères"]],
             override_grade=data.get("note manuelle"),
             comment=data.get("commentaire", ""),

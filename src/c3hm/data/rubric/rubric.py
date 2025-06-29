@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field, model_validator
 from c3hm.data.evaluation.evaluation import Evaluation
 from c3hm.data.rubric.descriptors import Descriptors
 from c3hm.data.rubric.format import Format
+from c3hm.data.rubric.grade_level import GradeLevel
 from c3hm.data.rubric.grade_levels import GradeLevels
 
 CTHM_OMNIVOX = "cthm_omnivox"
@@ -47,7 +48,8 @@ class Rubric(BaseModel):
         Retourne un dictionnaire représentant la grille d'évaluation.
         """
         return {
-            "niveaux": self.grade_levels.to_dict(convert_decimal=convert_decimal),
+            "niveaux": [gl.to_dict(convert_decimal=convert_decimal)
+                        for gl in self.grade_levels.levels],
             "évaluation": self.evaluation.to_dict(convert_decimal=convert_decimal),
             "format": self.format.to_dict(),
             "descripteurs": self.descriptors.to_dict()
@@ -59,8 +61,9 @@ class Rubric(BaseModel):
         """
         Crée une instance de Rubric à partir d'un dictionnaire.
         """
+        levels = [GradeLevel.from_dict(gl) for gl in data["niveaux"]]
         return cls(
-            grade_levels=GradeLevels.from_dict(data["niveaux"]),
+            grade_levels=GradeLevels(levels=levels),
             evaluation=Evaluation.from_dict(data["évaluation"]),
             format=Format.from_dict(data["format"]),
             descriptors=Descriptors.from_dict(data["descripteurs"])
