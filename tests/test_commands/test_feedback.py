@@ -41,3 +41,28 @@ def test_generate_feedback_rubric(
         gradebook_path=gradebook_path,
         output_dir=output_dir / "feedback"
     )
+
+def test_zero_grade(
+    config_full_template_path: Path,
+    gradebook_zero_path: Path,
+) -> None:
+    """
+    Teste la génération de feedback avec une note globale de 0.
+    """
+
+    # Charge la configuration et la grille d'évaluation
+    config = Config.from_user_config(config_full_template_path)
+    config.students.students = [s for s in config.students.students
+                                if s.omnivox_code == "19216801"]
+
+    # Ouvre le gradebook
+    wb = openpyxl.load_workbook(gradebook_zero_path,
+                                data_only=True,
+                                read_only=True)
+    grades = grades_from_wb(wb, config)
+
+    # Vérifie que le nombre est correct
+    assert len(grades) == 1
+    assert len(grades[0].grades) > 1
+    for v in grades[0].grades.values():
+        assert v == 0.0

@@ -78,10 +78,14 @@ def grades_from_ws(ws: Worksheet,
     grades = {}
 
     collect_comment_grade(ws, eval, comments, grades)
+    # Pour rendre la vie plus facile, si on met un 0 dans la cellule de note
+    # globale, on considère que l'évaluation est notée 0 partout. Par exemple,
+    # un travail non remis.
+    default_grade = 0 if grades[eval.id] == 0 else None
     for c in eval.criteria:
-        collect_comment_grade(ws, c, comments, grades)
+        collect_comment_grade(ws, c, comments, grades, default_grade)
         for i in c.indicators:
-            collect_comment_grade(ws, i, comments, grades)
+            collect_comment_grade(ws, i, comments, grades, default_grade)
 
     return GradeSheet(
         omnivox_code=omnivox_code,
@@ -92,25 +96,28 @@ def grades_from_ws(ws: Worksheet,
 def collect_comment_grade(ws: Worksheet,
                       x : Evaluation | Criterion | Indicator,
                       comments: dict[str, str],
-                      grades: dict[str, float]) -> None:
-    c = get_cell_value(ws, comment_cell_name(x.id), allow_none=True)
+                      grades: dict[str, float],
+                      default_grade = None) -> None:
+    c = get_cell_value(ws, comment_cell_name(x.id), default_value="")
     if c and str(c).strip():
         comments[x.id] = str(c).strip()
-    grades[x.id] = float(get_cell_value(ws, grade_cell_name(x.id))) # type: ignore
+    grades[x.id] = float(get_cell_value(ws, grade_cell_name(x.id), default_grade)) # type: ignore
 
 def get_cell_value(ws: Worksheet,
                    name: str,
-                   allow_none: bool = False):
+                   default_value = None):
     cell = find_named_cell(ws, name)
     if cell is None:
         raise ValueError(f"La cellule nommée '{name}'"
                             " n'existe pas dans la feuille.")
     if cell.value is None:
-        if allow_none:
-            return None
+        if default_value is not None:
+            return default_value
         else:
             raise ValueError(f"La cellule nommée '{name}' ne peut pas être vide.")
     if str(cell.value).strip().upper() == "#N/A":
+        if default_value is not None:
+            return default_value
         raise ValueError(f"La cellule nommée '{name}' ne peut pas contenir '#N/A'.")
     return cell.value
 
