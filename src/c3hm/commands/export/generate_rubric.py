@@ -138,8 +138,8 @@ def add_criterion(table: Table,
     if grade_sheet:
         c_grade = grade_sheet.get_grade(criterion, rubric.evaluation.precision + 1)
         c_percentage = grade_sheet.get_percentage(criterion)
-        grade_pos = rubric.grade_levels.get_index_by_percentage(c_percentage)
-        p = row.cells[grade_pos + 1].paragraphs[0]
+        c_grade_pos = rubric.grade_levels.get_index_by_percentage(c_percentage)
+        p = row.cells[c_grade_pos + 1].paragraphs[0]
         pts = "pt" if c_grade == 1 else "pts"
         p.text = f"{c_grade}{narrow_nbsp}{pts}"
         p.style = "Heading 3"
@@ -171,9 +171,9 @@ def add_criterion(table: Table,
         # Si l'indicateur est noté, on trouve le niveau de note
         if grade_sheet:
             i_percentage = grade_sheet.get_percentage(indicator)
-            grade_pos = rubric.grade_levels.get_index_by_percentage(i_percentage)
+            i_grade_pos = rubric.grade_levels.get_index_by_percentage(i_percentage)
         else:
-            grade_pos = None
+            i_grade_pos = None
 
         for i, level in enumerate(rubric.grade_levels.levels):
             # Descripteur
@@ -181,7 +181,7 @@ def add_criterion(table: Table,
             cell.text = rubric.descriptors.get_descriptor(indicator, level)
 
             # Ajoute la note de l'indicateur si disponible
-            if grade_sheet and grade_pos and i == grade_pos:
+            if grade_sheet and i == i_grade_pos:
                 if rubric.format.show_indicators_points:
                     g = grade_sheet.get_grade(indicator, rubric.evaluation.precision + 1)
                     run = cell.paragraphs[0].add_run(f" ({g})")

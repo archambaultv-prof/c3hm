@@ -43,8 +43,11 @@ def define_ws_named_cell(ws: Worksheet, row: int, col: int, name: str):
     )
     ws.defined_names.add(dn)
 
-def cell_addr(row: int, col: int) -> str:
+def cell_addr(row: int, col: int, ws: Worksheet | str | None = None) -> str:
     """
     Retourne l'adresse d'une cellule Excel à partir de la ligne et de la colonne.
     """
-    return f"{pyxl_utils.get_column_letter(col)}{row}"
+    if isinstance(ws, Worksheet):
+        ws = ws.title
+    ws_name = f"{quote_sheetname(ws)}!" if ws is not None else ""
+    return f"{ws_name}{pyxl_utils.get_column_letter(col)}{row}"

@@ -3,6 +3,7 @@ from pathlib import Path
 import openpyxl as pyxl
 from openpyxl.formatting.rule import CellIsRule
 from openpyxl.styles import Border, Font, PatternFill, Side
+from openpyxl.utils import quote_sheetname
 from openpyxl.worksheet.worksheet import Worksheet
 
 from c3hm.data.config import Config
@@ -35,14 +36,31 @@ def generate_gradebook(config: Config, output_path: Path | str) -> None:
     for sheet in wb.worksheets:
         wb.remove(sheet)
 
-    for student in config.students:
-        # Crée une feuille pour chaque étudiant
-        ws = wb.create_sheet(title=student.ws_name())
-        add_student_sheet(ws, config.rubric, student)
+    teams_list = config.students.list_teams()
+    teams_list.sort(key=lambda x: x[0].last_name)
+    color_tab = any(len(teams) > 1 for teams in teams_list)
+    tab_color = ["DDEBF7", "C7E8CA"]
+    for i, teams in enumerate(teams_list):
+        ref = teams[0]
+        ws = wb.create_sheet(title=ref.ws_name())
+        add_student_sheet(ws, config.rubric, ref, None)
+        if color_tab:
+            # Colorie l'onglet de l'équipe
+            ws.sheet_properties.tabColor = tab_color[i % 2]
+        for student in teams[1:]:
+            # Crée une feuille pour chaque étudiant
+            ws = wb.create_sheet(title=student.ws_name())
+            add_student_sheet(ws, config.rubric, student, ref)
+            if color_tab:
+                # Colorie l'onglet de l'équipe
+                ws.sheet_properties.tabColor = tab_color[i % 2]
 
     wb.save(output_path)
 
-def add_student_sheet(ws: Worksheet, rubric: Rubric, student: Student) -> None:
+def add_student_sheet(ws: Worksheet,
+                      rubric: Rubric,
+                      student: Student,
+                      ref_student: Student | None) -> None:
     ws.sheet_view.showGridLines = False
 
     # Tailles de colonnes
@@ -68,7 +86,7 @@ def add_student_sheet(ws: Worksheet, rubric: Rubric, student: Student) -> None:
 
     # Note globale
     print_header(ws)
-    print_grade_row(ws, rubric.evaluation, rubric)
+    print_grade_row(ws, rubric.evaluation, rubric, ref_student)
     ws.append([])
 
     # Note pour critères
@@ -78,7 +96,7 @@ def add_student_sheet(ws: Worksheet, rubric: Rubric, student: Student) -> None:
         if idx > 0:
             set_top_border(ws)
         for indicator in criterion.indicators:
-            print_grade_row(ws, indicator, rubric)
+            print_grade_row(ws, indicator, rubric, ref_student)
 
 def set_top_border(ws):
     top_side = Side(border_style="medium", color=BORDER_GRAY_HEX)
@@ -88,7 +106,8 @@ def set_top_border(ws):
 
 def print_grade_row(ws: Worksheet,
                     data: Evaluation | Criterion | Indicator,
-                    rubric: Rubric
+                    rubric: Rubric,
+                    ref_student: Student | None = None
                     ) -> None:
     levels = rubric.grade_levels
     # Nom
@@ -99,8 +118,13 @@ def print_grade_row(ws: Worksheet,
     cell.number_format = "0%"
 
     # Commentaire
-    n = comment_cell_name(data.id)
-    define_ws_named_cell(ws, ws.max_row, 4, n)
+    comment_name = comment_cell_name(data.id)
+    define_ws_named_cell(ws, ws.max_row, 4, comment_name)
+    if ref_student:
+        # Si on a un étudiant de référence, on utilise son commentaire
+        # par défaut
+        cell = ws.cell(row=ws.max_row, column=4)
+        cell.value = f"={quote_sheetname(ref_student.ws_name())}!{comment_name}" # type: ignore
 
     # Note calculée en %
     cell = ws.cell(row=ws.max_row, column=5)
@@ -120,7 +144,7 @@ def print_grade_row(ws: Worksheet,
 
 
     # Note calculée en pts
-    print_pts_cell(ws, data)
+    print_pts_cell(ws, data, ref_student)
 
     # Niveau calculé
     print_level_cell(ws, data, levels)
@@ -166,7 +190,9 @@ def print_descriptor_cell(ws: Worksheet,
         ifs += ")"  # Ferme les parenthèses pour chaque niveau
     ws.cell(row=ws.max_row, column=8, value=ifs)
 
-def print_pts_cell(ws, data: Evaluation | Criterion | Indicator):
+def print_pts_cell(ws,
+                   data: Evaluation | Criterion | Indicator,
+                   ref_student: Student | None = None) -> None:
     # Test pour savoir si les deux cellules de notes sont remplies
     both_cell = (f"AND(NOT(ISBLANK({cell_addr(ws.max_row, 2)})),"
                  f"NOT(ISBLANK({cell_addr(ws.max_row, 3)})))")
@@ -186,7 +212,13 @@ def print_pts_cell(ws, data: Evaluation | Criterion | Indicator):
         children_str = ", ".join(children)
         alternative = "sum(" + children_str + ")"
     else:
-        alternative = "NA()"
+        if ref_student is not None:
+            # Si on a un étudiant de référence, on utilise sa note
+            # pour l'indicateur, sinon on utilise NA(). La note
+            # de l'étudiant de référence provient d'une autre feuille
+            alternative = f"{quote_sheetname(ref_student.ws_name())}!{grade_cell_name(data.id)}"
+        else:
+            alternative = "NA()"
 
     # Calcul de la note en points
     note_pts = (f"IF(NOT(ISBLANK({cell_addr(ws.max_row, 2)})),"

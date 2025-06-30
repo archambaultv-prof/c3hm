@@ -75,6 +75,31 @@ class Students(BaseModel):
             if s.team == student.team and s.omnivox_code != student.omnivox_code
         ]
 
+    def list_teams(self) -> list[list[Student]]:
+        """
+        Retourne une liste de listes d'étudiants, où chaque sous-liste
+        représente une équipe d'étudiants. Le premier étudiant de chaque
+        sous-liste est l'étudiant référent de l'équipe.
+        """
+        ls = []
+        teams: dict[str, list[Student]] = {}
+        for student in self.students:
+            if student.team:
+                if student.team not in teams:
+                    teams[student.team] = []
+                teams[student.team].append(student)
+            else:
+                ls.append([student])
+        for members in teams.values():
+            # On s'assure que le premier membre est l'étudiant référent
+            ref = next((s for s in members if s.is_team_reference), None)
+            if ref:
+                members.remove(ref)
+                ls.append([ref] + members)
+            else:
+                ls.append(members)
+        return ls
+
     def __iter__(self): # type: ignore
         """
         Permet d'itérer sur les étudiants.
