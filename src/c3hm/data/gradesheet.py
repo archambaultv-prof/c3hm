@@ -42,7 +42,7 @@ class GradeSheet(BaseModel):
         """
         id = x.id
         grade = self.grades[id]
-        grade = Decimal(str(round(grade, precision)))
+        grade = Decimal(str(round(grade, precision))).quantize(Decimal("0.1") ** precision)
         if grade > x.points and not can_exceed_pts:
             raise ValueError(
                 f"La note {grade} pour {x.name} dépasse le maximum de points {x.points}."

@@ -84,7 +84,7 @@ def generate_rubric(
     # insérer le nom de l'étudiant
     if grade_sheet and student:
         p = doc.add_paragraph()
-        p.text = f"{student.first_name} {student.last_name}"
+        p.text = f"Étudiant : {student.first_name} {student.last_name}"
 
     # Insérer le commentaire général
     if grade_sheet and grade_sheet.has_comment(eval):
@@ -141,7 +141,8 @@ def add_criterion(table: Table,
         c_grade_pos = rubric.grade_levels.get_index_by_percentage(c_percentage)
         p = row.cells[c_grade_pos + 1].paragraphs[0]
         pts = "pt" if c_grade == 1 else "pts"
-        p.text = f"{c_grade}{narrow_nbsp}{pts}"
+        c_percent = f"({c_percentage * 100:.0f}%)"
+        p.text = f"{c_grade}{narrow_nbsp}{pts} {c_percent}"
         p.style = "Heading 3"
 
         # Ajoute le commentaire du critère si disponible
