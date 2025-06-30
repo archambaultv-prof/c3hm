@@ -184,7 +184,8 @@ def generate_xl_for_omnivox(
     # Remplit le tableau avec les notes et les commentaires
     for sheet in grade_sheets:
         note = sheet.get_grade(config.rubric.evaluation, config.rubric.evaluation.precision)
-        comment = sheet.get_comment(config.rubric.evaluation)
+        if sheet.has_comment(config.rubric.evaluation):
+            comment = sheet.get_comment(config.rubric.evaluation)
         ws.append([sheet.omnivox_code, note, comment]) # type: ignore
 
     # Sauvegarde le fichier Excel
