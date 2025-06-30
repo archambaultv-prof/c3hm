@@ -25,26 +25,28 @@ Le succès de `c3hm` leur revient en bonne partie, toutes les erreurs sont les m
 Pendant que tu regrettes ton choix de carrière face à la montagne de
 copies à corriger, `c3hm` vient à ta rescousse. Il te permet de :
 
-- `c3hm clean` : Nettoyer les remises des étudiants, comme un aspirateur numérique. Bye bye
+- `c3hm unpack` : Dézipper et nettoyer les remises des étudiants, comme un aspirateur numérique. Bye bye
   `node_modules`, `.venv` et autres joyeusetés. Ton OneDrive sera tellement content !
-- `c3hm statement` : Générer une grille d'évaluation à partir d'une description en YAML.
+- `c3hm export` : Générer une grille d'évaluation à partir d'une description en YAML.
 - `c3hm gradebook` : Générer un tableur Excel pour la correction.
 - `c3hm feedback` : Ouf... il est 3 heures du matin et tu viens de finir
   ta correction. Bravo, le pire est derrière toi. Mais il te faut encore
-  exporter un PDF pour chaque étudiant et remettre tout ça dans Omnivox. Tu en
-  as de la chance, `c3hm` peut le faire pour toi ! Il va créer un PDF pour
+  exporter une rétroaction pour chaque étudiant et remettre tout ça dans Omnivox. Tu en
+  as de la chance, `c3hm` peut le faire pour toi ! Il va créer un fichier pour
   chaque étudiant, avec un nom qu'Omnivox comprend. Il va même te créer un
-  tableur Excel avec les notes et les commentaires prêts à être importés dans
+  tableur Excel avec les notes prêtes à être importées dans
   Omnivox.
+- `c3hm template` : Le par cœur, ce n'est pas ton fort ? Pas de souci, `c3hm` peut
+  générer un modèle de grille d'évaluation pour toi.
 
 Pour l'instant, c'est tout, mais on a de grands projets pour l'avenir. Reste à l'écoute !
 
 #### 😮 Quoi en anglais ?
 
 Oui, les noms de commandes sont en anglais. Pourquoi ? Parce que c'est toujours
-comme ça en informatique. Des termes et options comme `clean`, `init`,
-`--dryrun`, `--verbose`, `--help`, `--dir` et autres sont des classiques. On ne
-va pas réinventer la roue ici.
+comme ça en informatique. Des termes et options comme `init`,
+`--dry-run`, `--verbose`, `--help`, `--dir` et autres sont des classiques. On ne
+va pas réinventer la roue.
 
 Par contre, les messages d'erreur et les descriptions sont en français. Parce qu'on est au Québec, et qu'on aime bien
 notre langue.
@@ -67,7 +69,7 @@ pipx install .
 
 ## 🛡️ Licence
 
-Plus généreux qu’un prof qui corrige avec des demi-points bonus.
+Plus généreux qu'un prof qui corrige avec des demi-points bonus.
 
 - Distribué sous la licence MIT.
 - Tu peux aussi utiliser le matériel de ce projet sous la licence [Creative
