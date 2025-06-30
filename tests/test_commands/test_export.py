@@ -1,4 +1,3 @@
-from decimal import Decimal
 from pathlib import Path
 
 from c3hm.commands.export.export import export_rubric
@@ -35,13 +34,13 @@ def test_generate_word_from_rubric(
     c_2_levels.rubric.grade_levels = GradeLevels(
         levels=[GradeLevel(
             name="✅",
-            max_percentage=Decimal(100),
-            min_percentage=Decimal(60)
+            max_percentage=1,
+            min_percentage=0.6
         ),
         GradeLevel(
             name="❌",
-            max_percentage=Decimal(59),
-            min_percentage=Decimal(0)
+            max_percentage=0.59,
+            min_percentage=0
         )])
     c_2_levels.rubric.format.show_level_descriptions = False
     c_2_levels.rubric.format.show_indicators_points = True

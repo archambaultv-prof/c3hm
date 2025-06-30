@@ -1,146 +1,61 @@
-from decimal import Decimal
-
 import pytest
 
 from c3hm.data.evaluation.criterion import Criterion
 from c3hm.data.evaluation.evaluation import Evaluation
 from c3hm.data.evaluation.indicator import Indicator
-from c3hm.data.student.student import Student
 
-def make_indicator(id="ind1", grade: Decimal | None = Decimal("2"), points=Decimal("2")):
-    return Indicator(
-        id=id,
-        name="Test Indicator",
-        grade=grade,
-        points=points,
-        comment="Test comment" if grade is not None else ""
-    )
 
-def make_criterion(id="crit1", name="Critère 1", indicators=None, override_grade=None,
-                   comment="Test"):
+def make_indicator(id_, points):
+    return Indicator(id=id_, name=f"Indicator {id_}", points=points)
+
+def make_criterion(id_, points, indicators=None):
     if indicators is None:
-        indicators = [make_indicator()]
-    return Criterion(
-        id=id,
-        name=name,
-        indicators=indicators,
-        override_grade=override_grade,
-        comment=comment
-    )
-
-def make_student():
-
-    return Student(
-        first_name="John",
-        last_name="Doe",
-        omnivox_code="123456",
-        alias="JD")
+        indicators = [make_indicator(f"{id_}_ind1", points)]
+    return Criterion(id=id_, name=f"Criterion {id_}", indicators=indicators)
 
 def test_evaluation_title():
-    criteria = [make_criterion()]
-    e = Evaluation(
-        name="Eval 1",
-        grade_step=Decimal("1"),
-        criteria=criteria,
-        override_grade=None,
-        evaluated_student=make_student(),
-        comment="Test"
-    )
-    assert "Grille d'évaluation" in e.title()
-    assert "Eval 1" in e.title()
+    crit = make_criterion("crit1", 5)
+    eval_ = Evaluation(id="eval1", name="Test Eval", criteria=[crit])
+    assert "Grille d'évaluation" in eval_.title()
+    assert "Test Eval" in eval_.title()
 
-def test_evaluation_points_property():
-    criteria = [
-        make_criterion(indicators=[make_indicator(points=Decimal("2"))]),
-        make_criterion(id="crit2", indicators=[make_indicator(id="ind2", points=Decimal("3"))])
-    ]
-    e = Evaluation(
-        name="Eval 2",
-        grade_step=Decimal("1"),
-        criteria=criteria,
-        override_grade=None,
-        evaluated_student=make_student(),
-        comment="Test"
-    )
-    assert e.points == Decimal("5")
-    assert e.nb_criteria == 2
-    d = e.to_dict(convert_decimal=True)
-    e2 = Evaluation.from_dict(d)
-    assert e2.name == e.name
-    assert e2.grade_step == e.grade_step
-    assert len(e2.criteria) == 2
-    assert e2.override_grade == e.override_grade
-    assert e2.comment == e.comment
+def test_evaluation_points_sum():
+    crit1 = make_criterion("crit1", 5)
+    crit2 = make_criterion("crit2", 3)
+    eval_ = Evaluation(id="eval2", name="Eval Points", criteria=[crit1, crit2])
+    assert eval_.points == 8
 
-    e2 = e.copy()
-    assert e2 is not e
-    assert e2.name == e.name
-    assert e2.grade_step == e.grade_step
-    assert e2.override_grade == e.override_grade
-    assert e2.comment == e.comment
-    assert all(c1.id == c2.id for c1, c2 in zip(e.criteria, e2.criteria, strict=True))
-    assert all(c1 is not c2 for c1, c2 in zip(e.criteria, e2.criteria, strict=True))
+def test_evaluation_to_dict_and_from_dict():
+    crit = make_criterion("crit1", 4)
+    eval_ = Evaluation(id="eval3", name="Eval Dict", criteria=[crit])
+    d = eval_.to_dict()
+    assert d["id"] == "eval3"
+    assert d["nom"] == "Eval Dict"
+    assert isinstance(d["critères"], list)
+    eval2 = Evaluation.from_dict(d)
+    assert eval2.id == eval_.id
+    assert eval2.name == eval_.name
+    assert eval2.criteria[0].id == crit.id
 
+def test_evaluation_copy():
+    crit = make_criterion("crit1", 2)
+    eval_ = Evaluation(id="eval4", name="Eval Copy", criteria=[crit])
+    eval2 = eval_.copy()
+    assert eval2 is not eval_
+    assert eval2.id == eval_.id
+    assert eval2.criteria[0] is not eval_.criteria[0]
+    assert eval2.criteria[0].id == eval_.criteria[0].id
 
-def test_evaluation_duplicate_criterion_ids_raises():
-    criteria = [make_criterion(id="dup"), make_criterion(id="dup")]
-    with pytest.raises(ValueError):
-        Evaluation(
-            name="Eval 6",
-            grade_step=Decimal("1"),
-            criteria=criteria,
-            override_grade=None,
-            evaluated_student=make_student(),
-            comment="Test"
-        )
+def test_evaluation_unique_ids():
+    crit1 = make_criterion("crit1", 2)
+    crit2 = make_criterion("crit1", 3)  # duplicate id
+    with pytest.raises(ValueError) as excinfo:
+        Evaluation(id="eval5", name="Eval Dups", criteria=[crit1, crit2])
+    assert "doivent être uniques" in str(excinfo.value)
 
-def test_evaluation_override_grade_greater_than_points_raises():
-    criteria = [make_criterion(indicators=[make_indicator(points=Decimal("2"))])]
-    with pytest.raises(ValueError):
-        Evaluation(
-            name="Eval 7",
-            grade_step=Decimal("1"),
-            criteria=criteria,
-            override_grade=Decimal("5"),
-            evaluated_student=make_student(),
-            comment="Test"
-        )
-
-def test_evaluation_override_grade_requires_all_criteria_graded():
-    # One criterion has no grade
-    indicators = [make_indicator(grade=None)]
-    criteria = [make_criterion(indicators=indicators)]
-    with pytest.raises(ValueError):
-        Evaluation(
-            name="Eval 8",
-            grade_step=Decimal("1"),
-            criteria=criteria,
-            override_grade=Decimal("1"),
-            evaluated_student=make_student(),
-            comment="Test"
-        )
-
-def test_evaluation_indicator_points_not_multiple_of_grade_step_raises():
-    indicators = [make_indicator(points=Decimal("1.5"), grade=None)]
-    criteria = [make_criterion(indicators=indicators)]
-    with pytest.raises(ValueError):
-        Evaluation(
-            name="Eval 9",
-            grade_step=Decimal("1"),
-            criteria=criteria,
-            override_grade=None,
-            evaluated_student=make_student(),
-            comment="Test"
-        )
-
-def test_evaluation_comment_is_stripped():
-    criteria = [make_criterion()]
-    e = Evaluation(
-        name="Eval 10",
-        grade_step=Decimal("1"),
-        criteria=criteria,
-        override_grade=None,
-        evaluated_student=make_student(),
-        comment="   Test comment   "
-    )
-    assert e.comment == "Test comment"
+def test_evaluation_invalid_excel_id():
+    crit = make_criterion("crit1", 2)
+    # id with space is not safe for Excel named cell
+    with pytest.raises(ValueError) as excinfo:
+        Evaluation(id="invalid id", name="Eval Excel", criteria=[crit])
+    assert "n'est pas valide pour une cellule Excel" in str(excinfo.value)

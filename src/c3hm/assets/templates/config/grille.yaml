@@ -52,13 +52,21 @@ grille:
     # ex: Travail pratique 1, Exercice 2, etc.
     nom: Le Grand Carénage des Flibustiers
 
-    # Optionnel. Le niveau de précision pour la notation.
-    pas de notation: 1
+    # Optionnel, le pas pour inférer les points des indicateurs.
+    # Cela permet à c3hm de calculer automatiquement les points des
+    # indicateurs à partir des critères et de la note finale si besoin
+    # sans obtenir des points fractionnaires comme 6.66666666
+    pas pour inférence des points: 1
 
     # Optionnel, total de la note finale. Si non précisé, la valeur
     # est calculée automatiquement via les critères et indicateurs.
     total: 100
 
+    # Optionnel. La précision du total (en nombre de décimales). Les critères
+    # et indicateurs ont une décimale de plus pour éviter les erreurs
+    # d'arrondi.
+    précision du total: 0
+  
     # Optionnel, descripteur par défaut. Si non précisé, tous les indicateurs
     # doivent avoir un descripteur.
     descripteurs par défaut:

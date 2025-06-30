@@ -4,8 +4,6 @@ from openpyxl.workbook.defined_name import DefinedName
 from openpyxl.worksheet.worksheet import Worksheet
 
 CTHM_OMNIVOX = "cthm_code_omnivox"
-CTHM_EVAL_POINTS = "cthm_eval_points"
-CTHM_EVAL_COMMENT = "cthm_eval_commentaire"
 
 def safe_for_named_cell(s: str):
     """

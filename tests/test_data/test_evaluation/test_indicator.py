@@ -1,108 +1,51 @@
-from decimal import Decimal
-
 import pytest
 from pydantic import ValidationError
 
 from c3hm.data.evaluation.indicator import Indicator
 
 
-def test_indicator_valid_with_grade():
-    ind = Indicator(
-        id="ind1",
-        name="Test indicator",
-        points=Decimal("10"),
-        grade=Decimal("7"),
-        comment=""
-    )
-    assert ind.id == "ind1"
-    assert ind.name == "Test indicator"
-    assert ind.points == Decimal("10")
-    assert ind.grade == Decimal("7")
-    assert ind.has_grade is True
-    assert ind.comment == ""
-    d = ind.to_dict()
-    assert d["id"] == "ind1"
-    assert d["indicateur"] == "Test indicator"
-    assert d["points"] == Decimal("10")
-    assert d["note"] == Decimal("7")
-    assert d["commentaire"] == ""
+def test_indicator_valid_creation():
+    ind = Indicator(id="valid_id", name="Test Indicator", points=5.0)
+    assert ind.id == "valid_id"
+    assert ind.name == "Test Indicator"
+    assert ind.points == 5.0
 
-def test_indicator_valid_without_grade():
-    ind = Indicator(
-        id="ind2",
-        name="No grade",
-        points=Decimal("5"),
-        grade=None,
-        comment=""
-    )
-    assert ind.has_grade is False
-    assert ind.grade is None
-    assert ind.comment == ""
+def test_indicator_invalid_id_empty():
+    with pytest.raises(ValidationError):
+        Indicator(id="", name="Test Indicator", points=5.0)
+
+def test_indicator_invalid_points_zero():
+    with pytest.raises(ValidationError):
+        Indicator(id="valid_id", name="Test Indicator", points=0)
+
+def test_indicator_invalid_points_negative():
+    with pytest.raises(ValidationError):
+        Indicator(id="valid_id", name="Test Indicator", points=-1)
+
+def test_indicator_to_dict():
+    ind = Indicator(id="valid_id", name="Test Indicator", points=3.5)
+    d = ind.to_dict()
+    assert d == {"id": "valid_id", "indicateur": "Test Indicator", "points": 3.5}
+
+def test_indicator_from_dict():
+    data = {"id": "valid_id", "indicateur": "Test Indicator", "points": 2.0}
+    ind = Indicator.from_dict(data)
+    assert ind.id == "valid_id"
+    assert ind.name == "Test Indicator"
+    assert ind.points == 2.0
+
+def test_indicator_copy():
+    ind = Indicator(id="valid_id", name="Test Indicator", points=1.0)
+    ind_copy = ind.copy()
+    assert ind_copy is not ind
+    assert ind_copy.id == ind.id
+    assert ind_copy.name == ind.name
+    assert ind_copy.points == ind.points
 
 def test_indicator_invalid_id_for_excel():
-    # Patch safe_for_named_cell to return False
-    with pytest.raises(ValidationError) as exc:
-        Indicator(
-            id="123",
-            name="desc",
-            points=Decimal("2"),
-            grade=Decimal("1"),
-            comment=""
-        )
-    assert "n'est pas valide pour une cellule Excel" in str(exc.value)
-
-def test_indicator_grade_greater_than_points():
+    # Assuming safe_for_named_cell does not allow spaces or special chars
     with pytest.raises(ValidationError):
-        Indicator(
-            id="ind3",
-            name="desc",
-            points=Decimal("2"),
-            grade=Decimal("3"),
-            comment=""
-        )
+        Indicator(id="invalid id!", name="Test Indicator", points=1.0)
 
-def test_indicator_comment_with_no_grade():
     with pytest.raises(ValidationError):
-        Indicator(
-            id="ind4",
-            name="desc",
-            points=Decimal("2"),
-            grade=None,
-            comment="Should not have comment"
-        )
-
-def test_indicator_comment_is_stripped():
-    ind = Indicator(
-        id="ind5",
-        name="desc",
-        points=Decimal("2"),
-        grade=Decimal("2"),
-        comment="   some comment   "
-    )
-    assert ind.comment == "some comment"
-
-def test_indicator_to_dict_convert_decimal():
-    ind = Indicator(
-        id="ind6",
-        name="desc",
-        points=Decimal("2.5"),
-        grade=Decimal("2"),
-        comment=""
-    )
-    d = ind.to_dict(convert_decimal=True)
-    assert isinstance(d["points"], float)
-    assert isinstance(d["note"], int)
-
-def test_indicator_from_dict_and_copy():
-    data = {
-        "id": "ind7",
-        "indicateur": "desc",
-        "points": Decimal("4"),
-        "note": Decimal("3"),
-        "commentaire": ""
-    }
-    ind = Indicator.from_dict(data)
-    assert ind.id == "ind7"
-    ind2 = ind.copy()
-    assert ind2.id == ind.id
-    assert ind2 is not ind
+        Indicator(id="123", name="Test Indicator", points=1.0)

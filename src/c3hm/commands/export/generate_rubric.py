@@ -1,4 +1,3 @@
-from decimal import Decimal
 from importlib import resources
 from pathlib import Path
 
@@ -8,8 +7,9 @@ from docx.enum.text import WD_COLOR_INDEX, WD_PARAGRAPH_ALIGNMENT
 from docx.table import Table
 
 from c3hm.data.evaluation.criterion import Criterion
+from c3hm.data.gradesheet import GradeSheet
 from c3hm.data.rubric.rubric import Rubric
-from c3hm.utils.decimal import decimal_to_number
+from c3hm.data.student.student import Student
 from c3hm.utils.word import (
     add_word_table,
     set_as_table_header,
@@ -43,14 +43,19 @@ def scale_color_schemes(size: int) -> list[str] | None:
 def generate_rubric(
         rubric: Rubric,
         output_path: Path | str,
+        grade_sheet: GradeSheet | None = None,
+        student: Student | None = None,
         ) -> None:
     """
     Génère un document Word pour les étudiants à partir d’un grille d’évaluation (Rubric).
     """
+    if not grade_sheet and student:
+        raise ValueError("Une feuille de notes doit être fournie si un étudiant est défini.")
+    if grade_sheet and not student:
+        raise ValueError("Un étudiant doit être fourni si une feuille de notes est définie.")
+
     output_path = Path(output_path)
     eval = rubric.evaluation
-    student = eval.evaluated_student
-    with_grade = student is not None
 
     # forcer l'extension .docx
     if output_path.suffix.lower() != ".docx":
@@ -77,19 +82,19 @@ def generate_rubric(
     p.alignment = docx.enum.text.WD_PARAGRAPH_ALIGNMENT.CENTER
 
     # insérer le nom de l'étudiant
-    if with_grade:
+    if grade_sheet and student:
         p = doc.add_paragraph()
         p.text = f"{student.first_name} {student.last_name}"
 
     # Insérer le commentaire général
-    if with_grade and eval.comment:
+    if grade_sheet and grade_sheet.has_comment(eval):
         p = doc.add_paragraph()
-        p.text = f"Commentaire : {eval.comment}"
+        p.text = f"Commentaire : {grade_sheet.get_comment(eval)}"
         p.style = "Normal"
         p.alignment = docx.enum.text.WD_PARAGRAPH_ALIGNMENT.LEFT
 
     # insérer la table pour la grille
-    if with_grade and eval.has_criteria_comments:
+    if grade_sheet and grade_sheet.has_criteria_comments(eval):
         col_width = rubric.format.columns_width_comments
         nb_columns = len(rubric.grade_levels.levels) + 2
     else:
@@ -98,11 +103,11 @@ def generate_rubric(
     table = add_word_table(doc, nb_columns, col_width)
 
     # Remplir la première ligne avec le barème
-    set_first_row(rubric, table)
+    set_first_row(rubric, table, grade_sheet)
 
     # Remplir le reste avec critères et indicateurs dans l'ordre
     for criterion in eval.criteria:
-        add_criterion(table, criterion, rubric)
+        add_criterion(table, criterion, rubric, grade_sheet)
 
     # Ajouter une bordure en bas de la dernière ligne
     last_row = table.rows[-1]
@@ -114,13 +119,11 @@ def generate_rubric(
 
 def add_criterion(table: Table,
                   criterion: Criterion,
-                  rubric: Rubric):
+                  rubric: Rubric,
+                  grade_sheet: GradeSheet | None = None) -> None:
     """
     Ajoute un critère et ses indicateurs à la table.
     """
-    eval = rubric.evaluation
-    student = eval.evaluated_student
-    with_grade = student is not None
     row = table.add_row()
     narrow_nbsp = "\u202F"
 
@@ -128,24 +131,24 @@ def add_criterion(table: Table,
     p = row.cells[0].paragraphs[0]
     txt = criterion.name
     pts = "pt" if criterion.points == 1 else "pts"
-    txt += f" ({decimal_to_number(criterion.points)}{narrow_nbsp}{pts})"
+    txt += f" ({criterion.points}{narrow_nbsp}{pts})"
     p.text = txt
     p.style = "Heading 3"
 
-    if with_grade:
-        c_grade = criterion.get_grade()
-        c_percentage = c_grade / criterion.points * Decimal(100)
+    if grade_sheet:
+        c_grade = grade_sheet.get_grade(criterion, rubric.evaluation.precision + 1)
+        c_percentage = grade_sheet.get_percentage(criterion)
         grade_pos = rubric.grade_levels.get_index_by_percentage(c_percentage)
         p = row.cells[grade_pos + 1].paragraphs[0]
         pts = "pt" if c_grade == 1 else "pts"
-        p.text = f"{decimal_to_number(c_grade)}{narrow_nbsp}{pts}"
+        p.text = f"{c_grade}{narrow_nbsp}{pts}"
         p.style = "Heading 3"
 
         # Ajoute le commentaire du critère si disponible
-        if criterion.comment:
+        if grade_sheet.has_comment(criterion):
             comment_cell = row.cells[-1]
             p = comment_cell.paragraphs[0]
-            p.text = criterion.comment
+            p.text = grade_sheet.get_comment(criterion)
 
     # Indicateurs
     for i, indicator in enumerate(criterion.indicators):
@@ -156,31 +159,32 @@ def add_criterion(table: Table,
         if rubric.format.show_indicators_points:
             # Afficher le pourcentage de l'indicateur
             pts = "pt" if indicator.points == 1 else "pts"
-            txt += f" ({decimal_to_number(indicator.points)}{narrow_nbsp}{pts})"
+            txt += f" ({indicator.points}{narrow_nbsp}{pts})"
         run.text = txt
         run.style = "Emphasis"
 
-        if indicator.comment:
+        if grade_sheet and grade_sheet.has_comment(indicator):
             comment_cell = row.cells[-1]
             p = comment_cell.paragraphs[0]
-            p.text = indicator.comment
+            p.text = grade_sheet.get_comment(indicator)
 
         # Si l'indicateur est noté, on trouve le niveau de note
-        if with_grade:
-            i_grade: Decimal = indicator.grade # type: ignore
-            i_percentage = i_grade / indicator.points * Decimal(100)
+        if grade_sheet:
+            i_percentage = grade_sheet.get_percentage(indicator)
             grade_pos = rubric.grade_levels.get_index_by_percentage(i_percentage)
         else:
             grade_pos = None
+
         for i, level in enumerate(rubric.grade_levels.levels):
             # Descripteur
             cell = row.cells[i + 1]
             cell.text = rubric.descriptors.get_descriptor(indicator, level)
 
             # Ajoute la note de l'indicateur si disponible
-            if grade_pos and i == grade_pos:
+            if grade_sheet and grade_pos and i == grade_pos:
                 if rubric.format.show_indicators_points:
-                    run = cell.paragraphs[0].add_run(f" ({decimal_to_number(indicator.grade)})") # type: ignore
+                    g = grade_sheet.get_grade(indicator, rubric.evaluation.precision + 1)
+                    run = cell.paragraphs[0].add_run(f" ({g})")
                     run.style = "Emphasis"
                 # On met en surbrillance le descripteur
                 for paragraph in cell.paragraphs:
@@ -188,12 +192,11 @@ def add_criterion(table: Table,
                         run.font.highlight_color = WD_COLOR_INDEX.YELLOW
 
 
-def set_first_row(rubric: Rubric, table: Table):
+def set_first_row(rubric: Rubric, table: Table, grade_sheet: GradeSheet | None = None):
     """
     Remplit la première ligne du tableau avec le barème et les seuils.
     """
     eval = rubric.evaluation
-    with_grade = eval.evaluated_student is not None
 
     # En-tête de la table
     set_as_table_header(table.rows[0])
@@ -203,9 +206,8 @@ def set_first_row(rubric: Rubric, table: Table):
     hdr_cells = table.rows[0].cells
     total_cell = hdr_cells[0]
     p = total_cell.paragraphs[0]
-    if with_grade:
-        total = eval.get_grade()
-        total = decimal_to_number(total)
+    if grade_sheet:
+        total = grade_sheet.get_grade(eval, eval.precision)
         points = eval.points
         t = f"Note : {total}"
         t += f" / {points}"
@@ -216,7 +218,7 @@ def set_first_row(rubric: Rubric, table: Table):
     set_grade_levels(rubric, hdr_cells)
 
     # Commentaires
-    if with_grade and eval.has_criteria_comments:
+    if grade_sheet and grade_sheet.has_criteria_comments(eval):
         comment_cell = hdr_cells[-1]
         p = comment_cell.paragraphs[0]
         p.text = "Commentaire"

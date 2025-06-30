@@ -26,8 +26,8 @@ class GradeLevels(BaseModel):
         """
         Retourne le niveau de note correspondant à une note donnée.
         """
-        if not (Decimal(0) <= percentage <= Decimal(100)):
-            raise ValueError("Le pourcentage doit être compris entre 0 et 100.")
+        if not (0 <= percentage <= 1):
+            raise ValueError("Le pourcentage doit être compris entre 0 et 1.")
         for level in self.levels:
             if percentage >= level.min_percentage:
                 return level
@@ -37,8 +37,8 @@ class GradeLevels(BaseModel):
         """
         Retourne le niveau de note correspondant à une note donnée.
         """
-        if not (Decimal(0) <= percentage <= Decimal(100)):
-            raise ValueError("Le pourcentage doit être compris entre 0 et 100.")
+        if not (0 <= percentage <= 1):
+            raise ValueError("Le pourcentage doit être compris entre 0 et 1.")
         for i, level in enumerate(self.levels):
             if percentage >= level.min_percentage:
                 return i

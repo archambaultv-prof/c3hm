@@ -9,20 +9,20 @@ from c3hm.utils.decimal import decimal_to_number
 class GradeLevel(BaseModel):
     """
     Représente un niveau de note comme Excellent, Bon, Passable, Insuffisant.
-    Les seuils sont exprimés en pourcentage et doivent être compris entre 0 et 100.
+    Les seuils sont exprimés en pourcentage et doivent être compris entre 0 et 1.
     """
     name: str = Field(..., min_length=1)
     max_percentage: Decimal = Field(
         ...,
         description="Valeur maximale de la note pour ce niveau",
-        gt=Decimal(0),
-        le=Decimal("100"),
+        gt=Decimal("0"),
+        le=Decimal("1"),
     )
     min_percentage: Decimal = Field(
         ...,
         description="Valeur minimale de la note pour ce niveau",
-        ge=Decimal(0),
-        lt=Decimal("100"),
+        ge=Decimal("0"),
+        lt=Decimal("1"),
     )
 
     @model_validator(mode="after")
@@ -40,11 +40,11 @@ class GradeLevel(BaseModel):
         Retourne une chaîne de caractères représentant le niveau
         """
         if self.min_percentage == self.max_percentage:
-            return f"{self.min_percentage}"
+            return f"{self.min_percentage * 100:.0f}%"
         else:
-            if self.min_percentage == Decimal("0"):
-                return f"{self.max_percentage} et moins"
-            return f"{self.max_percentage} à {self.min_percentage}"
+            if self.min_percentage == 0:
+                return f"{self.max_percentage * 100:.0f}% et moins"
+            return f"{self.max_percentage * 100:.0f}% à {self.min_percentage * 100:.0f}%"
 
     def to_dict(self, convert_decimal: bool = False) -> dict:
         """

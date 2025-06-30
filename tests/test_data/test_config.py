@@ -1,4 +1,3 @@
-from decimal import Decimal
 from pathlib import Path
 
 from c3hm.data.config import Config
@@ -25,7 +24,8 @@ def make_rubric_dict():
         "évaluation": {
             "nom": "Évaluation test",
             "total": 40,
-            "pas de notation": 1,
+            "précision du total": 0,
+            "pas pour inférence des points": 1,
             "critères": [
                 {
                     "id": "C1",
@@ -106,19 +106,19 @@ def test_config_no_indicators_points():
         for indicator in criterion["indicateurs"]:
             del indicator["points"]
     config = Config.from_user_dict(d, path=None)
-    assert config.rubric.evaluation.criteria[0].indicators[0].points == Decimal(15)
-    assert config.rubric.evaluation.criteria[0].indicators[1].points == Decimal(15)
-    assert config.rubric.evaluation.criteria[1].indicators[0].points == Decimal(5)
-    assert config.rubric.evaluation.criteria[1].indicators[1].points == Decimal(5)
+    assert config.rubric.evaluation.criteria[0].indicators[0].points == 15
+    assert config.rubric.evaluation.criteria[0].indicators[1].points == 15
+    assert config.rubric.evaluation.criteria[1].indicators[0].points == 5
+    assert config.rubric.evaluation.criteria[1].indicators[1].points == 5
 
 def test_config_no_indicators_points2():
     d = make_config_user_dict()
     del d["grille"]["évaluation"]["critères"][0]["indicateurs"][0]["points"]
     config = Config.from_user_dict(d, path=None)
-    assert config.rubric.evaluation.criteria[0].indicators[0].points == Decimal(20)
-    assert config.rubric.evaluation.criteria[0].indicators[1].points == Decimal(10)
-    assert config.rubric.evaluation.criteria[1].indicators[0].points == Decimal(5)
-    assert config.rubric.evaluation.criteria[1].indicators[1].points == Decimal(5)
+    assert config.rubric.evaluation.criteria[0].indicators[0].points == 20
+    assert config.rubric.evaluation.criteria[0].indicators[1].points == 10
+    assert config.rubric.evaluation.criteria[1].indicators[0].points == 5
+    assert config.rubric.evaluation.criteria[1].indicators[1].points == 5
 
 def test_config_only_total_points():
     d = make_config_user_dict()
@@ -127,10 +127,10 @@ def test_config_only_total_points():
             del indicator["points"]
         del criterion["total"]
     config = Config.from_user_dict(d, path=None)
-    assert config.rubric.evaluation.criteria[0].indicators[0].points == Decimal(10)
-    assert config.rubric.evaluation.criteria[0].indicators[1].points == Decimal(10)
-    assert config.rubric.evaluation.criteria[1].indicators[0].points == Decimal(10)
-    assert config.rubric.evaluation.criteria[1].indicators[1].points == Decimal(10)
+    assert config.rubric.evaluation.criteria[0].indicators[0].points == 10
+    assert config.rubric.evaluation.criteria[0].indicators[1].points == 10
+    assert config.rubric.evaluation.criteria[1].indicators[0].points == 10
+    assert config.rubric.evaluation.criteria[1].indicators[1].points == 10
 
 def test_config_some_points():
     d = make_config_user_dict()
@@ -143,19 +143,10 @@ def test_config_some_points():
                     del indicator["points"]
     del d["grille"]["évaluation"]["total"]
     config = Config.from_user_dict(d, path=None)
-    assert config.rubric.evaluation.criteria[0].indicators[0].points == Decimal(20)
-    assert config.rubric.evaluation.criteria[0].indicators[1].points == Decimal(10)
-    assert config.rubric.evaluation.criteria[1].indicators[0].points == Decimal(5)
-    assert config.rubric.evaluation.criteria[1].indicators[1].points == Decimal(5)
-
-def test_config_default_descriptors1():
-    d = make_config_user_dict()
-    config = Config.from_user_dict(d, path=None)
-
-    d2 = d.copy()
-    d2["grille"]["évaluation"]["descripteurs par défaut"] = ["D1", "D2"]
-    config2 = Config.from_user_dict(d2, path=None)
-    assert config2 == config
+    assert config.rubric.evaluation.criteria[0].indicators[0].points == 20
+    assert config.rubric.evaluation.criteria[0].indicators[1].points == 10
+    assert config.rubric.evaluation.criteria[1].indicators[0].points == 5
+    assert config.rubric.evaluation.criteria[1].indicators[1].points == 5
 
 def test_config_default_descriptors2():
     d = make_config_user_dict()

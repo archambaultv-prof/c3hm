@@ -16,34 +16,15 @@ class Indicator(BaseModel):
     points: Decimal = Field(
         ...,
         description="Nombre de points attribués à cet indicateur.",
-        ge=Decimal(0),  #  Zéro permis pour donner la possibilité de ne pas évaluer un indicateur
+        gt=Decimal("0"),
     )
-    grade: Decimal | None = Field(..., ge=Decimal(0))
-    comment: str
 
-    @property
-    def has_grade(self) -> bool:
-        """
-        Indique si l'évaluation est notée.
-        """
-        return self.grade is not None
 
     @model_validator(mode="after")
     def validate_indicator(self) -> Self:
         if not safe_for_named_cell(self.id):
             raise ValueError(f"L'identifiant '{self.id}' n'est pas valide pour une cellule Excel.")
-        if self.has_grade:
-            if self.grade > self.points: # type: ignore
-                raise ValueError(
-                    f"La valeur de la note ({self.grade}) ne peut pas dépasser "
-                    f"le nombre de points attribués à l'indicateur ({self.points})."
-                )
-        else:
-            if self.comment:
-                raise ValueError(
-                    "Un indicateur sans note ne peut pas avoir de commentaire."
-                )
-        self.comment = self.comment.strip()
+
         return self
 
     def to_dict(self, convert_decimal: bool = False) -> dict:
@@ -51,16 +32,10 @@ class Indicator(BaseModel):
         Retourne un dictionnaire représentant l'indicateur.
         """
         pts = self.points if not convert_decimal else decimal_to_number(self.points)
-        if self.has_grade:
-            grade = decimal_to_number(self.grade) if convert_decimal else self.grade # type: ignore
-        else:
-            grade = None
         return {
             "id": self.id,
             "indicateur": self.name,
             "points": pts,
-            "note": grade,
-            "commentaire": self.comment,
         }
 
     @classmethod
@@ -72,8 +47,6 @@ class Indicator(BaseModel):
             id=data["id"],
             name=data["indicateur"],
             points=data["points"],
-            grade=data.get("note"),  # type: ignore
-            comment=data.get("commentaire", ""),
         )
 
     def copy(self) -> "Indicator": # type: ignore
@@ -84,6 +57,4 @@ class Indicator(BaseModel):
             id=self.id,
             name=self.name,
             points=self.points,
-            grade=self.grade,  # type: ignore
-            comment=self.comment
         )

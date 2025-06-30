@@ -13,8 +13,6 @@ from c3hm.data.rubric.grade_levels import GradeLevels
 from c3hm.data.rubric.rubric import Rubric
 from c3hm.data.student.student import Student
 from c3hm.utils.excel import (
-    CTHM_EVAL_COMMENT,
-    CTHM_EVAL_POINTS,
     CTHM_OMNIVOX,
     cell_addr,
     comment_cell_name,
@@ -101,7 +99,7 @@ def print_grade_row(ws: Worksheet,
     cell.number_format = "0%"
 
     # Commentaire
-    n = CTHM_EVAL_COMMENT if isinstance(data, Evaluation) else comment_cell_name(data.id)
+    n = comment_cell_name(data.id)
     define_ws_named_cell(ws, ws.max_row, 4, n)
 
     # Note calculée en %
@@ -143,10 +141,10 @@ def print_grade_row(ws: Worksheet,
 def print_level_cell(ws: Worksheet,
                      data: Evaluation | Criterion | Indicator,
                      levels: GradeLevels) -> None:
-    percent = f"{points_cell_name(data)} / {data.points}"
+    percent = f"{grade_cell_name(data.id)} / {data.points}"
     ifs = "="
     for level in levels.levels:
-        ifs += (f"if({percent} >= {level.min_percentage / 100},")
+        ifs += (f"if({percent} >= {level.min_percentage},")
         ifs += f'"{level.name}", '
     ifs += '""'  # Niveau par défaut
     for _ in levels.levels:
@@ -158,10 +156,10 @@ def print_descriptor_cell(ws: Worksheet,
                           rubric: Rubric) -> None:
     levels = rubric.grade_levels
     desc = rubric.descriptors
-    percent = f"{points_cell_name(data)} / {data.points}"
+    percent = f"{grade_cell_name(data.id)} / {data.points}"
     ifs = "="
     for level in levels.levels:
-        ifs += (f"if({percent} >= {level.min_percentage / 100},")
+        ifs += (f"if({percent} >= {level.min_percentage},")
         ifs += f'"{desc.get_descriptor(data, level)}", '
     ifs += '""'  # Niveau par défaut
     for _ in levels.levels:
@@ -178,13 +176,13 @@ def print_pts_cell(ws, data: Evaluation | Criterion | Indicator):
     if isinstance(data, Evaluation):
         children = []
         for c in data.criteria:
-            children.append(points_cell_name(c))
+            children.append(grade_cell_name(c.id))
         children_str = ", ".join(children)
         alternative = "sum(" + children_str + ")"
     elif isinstance(data, Criterion):
         children = []
         for i in data.indicators:
-            children.append(points_cell_name(i))
+            children.append(grade_cell_name(i.id))
         children_str = ", ".join(children)
         alternative = "sum(" + children_str + ")"
     else:
@@ -201,19 +199,9 @@ def print_pts_cell(ws, data: Evaluation | Criterion | Indicator):
 
     cell = ws.cell(row=ws.max_row, column=6)
     cell.value = formula
-    n = points_cell_name(data)
+    n = grade_cell_name(data.id)
     define_ws_named_cell(ws, ws.max_row, 6, n)
 
-def points_cell_name(data: Evaluation | Criterion | Indicator) -> str:
-    """
-    Retourne le nom de la cellule pour la note en points.
-    """
-    if isinstance(data, Evaluation):
-        return CTHM_EVAL_POINTS
-    elif isinstance(data, Criterion | Indicator):
-        return grade_cell_name(data.id)
-    else:
-        raise ValueError(f"Type de ligne inconnu: {type(data)}")
 
 def print_name(ws, data: Evaluation | Criterion | Indicator):
     if isinstance(data, Evaluation):

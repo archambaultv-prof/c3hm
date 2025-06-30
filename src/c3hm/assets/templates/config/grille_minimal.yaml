@@ -12,9 +12,11 @@ grille:
 
     nom: 
 
-    pas de notation: 1
-
     total: 100
+
+    précision du total: 0
+
+    pas pour inférence des points: 1
 
     descripteurs par défaut:
     - "Aucune erreur notable."

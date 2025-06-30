@@ -4,7 +4,6 @@ from pathlib import Path
 import yaml
 from pydantic import BaseModel
 
-from c3hm.data.evaluation.evaluation import Evaluation
 from c3hm.data.rubric.rubric import Rubric
 from c3hm.data.student.student import Student
 from c3hm.data.student.students import Students, read_student
@@ -92,8 +91,23 @@ def _normalize_rubric(rubric: dict) -> Rubric:
     _normalize_id_name(rubric["évaluation"])
     _normalize_descriptors(rubric)
     _normalize_points(rubric["évaluation"])
+    _normalize_levels(rubric)
     return Rubric.from_dict(rubric)
 
+
+def _normalize_levels(rubric: dict) -> None:
+    """
+    Normalise les niveaux de la grille d'évaluation.
+    Assure que chaque niveau a un nom et un identifiant unique.
+    """
+    if "niveaux" not in rubric:
+        raise ValueError("La grille d'évaluation doit contenir des niveaux.")
+
+    for i, level in enumerate(rubric["niveaux"]):
+        if "nom" not in level:
+            raise ValueError(f"Le niveau {i+1} n'a pas de nom défini.")
+        level["maximum"] = level["maximum"] / 100.0
+        level["minimum"] = level["minimum"] / 100.0
 
 def _normalize_descriptors(rubric: dict) -> None:
     """
@@ -180,10 +194,6 @@ def _normalize_points(evaluation: dict) -> None:
     L'algorithme boucle sur ces quatre étapes jusqu'à ce qu'aucune modification ne soit apportée
     ou que les points soient cohérents.
     """
-    grade_step = evaluation.get("pas de notation", Evaluation.grade_step_default)
-    if not isinstance(grade_step, Decimal):
-        grade_step = Decimal(str(grade_step))
-
     # Normalisation des clés manquantes
     _initialize_totals(evaluation)
 
@@ -192,10 +202,10 @@ def _normalize_points(evaluation: dict) -> None:
         modified = False
 
         # Mise à jour du total du critère par les indicateurs ou vice-versa
-        modified = _criterion_indicators_total(evaluation, grade_step)
+        modified = _criterion_indicators_total(evaluation)
 
         # Mise à jour du total de l'évaluation par les critères ou vice-versa
-        modified = modified or _evaluation_criteria_totals(evaluation, grade_step)
+        modified = modified or _evaluation_criteria_totals(evaluation)
 
         if not modified:
             # Aucune modification n'a été apportée, on sort de la boucle
@@ -222,16 +232,16 @@ def _initialize_totals(evaluation):
             if "points" not in indicator:
                 indicator["points"] = None
 
-def _evaluation_criteria_totals(evaluation, grade_step) -> bool:
+def _evaluation_criteria_totals(evaluation) -> bool:
     modified = False
-
+    precision = Decimal(str(evaluation.get("pas pour inférence des points", 1)))
     missing_criteria = [
             criterion for criterion in evaluation["critères"]
             if criterion["total"] is None
         ]
     if len(missing_criteria) == 0:
             # Tous les critères ont un total défini
-        pts = [Decimal(str(criterion["total"]))
+        pts = [criterion["total"]
                    for criterion in evaluation["critères"]
                    if criterion["total"] is not None]
         total_points = sum(pts)
@@ -254,25 +264,22 @@ def _evaluation_criteria_totals(evaluation, grade_step) -> bool:
             raise ValueError(
                     "Le total de l'évaluation est inférieur à la somme des points des critères."
                 )
-        new_pts = split_decimal(
-                missing_points,
-                len(missing_criteria),
-                grade_step
-            )
+        new_pts = split_decimal(missing_points, len(missing_criteria), precision)
         for x, p in zip(missing_criteria, new_pts, strict=True):
             x["total"] = p
         modified = True
     return modified
 
-def _criterion_indicators_total(evaluation, grade_step) -> bool:
+def _criterion_indicators_total(evaluation) -> bool:
     modified = False
+    precision = Decimal(str(evaluation.get("pas pour inférence des points", 1)))
 
     for criterion in evaluation["critères"]:
-        pts = [Decimal(str(indicator["points"]))
-                   for indicator in criterion["indicateurs"]
-                   if indicator["points"] is not None]
+        pts = [indicator["points"]
+               for indicator in criterion["indicateurs"]
+               if indicator["points"] is not None]
         if len(pts) == len(criterion["indicateurs"]):
-                # Tous les indicateurs ont des points définis
+            # Tous les indicateurs ont des points définis
             total_points = sum(pts)
             if criterion["total"] is None:
                 criterion["total"] = total_points
@@ -285,7 +292,7 @@ def _criterion_indicators_total(evaluation, grade_step) -> bool:
                     )
         elif criterion["total"] is not None:
                 # Certains indicateurs n'ont pas de points, mais le total du critère est défini
-            missing_points = Decimal(str(criterion["total"])) - sum(pts)
+            missing_points = criterion["total"] - sum(pts)
             if missing_points < Decimal(0):
                 raise ValueError(
                         f"Le total du critère '{criterion['critère']}' ({criterion['total']}) "
@@ -293,11 +300,7 @@ def _criterion_indicators_total(evaluation, grade_step) -> bool:
                     )
             missing_indicators = [indicator for indicator in criterion["indicateurs"]
                                       if indicator["points"] is None]
-            new_pts = split_decimal(
-                    missing_points,
-                    len(missing_indicators),
-                    grade_step
-                )
+            new_pts = split_decimal(missing_points, len(missing_indicators), precision)
             for x, p in zip(missing_indicators, new_pts, strict=True):
                 x["points"] = p
             modified = True

@@ -1,5 +1,3 @@
-from decimal import Decimal
-
 import pytest
 from pydantic import ValidationError
 
@@ -11,55 +9,38 @@ from c3hm.data.rubric.format import Format
 from c3hm.data.rubric.grade_level import GradeLevel
 from c3hm.data.rubric.grade_levels import GradeLevels
 from c3hm.data.rubric.rubric import Rubric
-from c3hm.data.student.student import Student
 
 
-def make_indicator(id="ind1", grade=Decimal("2"), points=Decimal("2")):
+def make_indicator(id="ind1", points=2):
     return Indicator(
         id=id,
         name="Test Indicator",
-        grade=grade,
         points=points,
-        comment="Test comment" if grade is not None else ""
     )
 
-def make_criterion(id="crit1", name="Critère 1", indicators=None, override_grade=None,
-                   comment="Test"):
+def make_criterion(id="crit1", name="Critère 1", indicators=None):
     if indicators is None:
-        indicators = [make_indicator()]
+        indicators = [make_indicator(id=f"{id}_ind1")]
     return Criterion(
         id=id,
         name=name,
         indicators=indicators,
-        override_grade=override_grade,
-        comment=comment
     )
 
-def make_grade_level(name="Excellent", max_percentage=Decimal("20"), min_percentage=Decimal("16")):
+def make_grade_level(name="Excellent", max_percentage=0.20, min_percentage=0.16):
     return GradeLevel(
         name=name,
         max_percentage=max_percentage,
         min_percentage=min_percentage
     )
 
-def make_student():
-
-    return Student(
-        first_name="John",
-        last_name="Doe",
-        omnivox_code="123456",
-        alias="JD")
-
 def make_evaluation(name="Test Evaluation", criteria=None):
     if criteria is None:
         criteria = [make_criterion()]
     return Evaluation(
+        id="eval",
         name=name,
-        grade_step=Decimal("1"),
         criteria=criteria,
-        override_grade=None,
-        evaluated_student=make_student(),
-        comment=""
     )
 
 def make_rubric(grade_levels: GradeLevels, evaluation: Evaluation,
@@ -83,9 +64,9 @@ def make_rubric(grade_levels: GradeLevels, evaluation: Evaluation,
 def test_rubric_valid_creation():
     criteria = [make_criterion(id="crit1"), make_criterion(id="crit2")]
     grade_levels = [
-        make_grade_level(name="Excellent", max_percentage=Decimal("20"),
-                         min_percentage=Decimal("16")),
-        make_grade_level(name="Bon", max_percentage=Decimal("15"), min_percentage=Decimal("10")),
+        make_grade_level(name="Excellent", max_percentage=0.20,
+                         min_percentage=0.16),
+        make_grade_level(name="Bon", max_percentage=0.15, min_percentage=0.10),
     ]
     evaluation = make_evaluation(criteria=criteria)
     rubric = make_rubric(
@@ -107,9 +88,9 @@ def test_rubric_valid_creation():
 def test_rubric_invalid_descriptor():
     criteria = [make_criterion(id="crit1"), make_criterion(id="crit2")]
     grade_levels = [
-        make_grade_level(name="Excellent", max_percentage=Decimal("20"),
-                         min_percentage=Decimal("16")),
-        make_grade_level(name="Bon", max_percentage=Decimal("15"), min_percentage=Decimal("10")),
+        make_grade_level(name="Excellent", max_percentage=0.20,
+                         min_percentage=0.16),
+        make_grade_level(name="Bon", max_percentage=0.15, min_percentage=0.10),
     ]
     evaluation = make_evaluation(criteria=criteria)
     with pytest.raises(ValidationError):
@@ -126,6 +107,6 @@ def test_rubric_invalid_descriptor():
     )
     rdict = rubric.to_dict()
     d = rdict["descripteurs"]
-    del d[("ind1", "Excellent")]
+    del d[("crit1_ind1", "Excellent")]
     with pytest.raises(ValidationError):
         Rubric.from_dict(rdict)
