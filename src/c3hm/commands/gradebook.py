@@ -84,7 +84,7 @@ def add_student_sheet(ws: Worksheet, rubric: Rubric, student: Student) -> None:
 
 def set_top_border(ws):
     top_side = Side(border_style="medium", color=BORDER_GRAY_HEX)
-    for i in range(1, 8):
+    for i in range(1, 9):
         cell = ws.cell(row=ws.max_row, column=i)
         cell.border = Border(top=top_side)
 

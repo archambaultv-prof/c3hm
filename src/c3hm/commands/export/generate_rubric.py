@@ -137,7 +137,8 @@ def add_criterion(table: Table,
         c_percentage = c_grade / criterion.points * Decimal(100)
         grade_pos = rubric.grade_levels.get_index_by_percentage(c_percentage)
         p = row.cells[grade_pos + 1].paragraphs[0]
-        p.text = f"{decimal_to_number(c_grade)}"
+        pts = "pt" if c_grade == 1 else "pts"
+        p.text = f"{decimal_to_number(c_grade)}{narrow_nbsp}{pts}"
         p.style = "Heading 3"
 
         # Ajoute le commentaire du critère si disponible
@@ -207,10 +208,7 @@ def set_first_row(rubric: Rubric, table: Table):
         total = decimal_to_number(total)
         points = eval.points
         t = f"Note : {total}"
-        if points == Decimal("100"):
-            t += " %"
-        else:
-            t += f" / {points}"
+        t += f" / {points}"
         p.text = t
         p.style = "Heading 3"
 
