@@ -1,8 +1,9 @@
+import os
 import shutil
+import subprocess
 import zipfile
 from pathlib import Path
 
-import rarfile
 from pydantic import BaseModel
 
 PATHS_TO_DELETE = [
@@ -27,6 +28,9 @@ class UnpackOmnivox(BaseModel):
         Décompresse les archives dans le dossier spécifié et supprime les
         fichiers et dossiers indésirables.
         """
+        if not self.folder.exists():
+            raise FileNotFoundError(f"Le dossier {self.folder} n'existe pas.")
+
         self._vprint(f"Début de l'extraction de {self.folder}")
 
         # Si le dossier est lui-même une archive, on le décompresse d'abord
@@ -53,7 +57,7 @@ class UnpackOmnivox(BaseModel):
         self._vprint(f"Nettoyage de l'archive : {path}")
 
         # Décompresse les archives additionnelles dans le dossier de l'étudiant
-        for item in list(path.glob("*.zip")) + list(path.glob("*.rar")):
+        for item in list(path.glob("*.zip")) + list(path.glob("*.rar")) + list(path.glob("*.7z")):
             if item.is_file():
                 output = item.parent / self._shorten_omnivox_name(item.stem)
                 self._extract_archive(item, output)
@@ -74,7 +78,7 @@ class UnpackOmnivox(BaseModel):
 
     def _extract_student_archives(self):
         for archive in self.folder.glob("*"):
-            if archive.is_file() and archive.suffix in [".zip", ".rar"]:
+            if archive.is_file() and archive.suffix in [".zip", ".rar", ".7z"]:
                 stem = self._shorten_omnivox_name(archive.stem)
                 output_path = archive.parent / stem
                 self._extract_archive(archive, output_path)
@@ -100,13 +104,36 @@ class UnpackOmnivox(BaseModel):
                     z.extractall(output)
                 self._vprint(f"Dézipper : {archive}")
                 archive.unlink()
-            elif archive.suffix == ".rar":
-                with rarfile.RarFile(archive) as r:
-                    r.extractall(output)
-                self._vprint(f"Décompresser .rar : {archive}")
+            elif archive.suffix in [".rar", ".7z"]:
+                self._extract_archive_7z(archive, output)
+                self._vprint(f"Décompresser {archive.suffix} : {archive}")
                 archive.unlink()
         except Exception as e:
             self._vprint(f"Erreur avec {archive} : {e}")
+
+    def _extract_archive_7z(self, archive_path: Path, output_dir: Path) -> None:
+        """
+        Extracts a .rar or .7z archive using 7-Zip command-line tool.
+        Requires 7z.exe to be in PATH or known location.
+        """
+        # Find 7z executable
+        seven_zip = shutil.which("7z")
+        if not seven_zip:
+            raise FileNotFoundError(
+                "7z.exe not found in PATH. "
+                "Make sure 7-Zip is installed for .rar and .7z extraction."
+                )
+
+        # Ensure output directory exists
+        os.makedirs(output_dir, exist_ok=True)
+
+        # Build and run extraction command
+        command = [seven_zip, "x", archive_path, f"-o{output_dir}", "-y"]
+        result = subprocess.run(command, capture_output=True, text=True)
+
+        if result.returncode != 0:
+            raise RuntimeError(f"Extraction failed:\n{result.stderr}")
+
 
     def _shorten_omnivox_name(self, name: str) -> str:
         """
