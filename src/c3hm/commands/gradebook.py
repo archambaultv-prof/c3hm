@@ -2,7 +2,7 @@ from pathlib import Path
 
 import openpyxl as pyxl
 from openpyxl.formatting.rule import CellIsRule
-from openpyxl.styles import Border, Font, PatternFill, Side
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import quote_sheetname
 from openpyxl.worksheet.worksheet import Worksheet
 
@@ -120,10 +120,11 @@ def print_grade_row(ws: Worksheet,
     # Commentaire
     comment_name = comment_cell_name(data.id)
     define_ws_named_cell(ws, ws.max_row, 4, comment_name)
+    cell = ws.cell(row=ws.max_row, column=4)
+    cell.alignment = Alignment(wrap_text=True)
     if ref_student:
         # Si on a un étudiant de référence, on utilise son commentaire
         # par défaut
-        cell = ws.cell(row=ws.max_row, column=4)
         cell.value = f"={quote_sheetname(ref_student.ws_name())}!{comment_name}" # type: ignore
 
     # Note calculée en %
@@ -253,6 +254,7 @@ def print_name(ws, data: Evaluation | Criterion | Indicator):
         cell.style = "Explanatory Text"
     else:
         raise ValueError(f"Type de ligne inconnu: {type(data)}")
+    cell.alignment = Alignment(wrap_text=True)
 
 def print_header(ws: Worksheet, descriptor: bool = False) -> None:
     header = [None, "Note en %", "Note en pts", "Commentaire", "Note en %",
