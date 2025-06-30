@@ -8,7 +8,7 @@ def test_help(runner: CliRunner):
     assert result.exit_code == 0
 
     for command in [
-        "clean",
+        "unpack",
         "template",
         "export",
         "gradebook",
