@@ -7,7 +7,7 @@ from c3hm.data.config import Config
 
 
 def test_graded_rubrics_from_wb(
-    config_template_path: Path,
+    config_full_template_path: Path,
     gradebook_path: Path,
 ):
     """
@@ -15,7 +15,7 @@ def test_graded_rubrics_from_wb(
     """
 
     # Charge la configuration et la grille d'évaluation
-    config = Config.from_yaml(config_template_path)
+    config = Config.from_user_config(config_full_template_path)
 
     # Ouvre le gradebook
     wb = openpyxl.load_workbook(gradebook_path,
@@ -28,7 +28,7 @@ def test_graded_rubrics_from_wb(
 
 
 def test_generate_feedback_rubric(
-    config_template_path: Path,
+    config_full_template_path: Path,
     gradebook_path: Path,
     output_dir: Path
 ) -> None:
@@ -37,7 +37,32 @@ def test_generate_feedback_rubric(
     """
 
     generate_feedback(
-        config_path=config_template_path,
+        config_path=config_full_template_path,
         gradebook_path=gradebook_path,
         output_dir=output_dir / "feedback"
     )
+
+def test_zero_grade(
+    config_full_template_path: Path,
+    gradebook_zero_path: Path,
+) -> None:
+    """
+    Teste la génération de feedback avec une note globale de 0.
+    """
+
+    # Charge la configuration et la grille d'évaluation
+    config = Config.from_user_config(config_full_template_path)
+    config.students.students = [s for s in config.students.students
+                                if s.omnivox_code == "19216801"]
+
+    # Ouvre le gradebook
+    wb = openpyxl.load_workbook(gradebook_zero_path,
+                                data_only=True,
+                                read_only=True)
+    grades = grades_from_wb(wb, config)
+
+    # Vérifie que le nombre est correct
+    assert len(grades) == 1
+    assert len(grades[0].grades) > 1
+    for v in grades[0].grades.values():
+        assert v == 0.0

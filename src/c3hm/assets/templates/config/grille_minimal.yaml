@@ -1,48 +1,68 @@
-évaluation:
-
-  nom: 
-
-  cours: 
-
 grille:
 
-  niveaux: [Excellent, Très bien, Bien, Passable, Insuffisant]
+  niveaux: [
+    {nom: "Excellent", maximum: 100, minimum: 90},
+    {nom: "Très bien", maximum: 89, minimum: 80},
+    {nom: "Bien", maximum: 79, minimum: 70},
+    {nom: "Passable", maximum: 69, minimum: 60},
+    {nom: "Insuffisant", maximum: 59, minimum: 0}
+  ]
 
-  seuils par niveau:
-  - [100, 90, 100]
-  - [89, 80, 85]
-  - [79, 70, 70]
-  - [69, 60, 60]
-  - [59, 0, 30]
+  évaluation:
 
-  précision: 1
+    nom: 
 
-  descripteurs par défaut:
-  - "Aucune erreur notable."
-  - "Quelques erreurs mineures."
-  - "Une erreur significative."
-  - "Plusieurs erreurs significatives."
-  - "Lacunes importantes ou travail incomplet."
+    total: 100
 
-  critères:
+    précision du total: 0
 
-  - critère: 
+    pas pour inférence des points: 1
 
-    pourcentage: 
+    descripteurs par défaut:
+    - "Aucune erreur notable."
+    - "Quelques erreurs mineures."
+    - "Une erreur significative."
+    - "Plusieurs erreurs significatives."
+    - "Lacunes importantes ou travail incomplet."
 
-    indicateurs:
+    critères:
 
-    - nom: 
+    - critère: 
 
-    - nom: 
+      total: 
 
-    - nom: 
+      indicateurs:
+
+      - indicateur: 
+        points: 
+        descripteurs:
+        - "Aucune erreur notable."
+        - "Quelques erreurs mineures."
+        - "Une erreur significative."
+        - "Plusieurs erreurs significatives."
+        - "Lacunes importantes ou travail incomplet."
+
+      - indicateur: 
+
+      - indicateur: 
+
+    - critère:
+
+      total: 
+
+      indicateurs:
+
+      - indicateur: 
+
+      - indicateur: 
+
+      - indicateur: 
 
   format:
 
     orientation: paysage # portrait ou paysage
 
-    afficher le pourcentage des indicateurs: true
+    afficher les points des indicateurs: false
 
     largeur des colonnes: []
 

@@ -1,19 +1,29 @@
 from pathlib import Path
 
 import openpyxl as pyxl
-import openpyxl.utils as pyxl_utils
-from openpyxl.formatting.rule import FormulaRule
-from openpyxl.styles import PatternFill
-from openpyxl.utils import absolute_coordinate, quote_sheetname
-from openpyxl.workbook.defined_name import DefinedName
+from openpyxl.formatting.rule import CellIsRule
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import quote_sheetname
 from openpyxl.worksheet.worksheet import Worksheet
 
-from c3hm.commands.generate_rubric import scale_color_schemes
 from c3hm.data.config import Config
-from c3hm.data.rubric import CTHM_GLOBAL_COMMENT, CTHM_OMNIVOX
-from c3hm.data.student import Student
-from c3hm.utils.decimal import decimal_to_number
+from c3hm.data.evaluation.criterion import Criterion
+from c3hm.data.evaluation.evaluation import Evaluation
+from c3hm.data.evaluation.indicator import Indicator
+from c3hm.data.rubric.grade_levels import GradeLevels
+from c3hm.data.rubric.rubric import Rubric
+from c3hm.data.student.student import Student
+from c3hm.utils.excel import (
+    CTHM_OMNIVOX,
+    cell_addr,
+    comment_cell_name,
+    define_ws_named_cell,
+    grade_cell_name,
+)
 
+BORDER_GRAY_HEX = "BBBBBB"
+FILL_GRAY_HEX = "F5F5F5"
+FILL_RED_HEX = "FF9999"
 
 def generate_gradebook(config: Config, output_path: Path | str) -> None:
     """
@@ -26,202 +36,240 @@ def generate_gradebook(config: Config, output_path: Path | str) -> None:
     for sheet in wb.worksheets:
         wb.remove(sheet)
 
-    for student in config.students:
-        # Crée une feuille pour chaque étudiant
-        ws = wb.create_sheet(title=student.ws_name())
-        add_student_sheet(ws, config, student)
+    teams_list = config.students.list_teams()
+    teams_list.sort(key=lambda x: x[0].last_name)
+    color_tab = any(len(teams) > 1 for teams in teams_list)
+    tab_color = ["DDEBF7", "C7E8CA"]
+    for i, teams in enumerate(teams_list):
+        ref = teams[0]
+        ws = wb.create_sheet(title=ref.ws_name())
+        add_student_sheet(ws, config.rubric, ref, None)
+        if color_tab:
+            # Colorie l'onglet de l'équipe
+            ws.sheet_properties.tabColor = tab_color[i % 2]
+        for student in teams[1:]:
+            # Crée une feuille pour chaque étudiant
+            ws = wb.create_sheet(title=student.ws_name())
+            add_student_sheet(ws, config.rubric, student, ref)
+            if color_tab:
+                # Colorie l'onglet de l'équipe
+                ws.sheet_properties.tabColor = tab_color[i % 2]
 
     wb.save(output_path)
 
-def add_student_sheet(ws: Worksheet, config: Config, student: Student) -> None:
+def add_student_sheet(ws: Worksheet,
+                      rubric: Rubric,
+                      student: Student,
+                      ref_student: Student | None) -> None:
     ws.sheet_view.showGridLines = False
 
     # Tailles de colonnes
-    ws.column_dimensions['A'].width = 50
-    ws.column_dimensions['B'].width = 15
-    for i in range(3, 10):
-        ws.column_dimensions[pyxl_utils.get_column_letter(i)].width = 15
-    ws.column_dimensions[pyxl_utils.get_column_letter(10)].width = 60
-    for i in range(11, 11 + len(config.rubric.grade_levels)):
-        ws.column_dimensions[pyxl_utils.get_column_letter(i)].width = 15
+    ws.column_dimensions['A'].width = 50  # Critère ou indicateur
+    ws.column_dimensions['B'].width = 10  # Note en %
+    ws.column_dimensions['C'].width = 10  # Note en pts
+    ws.column_dimensions['D'].width = 60  # Commentaire
+    ws.column_dimensions['E'].width = 11  # Note en % calculée
+    ws.column_dimensions['F'].width = 11  # Note en pts calculée
+    ws.column_dimensions['G'].width = 11  # Niveau calculé
+    ws.column_dimensions['H'].width = 60  # Descripteur
 
     # Titre
-    ws.append([config.title()])
-    cell = ws.cell(row=ws.max_row, column=1)
-    cell.style = "Title"
+    ws.append([rubric.evaluation.title()])
+    ws.cell(row=ws.max_row, column=1).style = "Title"
     ws.append([])
 
     # Info étudiant + commentaire général
     ws.append(["Étudiant", f"{student.first_name} {student.last_name}"])
-
     ws.append(["Code omnivox", f"{student.omnivox_code}"])
-    cell = ws.cell(row=ws.max_row, column=2)
-    dn = DefinedName(
-        name=CTHM_OMNIVOX,
-        attr_text=f"{quote_sheetname(ws.title)}!{absolute_coordinate(cell.coordinate)}",
-    )
-    ws.defined_names.add(dn)
-
-    ws.append(["Commentaire général"])
-    cell = ws.cell(row=ws.max_row, column=2)
-    dn = DefinedName(
-        name=CTHM_GLOBAL_COMMENT,
-        attr_text=f"{quote_sheetname(ws.title)}!{absolute_coordinate(cell.coordinate)}",
-    )
-    ws.defined_names.add(dn)
-
+    define_ws_named_cell(ws, ws.max_row, 2, CTHM_OMNIVOX)
     ws.append([])
 
-    # Total sur X pts
-    ws.append([f"Total sur {config.rubric.max_grade()}"])
-    cell = ws.cell(row=ws.max_row, column=1)
-    cell.style = "Headline 2"
-
-    total_row = ws.max_row
-    total_cell = 2
-    cell = ws.cell(row=ws.max_row, column=2)
-    cell.style = "Calculation"
-    cell.number_format = "0.0"
+    # Note globale
+    print_header(ws)
+    print_grade_row(ws, rubric.evaluation, rubric, ref_student)
     ws.append([])
 
-    # Grille
-    rubric = config.rubric
-
-    # En-tête - barème
-    col_before_scale = 1
-    t_str = [rubric.threshold_str(i) for i in range(len(rubric.grade_levels))]
-    ws.append([''] * col_before_scale + t_str)
-    for i in range(2, len(t_str) + 2):
-        cell = ws.cell(row=ws.max_row, column=i)
-        cell.style = "Explanatory Text"
-
-    scale_colors = scale_color_schemes(len(rubric.grade_levels))
-    extra_cols = ["note calculée", "note manuelle", "note", "commentaires"]
-    ws.append([''] * col_before_scale + rubric.grade_levels + extra_cols)
-    for i in range(col_before_scale + 1,
-                   len(rubric.grade_levels) + col_before_scale + 1 + len(extra_cols)):
-        cell = ws.cell(row=ws.max_row, column=i)
-        cell.style = "Headline 4"
-        if scale_colors and i - col_before_scale - 1 < len(scale_colors):
-            color = scale_colors[i - col_before_scale - 1]
-            cell.fill = PatternFill(start_color=color, end_color=color, fill_type="solid")
-
-
-    criterion_rows = []
-    computed_col = col_before_scale + len(rubric.grade_levels) + 1
-    computed_letter = pyxl_utils.get_column_letter(computed_col)
-    manual_col = col_before_scale + len(rubric.grade_levels) + 2
-    manual_letter = pyxl_utils.get_column_letter(manual_col)
-    final_col = col_before_scale + len(rubric.grade_levels) + 3
-    final_letter = pyxl_utils.get_column_letter(final_col)
-    comment_col = col_before_scale + len(rubric.grade_levels) + 4
-    for criterion in rubric.criteria:
-        # Critère
-        ws.append([criterion.name])
-        cr = ws.max_row
-        criterion_rows.append(cr)
-        cell = ws.cell(row=ws.max_row, column=1)
-        cell.style = "Headline 3"
-
-        # note calculée
-        cell = ws.cell(row=ws.max_row, column= computed_col)
-        all_s = []
-        for i, ind in enumerate(criterion.indicators):
-            s = f"{decimal_to_number(ind.percentage)} * {computed_letter}{cr+1+i}" # type: ignore
-            all_s.append(s)
-        cell.value = f"=({' + '.join(all_s)}) / {decimal_to_number(criterion.percentage)}" # type: ignore
-        cell.style = "Calculation"
-        cell.number_format = "0.0"
-
-        # note manuelle
-        cell = ws.cell(row=ws.max_row, column= manual_col)
-        cell.style = "Input"
-        cell.number_format = "0.0"
-        dn = DefinedName(
-            name=criterion.xl_grade_overwrite_cell_id(),
-            attr_text=f"{quote_sheetname(ws.title)}!{absolute_coordinate(cell.coordinate)}",
-        )
-        ws.defined_names.add(dn)
-
-        # note en pts
-        cell = ws.cell(row=ws.max_row, column= col_before_scale + len(rubric.grade_levels) + 3)
-        computed_or_manual = (f"=IF(ISBLANK({manual_letter}{cr}),{computed_letter}{cr},"
-                              f"{manual_letter}{cr})")
-        cell.value = computed_or_manual
-        cell.style = "Calculation"
-        cell.number_format = "0.0"
-
-        # Commentaire
-        cell = ws.cell(row=ws.max_row, column=comment_col)
-        dn = DefinedName(
-            name=criterion.xl_comment_cell_id(),
-            attr_text=f"{quote_sheetname(ws.title)}!{absolute_coordinate(cell.coordinate)}",
-        )
-        ws.defined_names.add(dn)
-
-        # Indicateurs
+    # Note pour critères
+    print_header(ws, descriptor=True)
+    for idx, criterion in enumerate(rubric.evaluation.criteria):
+        print_grade_row(ws, criterion, rubric)
+        if idx > 0:
+            set_top_border(ws)
         for indicator in criterion.indicators:
-            ws.append([indicator.name])
-            cell = ws.cell(row=ws.max_row, column=1)
-            cell.style = "Explanatory Text"
+            print_grade_row(ws, indicator, rubric, ref_student)
 
-            # Affichage conditionnel pour les indicateurs
-            for i in range(len(indicator.descriptors)):
-                color = "D3D3D3"  # Gris clair
-                if scale_colors:
-                    color = scale_colors[i]
-                col_letter = pyxl_utils.get_column_letter(i + col_before_scale + 1)
-                rule = FormulaRule(
-                    formula=[f'NOT(ISBLANK({col_letter}{ws.max_row}))'],
-                    stopIfTrue=True,
-                    fill=PatternFill(start_color=color, end_color=color, fill_type="solid")
-                )
-                ws.conditional_formatting.add(
-                    f'{col_letter}{ws.max_row}',
-                    rule
-                )
+def set_top_border(ws):
+    top_side = Side(border_style="medium", color=BORDER_GRAY_HEX)
+    for i in range(1, 9):
+        cell = ws.cell(row=ws.max_row, column=i)
+        cell.border = Border(top=top_side)
 
-            # Note pour l'indicateur.
-            # Si on utilise une formule trop avancée, Excel
-            # va ajouter un @ sur certains ranges, ce qui va casser la formule.
-            # Donc on utilise des formules simples sans confusion avec les
-            # dynamic arrays.
-            r = ws.max_row
-            def cell_addr(i, r=r):
-                return f"{pyxl_utils.get_column_letter(i + col_before_scale + 1)}{r}"
-            # one_cell est un test pour vérifier si uniquement une cellule est non vide
-            one_cell = [f"IF(ISBLANK({cell_addr(i)}),0,1)"
-                        for i in range(len(rubric.grade_levels))]
-            one_cell = f"{' + '.join(one_cell)} = 1"
-            # la note. Soit un nombre, soit la note par défaut du niveau.
-            val = [f"IF(ISBLANK({cell_addr(i)}),0,"
-                   f"IF(ISNUMBER({cell_addr(i)}),{cell_addr(i)},{decimal_to_number(rubric.threshold_default(i))}))"
-                   for i in range(len(rubric.grade_levels))]
-            val = f"{' + '.join(val)}"
-            # Check si la note est supérieure à la note maximale
-            # du niveau.
-            val_check = f"IF({val} > {decimal_to_number(rubric.max_grade())}, NA(), {val})"
-            cell = ws.cell(row=ws.max_row, column=computed_col)
-            cell.value = (f"=IF({one_cell},{val_check},NA())")
-            cell.style = "Output"
-            cell.number_format = "0.0"
-            dn = DefinedName(
-                name=indicator.xl_grade_cell_id(),
-                attr_text=f"{quote_sheetname(ws.title)}!{absolute_coordinate(cell.coordinate)}",
-            )
-            ws.defined_names.add(dn)
+def print_grade_row(ws: Worksheet,
+                    data: Evaluation | Criterion | Indicator,
+                    rubric: Rubric,
+                    ref_student: Student | None = None
+                    ) -> None:
+    levels = rubric.grade_levels
+    # Nom
+    print_name(ws, data)
 
-            # Commentaire
-            cell = ws.cell(row=ws.max_row, column=comment_col)
-            dn = DefinedName(
-                name=indicator.xl_comment_cell_id(),
-                attr_text=f"{quote_sheetname(ws.title)}!{absolute_coordinate(cell.coordinate)}",
-            )
-            ws.defined_names.add(dn)
+    # Note en %
+    cell = ws.cell(row=ws.max_row, column=2)
+    cell.number_format = "0%"
 
-    # Formule pour le total
-    f = "=sum("
-    f += ",".join([f"{final_letter}{r}*{decimal_to_number(rubric.criteria[i].percentage)}" # type: ignore
-                   for i, r in enumerate(criterion_rows)])
-    f += ")/100"
-    ws.cell(row=total_row, column=total_cell).value = f
+    # Commentaire
+    comment_name = comment_cell_name(data.id)
+    define_ws_named_cell(ws, ws.max_row, 4, comment_name)
+    cell = ws.cell(row=ws.max_row, column=4)
+    cell.alignment = Alignment(wrap_text=True)
+    if ref_student:
+        # Si on a un étudiant de référence, on utilise son commentaire
+        # par défaut
+        cell.value = f"={quote_sheetname(ref_student.ws_name())}!{comment_name}" # type: ignore
+
+    # Note calculée en %
+    cell = ws.cell(row=ws.max_row, column=5)
+    cell.value = f"={cell_addr(ws.max_row, 6)} / {data.points}" # type: ignore
+    cell.number_format = "0%"
+    red_fill = PatternFill(start_color=FILL_RED_HEX, end_color=FILL_RED_HEX, fill_type="solid")
+    rule1 = CellIsRule(operator="lessThan",
+                      formula=["0."],
+                      stopIfTrue=True,
+                      fill=red_fill)
+    ws.conditional_formatting.add(cell.coordinate, rule1)
+    rule2 = CellIsRule(operator="greaterThan",
+                      formula=["1."],
+                      stopIfTrue=True,
+                      fill=red_fill)
+    ws.conditional_formatting.add(cell.coordinate, rule2)
+
+
+    # Note calculée en pts
+    print_pts_cell(ws, data, ref_student)
+
+    # Niveau calculé
+    print_level_cell(ws, data, levels)
+
+    # Descripteur calculé
+    if isinstance(data, Indicator):
+        print_descriptor_cell(ws, data, rubric)
+
+    # Format pour les lignes calculées
+    end = 8 if isinstance(data, Evaluation) else 9
+    for idx in range(5, end):
+        cell = ws.cell(row=ws.max_row, column=idx)
+        cell.fill = PatternFill(start_color=FILL_GRAY_HEX, end_color=FILL_RED_HEX,
+                                fill_type="solid")
+        if isinstance(data, Evaluation | Criterion):
+            cell.font = Font(bold=True)
+
+def print_level_cell(ws: Worksheet,
+                     data: Evaluation | Criterion | Indicator,
+                     levels: GradeLevels) -> None:
+    percent = f"{grade_cell_name(data.id)} / {data.points}"
+    ifs = "="
+    for level in levels.levels:
+        ifs += (f"if({percent} >= {level.min_percentage},")
+        ifs += f'"{level.name}", '
+    ifs += '""'  # Niveau par défaut
+    for _ in levels.levels:
+        ifs += ")"  # Ferme les parenthèses pour chaque niveau
+    ws.cell(row=ws.max_row, column=7, value=ifs)
+
+def print_descriptor_cell(ws: Worksheet,
+                          data: Indicator,
+                          rubric: Rubric) -> None:
+    levels = rubric.grade_levels
+    desc = rubric.descriptors
+    percent = f"{grade_cell_name(data.id)} / {data.points}"
+    ifs = "="
+    for level in levels.levels:
+        ifs += (f"if({percent} >= {level.min_percentage},")
+        ifs += f'"{desc.get_descriptor(data, level)}", '
+    ifs += '""'  # Niveau par défaut
+    for _ in levels.levels:
+        ifs += ")"  # Ferme les parenthèses pour chaque niveau
+    ws.cell(row=ws.max_row, column=8, value=ifs)
+
+def print_pts_cell(ws,
+                   data: Evaluation | Criterion | Indicator,
+                   ref_student: Student | None = None) -> None:
+    # Test pour savoir si les deux cellules de notes sont remplies
+    both_cell = (f"AND(NOT(ISBLANK({cell_addr(ws.max_row, 2)})),"
+                 f"NOT(ISBLANK({cell_addr(ws.max_row, 3)})))")
+
+    # Pour une évaluation ou un critère, en l'absence de note,
+    # on utilise la notes des enfants.
+    if isinstance(data, Evaluation):
+        children = []
+        for c in data.criteria:
+            children.append(grade_cell_name(c.id))
+        children_str = ", ".join(children)
+        alternative = "sum(" + children_str + ")"
+    elif isinstance(data, Criterion):
+        children = []
+        for i in data.indicators:
+            children.append(grade_cell_name(i.id))
+        children_str = ", ".join(children)
+        alternative = "sum(" + children_str + ")"
+    else:
+        if ref_student is not None:
+            # Si on a un étudiant de référence, on utilise sa note
+            # pour l'indicateur, sinon on utilise NA(). La note
+            # de l'étudiant de référence provient d'une autre feuille
+            alternative = f"{quote_sheetname(ref_student.ws_name())}!{grade_cell_name(data.id)}"
+        else:
+            alternative = "NA()"
+
+    # Calcul de la note en points
+    note_pts = (f"IF(NOT(ISBLANK({cell_addr(ws.max_row, 2)})),"
+                f"{cell_addr(ws.max_row, 2)} * {data.points},"
+                f"IF(NOT(ISBLANK({cell_addr(ws.max_row, 3)})),"
+                f"{cell_addr(ws.max_row, 3)}, {alternative}))")
+
+    # On assemble le tout
+    formula = f"=IF({both_cell}, NA(), {note_pts})"
+
+    cell = ws.cell(row=ws.max_row, column=6)
+    cell.value = formula
+    n = grade_cell_name(data.id)
+    define_ws_named_cell(ws, ws.max_row, 6, n)
+
+
+def print_name(ws, data: Evaluation | Criterion | Indicator):
+    if isinstance(data, Evaluation):
+        pts = "pt" if data.points == 1 else "pts"
+        ws.append([f"Total sur {data.points} {pts}"])
+        cell = ws.cell(row=ws.max_row, column=1)
+        cell.style = "Headline 2"
+    elif isinstance(data, Criterion):
+        pts = "pt" if data.points == 1 else "pts"
+        ws.append([f"{data.name} ({data.points} {pts})"])
+        cell = ws.cell(row=ws.max_row, column=1)
+        cell.style = "Headline 4"
+    elif isinstance(data, Indicator):
+        pts = "pt" if data.points == 1 else "pts"
+        ws.append([f"{data.name} ({data.points} {pts})"])
+        cell = ws.cell(row=ws.max_row, column=1)
+        cell.style = "Explanatory Text"
+    else:
+        raise ValueError(f"Type de ligne inconnu: {type(data)}")
+    cell.alignment = Alignment(wrap_text=True)
+
+def print_header(ws: Worksheet, descriptor: bool = False) -> None:
+    header = [None, "Note en %", "Note en pts", "Commentaire", "Note en %",
+              "Note en pts", "Niveau"]
+    if descriptor:
+        header.append("Descripteur")
+    ws.append(header)
+    for idx in range(2, 5):
+        cell = ws.cell(row=ws.max_row, column=idx)
+        cell.style = "Headline 4"
+    end = 9 if descriptor else 8
+    for idx in range(5, end):
+        cell = ws.cell(row=ws.max_row, column=idx)
+        cell.style = "Calculation"
+        # No border for calculated cells
+        no_border_side = Side(border_style=None)
+        cell.border = Border(left=no_border_side, right=no_border_side,
+                             top=no_border_side, bottom=no_border_side)

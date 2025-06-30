@@ -1,4 +1,3 @@
-from decimal import Decimal
 from pathlib import Path
 
 import openpyxl
@@ -6,45 +5,32 @@ from openpyxl import Workbook
 from openpyxl.cell.cell import Cell
 from openpyxl.worksheet.worksheet import Worksheet
 
-from c3hm.commands.generate_rubric import generate_rubric, word_to_pdf
+from c3hm.commands.export.generate_rubric import generate_rubric
 from c3hm.data.config import Config
-from c3hm.data.rubric import CTHM_GLOBAL_COMMENT, CTHM_OMNIVOX
-from c3hm.data.studentgrade import CriterionGrade, IndicatorGrade, StudentGrade
-from c3hm.utils.decimal import round_to_nearest_quantum
+from c3hm.data.evaluation.criterion import Criterion
+from c3hm.data.evaluation.evaluation import Evaluation
+from c3hm.data.evaluation.indicator import Indicator
+from c3hm.data.gradesheet import GradeSheet
+from c3hm.utils.excel import (
+    CTHM_OMNIVOX,
+    comment_cell_name,
+    grade_cell_name,
+)
 
 
 def grades_from_wb(
     wb: Workbook,
     config: Config,
-) -> list[StudentGrade]:
+) -> list[GradeSheet]:
     """
-    Lit le fichier Excel et retourne une liste de dictionnaires contenant
-    les informations sur les grilles d'évaluation.
-    Chaque dictionnaire contient les informations suivantes :
-    - omnivox_code : le code omnivox de l'étudiant. Clé : cthm_omnivox
-    - les notes et commentaires pour chaque critère et indicateur.
-      Clé : le xl_cell_id_[grade|comment]
+    Lit le fichier Excel et retourne une liste d'évaluations notées
     """
-    graded_rubrics = []
+    grade_sheets = []
 
-    # Si un étudiant est une référence d'équipe, on lit la feuille de calcul
-    # de l'équipe et on ajoute les notes pour tous les membres de l'équipe.
-    # Sinon on lit la feuille de calcul de l'étudiant seulement.
     for student in config.students:
-        if student.is_team_reference:
-            ws = find_worksheet(wb, student.alias)
-            ref_grade = grades_from_ws(ws, config, None)
-            graded_rubrics.append(ref_grade)
-            ls = config.find_other_team_members(student)
-            for member in ls:
-                ws = find_worksheet(wb, member.alias)
-                grade = grades_from_ws(ws, config, ref_grade)
-                graded_rubrics.append(grade)
-        elif not student.has_team():
-            ws = find_worksheet(wb, student.alias)
-            ref_grade = grades_from_ws(ws, config, None)
-            graded_rubrics.append(ref_grade)
-    return graded_rubrics
+        ws = find_worksheet(wb, student.alias)
+        grade_sheets.append(grades_from_ws(ws, config.rubric.evaluation))
+    return grade_sheets
 
 def find_worksheet(wb: Workbook, alias: str) -> Worksheet:
     """
@@ -81,119 +67,59 @@ def find_named_cell(ws: Worksheet, named_cell: str) -> Cell | None:
 
 
 def grades_from_ws(ws: Worksheet,
-                   config: Config,
-                   reference: StudentGrade | None) -> StudentGrade:
+                   eval: Evaluation) -> GradeSheet:
     """
-    Lit une feuille de calcul et retourne un dictionnaire contenant
-    les informations sur les grilles d'évaluation.
+    Lit une feuille de calcul et retourne une évaluation notée.
     Se fit aux noms de cellules définis dans la feuille de calcul.
     """
-    rubric = config.rubric
 
-    # Récupère le code omnivox
-    cell = find_named_cell(ws, CTHM_OMNIVOX)
+    omnivox_code = str(get_cell_value(ws, CTHM_OMNIVOX))
+    comments = {}
+    grades = {}
+
+    collect_comment_grade(ws, eval, comments, grades)
+    # Pour rendre la vie plus facile, si on met un 0 dans la cellule de note
+    # globale, on considère que l'évaluation est notée 0 partout. Par exemple,
+    # un travail non remis.
+    default_grade = 0 if grades[eval.id] == 0 else None
+    for c in eval.criteria:
+        collect_comment_grade(ws, c, comments, grades, default_grade)
+        for i in c.indicators:
+            collect_comment_grade(ws, i, comments, grades, default_grade)
+
+    return GradeSheet(
+        omnivox_code=omnivox_code,
+        comments=comments,
+        grades=grades,
+    )
+
+def collect_comment_grade(ws: Worksheet,
+                      x : Evaluation | Criterion | Indicator,
+                      comments: dict[str, str],
+                      grades: dict[str, float],
+                      default_grade = None) -> None:
+    c = get_cell_value(ws, comment_cell_name(x.id), default_value="")
+    if c and str(c).strip():
+        comments[x.id] = str(c).strip()
+    grades[x.id] = float(get_cell_value(ws, grade_cell_name(x.id), default_grade)) # type: ignore
+
+def get_cell_value(ws: Worksheet,
+                   name: str,
+                   default_value = None):
+    cell = find_named_cell(ws, name)
     if cell is None:
-        raise ValueError(f"La cellule nommée '{CTHM_OMNIVOX}' n'existe pas dans la feuille.")
-    student = config.find_student(str(cell.value))
-    if student is None:
-        raise ValueError(f"Étudiant avec code omnivox '{cell.value}' "
-                         "non trouvé dans la configuration.")
-    s = StudentGrade(student=student,
-                     criteria=[],
-                     comment="")
-
-    # Récupère le commentaire général
-    cell = find_named_cell(ws, CTHM_GLOBAL_COMMENT)
-    if cell is None:
-        raise ValueError(f"La cellule nommée '{CTHM_GLOBAL_COMMENT}' "
-                         "n'existe pas dans la feuille.")
-    if cell.value is None and reference is not None:
-        s.comment = reference.comment
-    elif cell.value is not None:
-        s.comment = str(cell.value)
-    else:
-        s.comment = ""
-
-    # Récupère les notes et commentaires
-    cs = reference.criteria if reference is not None else [None] * len(rubric.criteria)
-    for criterion, creference in zip(rubric.criteria, cs, strict=True):
-        c = CriterionGrade(
-            indicators=[],
-            manual_grade=None,
-            percentage=criterion.percentage, # type: ignore
-            comment=""
-        )
-        grade_cell = find_named_cell(ws, criterion.xl_grade_overwrite_cell_id())
-        if grade_cell is None:
-            raise ValueError(f"La cellule nommée '{criterion.xl_grade_overwrite_cell_id()}'"
-                             " n'existe pas dans la feuille.")
-        if grade_cell.value is None:
-            if creference is not None:
-                grade = creference.manual_grade
-            grade = None
+        raise ValueError(f"La cellule nommée '{name}'"
+                            " n'existe pas dans la feuille.")
+    if cell.value is None:
+        if default_value is not None:
+            return default_value
         else:
-            grade = round_to_nearest_quantum(Decimal(str(grade_cell.value)),
-                                            rubric.precision)
-        c.manual_grade = grade
-
-        # Récupère les commentaires
-        comment_cell = find_named_cell(ws, criterion.xl_comment_cell_id())
-        if comment_cell is None:
-            raise ValueError(f"La cellule nommée '{criterion.xl_comment_cell_id()}'"
-                             " n'existe pas dans la feuille.")
-        if comment_cell.value is None and creference is not None:
-            comment = creference.comment
-        elif comment_cell.value is not None:
-            comment = str(comment_cell.value).strip()
-        else:
-            comment = ""
-        c.comment = comment
-
-        iss = (creference.indicators
-               if creference is not None
-               else [None] * len(criterion.indicators))
-        for indicator, rindicator in zip(criterion.indicators, iss, strict=True):
-            # Récupère la note de l'indicateur
-            ind_grade_cell = find_named_cell(ws, indicator.xl_grade_cell_id())
-            if ind_grade_cell is None:
-                raise ValueError(f"La cellule nommée '{indicator.xl_grade_cell_id()}'"
-                                 " n'existe pas dans la feuille.")
-            if cell_none_or_error(ind_grade_cell) and rindicator is not None:
-                ind_grade = rindicator.grade
-            elif not cell_none_or_error(ind_grade_cell):
-                ind_grade = round_to_nearest_quantum(Decimal(str(ind_grade_cell.value)),
-                                                 rubric.precision)
-            else:
-                raise ValueError(
-                    f"La note de l'indicateur '{indicator.name}' n'est pas définie"
-                    f" pour l'étudiant '{student.alias}'."
-                )
-            i = IndicatorGrade(
-                grade=ind_grade,
-                percentage=indicator.percentage,  # type: ignore
-                comment=""
-            )
-
-            # Récupère le commentaire de l'indicateur
-            ind_comment_cell = find_named_cell(ws, indicator.xl_comment_cell_id())
-            if ind_comment_cell is None:
-                raise ValueError(f"La cellule nommée '{indicator.xl_comment_cell_id()}'"
-                                 " n'existe pas dans la feuille.")
-            if ind_comment_cell.value is None and rindicator is not None:
-                ind_comment = rindicator.comment
-            elif ind_comment_cell.value is not None:
-                ind_comment = str(ind_comment_cell.value).strip()
-            else:
-                ind_comment = ""
-            i.comment = ind_comment
-            c.indicators.append(i)
-        # Ajoute le critère à la note de l'étudiant
-        s.criteria.append(c)
-
-    return s
-
-def cell_none_or_error(cell: Cell) -> bool:
-    return cell.value is None or str(cell.value).strip().upper() == "#N/A"
+            raise ValueError(f"La cellule nommée '{name}' ne peut pas être vide.")
+    if str(cell.value).strip().upper() == "#N/A":
+        if default_value is not None:
+            return default_value
+        raise ValueError(f"La cellule nommée '{name}' ne peut pas contenir '#N/A'.")
+    return cell.value
 
 
 def generate_feedback(
@@ -202,50 +128,52 @@ def generate_feedback(
     output_dir: Path | str
 ) -> None:
     """
-    Génère un document Word pour les étudiants à partir d’un grille d’évaluation (GradedRubric).
+    Génère un document Word pour les étudiants à partir d’une feuille de notes.
     """
     config_path = Path(config_path)
     gradebook_path = Path(gradebook_path)
     output_dir = Path(output_dir)
 
-    config = Config.from_yaml(config_path)
+    config = Config.from_user_config(config_path)
     wb = openpyxl.load_workbook(gradebook_path,
                                 data_only=True,
                                 read_only=True)
-    grades = grades_from_wb(wb, config)
+    grade_sheets = grades_from_wb(wb, config)
 
     # Génère le document Word
-    for grade in grades:
-        student = grade.student
+    for student in config.students:
+        grade_sheet = None
+        for s in grade_sheets:
+            if s.omnivox_code == student.omnivox_code:
+                grade_sheet = s
+                break
+        if grade_sheet is None:
+            raise ValueError(
+                f"L'étudiant avec le code Omnivox '{student.omnivox_code}' "
+                "n'a pas été trouvé dans le fichier de notes."
+            )
+
         # Génère le fichier dans le répertoire de sortie pour inspection manuelle
         feedback_path = output_dir / f"{student.omnivox_code}-{student.alias}.docx"
         feedback_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Génère le document Word
-        course = config.evaluation.course or ""
-        title = (student.first_name + " " +
-                 student.last_name + " - " +
-                 config.evaluation.name + " - " +
-                 course)
-        generate_rubric(config.rubric, feedback_path, title=title, grades=grade)
-        # # Generate the PDF file
-        # pdf_path = feedback_path.with_suffix(".pdf")
-        # word_to_pdf(feedback_path, pdf_path)
+        generate_rubric(config.rubric, feedback_path, grade_sheet, student)
 
-    # Génère le fichier Excel pour charge les notes dans Omnivox
-    generate_xl_for_omnivox(config, grades, output_dir)
+    # Génère le fichier Excel pour charger les notes dans Omnivox
+    generate_xl_for_omnivox(config, grade_sheets, output_dir)
 
 
 def generate_xl_for_omnivox(
     config: Config,
-    grades: list[StudentGrade],
+    grade_sheets: list[GradeSheet],
     output_dir: Path | str
 ) -> None:
     """
     Génère un fichier Excel pour charger les notes dans Omnivox.
     """
     output_dir = Path(output_dir)
-    omnivox_path = output_dir / f"{config.evaluation.name}.xlsx"
+    omnivox_path = output_dir / f"{config.rubric.evaluation.name}.xlsx"
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Notes" # type: ignore
@@ -254,9 +182,10 @@ def generate_xl_for_omnivox(
     ws.append(["Code omnivox", "Note", "Commentaire"]) # type: ignore
 
     # Remplit le tableau avec les notes et les commentaires
-    for grade in grades:
-        note = grade.rounded_grade(config.rubric.precision)
-        ws.append([grade.student.omnivox_code, note, grade.comment]) # type: ignore
+    for sheet in grade_sheets:
+        note = sheet.get_grade(config.rubric.evaluation, config.rubric.evaluation.precision)
+        comment = sheet.get_comment(config.rubric.evaluation)
+        ws.append([sheet.omnivox_code, note, comment]) # type: ignore
 
     # Sauvegarde le fichier Excel
     wb.save(omnivox_path)

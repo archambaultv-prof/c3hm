@@ -1,5 +1,6 @@
-from c3hm.cli import cli
 from click.testing import CliRunner
+
+from c3hm.cli import cli
 
 
 def test_help(runner: CliRunner):
@@ -7,9 +8,9 @@ def test_help(runner: CliRunner):
     assert result.exit_code == 0
 
     for command in [
-        "clean",
+        "unpack",
         "template",
-        "rubric",
+        "export",
         "gradebook",
         "feedback",
     ]:
