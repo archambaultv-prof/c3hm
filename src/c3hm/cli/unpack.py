@@ -21,7 +21,7 @@ from c3hm.commands.unpack import PATHS_TO_DELETE, UnpackOmnivox
 @click.argument(
     "path",
     type=click.Path(
-        file_okay=False,
+        file_okay=True,
         dir_okay=True,
         path_type=Path
     ),

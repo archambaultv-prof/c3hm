@@ -74,7 +74,7 @@ class UnpackOmnivox(BaseModel):
 
     def _extract_student_archives(self):
         for archive in self.folder.glob("*"):
-            if archive.is_file() and archive.suffix in [".zip"]:
+            if archive.is_file() and archive.suffix in [".zip", ".rar"]:
                 stem = self._shorten_omnivox_name(archive.stem)
                 output_path = archive.parent / stem
                 self._extract_archive(archive, output_path)
@@ -98,12 +98,12 @@ class UnpackOmnivox(BaseModel):
             if archive.suffix == ".zip":
                 with zipfile.ZipFile(archive) as z:
                     z.extractall(output)
-                self._vprint(f"Dézippé : {archive}")
+                self._vprint(f"Dézipper : {archive}")
                 archive.unlink()
             elif archive.suffix == ".rar":
                 with rarfile.RarFile(archive) as r:
                     r.extractall(output)
-                self._vprint(f"Décompressé .rar : {archive}")
+                self._vprint(f"Décompresser .rar : {archive}")
                 archive.unlink()
         except Exception as e:
             self._vprint(f"Erreur avec {archive} : {e}")
@@ -136,9 +136,26 @@ class UnpackOmnivox(BaseModel):
             self._vprint(f"Aplatir: {deepest_folder} → {path}")
 
             # Déplace tout le contenu du dossier le plus profond vers le dossier cible
+            rename_after_conflict = None
             for item in deepest_folder.iterdir():
-                shutil.move(str(item), str(path / item.name))
+                target_path = path / item.name
+
+                # Gère les conflits de noms
+                # Arrive lorsqu'un dossier dans deepest_folder a le même nom
+                # que le premier dossier à aplatir
+                if target_path.exists():
+                    new_name = f"{item.stem}_temp{item.suffix}"
+                    target_path = path / new_name
+                    rename_after_conflict = (target_path, path / item.name)
+
+                shutil.move(str(item), str(target_path))
+
+            # Gère le conflit de noms
+            if rename_after_conflict:
+                shutil.move(rename_after_conflict[0], rename_after_conflict[1])
+                folders_to_remove = folders_to_remove[1:]
 
             # Supprime tous les dossiers intermédiaires vides (en partant du plus profond)
             for folder in reversed(folders_to_remove):
+                print(folder)
                 folder.rmdir()

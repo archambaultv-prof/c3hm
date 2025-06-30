@@ -24,6 +24,8 @@ def temp_zip(tmp_path: Path):
             current_dir = student_dir / "subdir1" / "subdir2"
         else:
             current_dir = student_dir
+        (current_dir / "subdir1").mkdir() # This folder has the same name as one to be flattened
+        (current_dir / "subdir1" / "file.txt").write_text("Boom !")
         (current_dir / "python.py").write_text(f"print('Hello from {code}')\n")
         (current_dir / "node_modules").mkdir()
         (current_dir / "node_modules" / "package.json").write_text(
