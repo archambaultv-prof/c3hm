@@ -109,16 +109,22 @@ def get_cell_value(ws: Worksheet,
     cell = find_named_cell(ws, name)
     if cell is None:
         raise ValueError(f"La cellule nommée '{name}'"
-                            " n'existe pas dans la feuille.")
+                         f" n'existe pas dans la feuille {ws.title}.")
     if cell.value is None:
         if default_value is not None:
             return default_value
         else:
-            raise ValueError(f"La cellule nommée '{name}' ne peut pas être vide.")
+            raise ValueError(
+                f"La cellule nommée '{name}' ne peut pas être vide "
+                f"dans la feuille {ws.title}."
+                )
     if str(cell.value).strip().upper() == "#N/A":
         if default_value is not None:
             return default_value
-        raise ValueError(f"La cellule nommée '{name}' ne peut pas contenir '#N/A'.")
+        raise ValueError(
+            f"La cellule nommée '{name}' ne peut pas contenir '#N/A'."
+            f" Dans la feuille {ws.title}."
+            )
     return cell.value
 
 
