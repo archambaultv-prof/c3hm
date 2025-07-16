@@ -13,6 +13,7 @@ def test_help(runner: CliRunner):
         "export",
         "gradebook",
         "feedback",
+        "clean",
     ]:
         result = runner.invoke(cli, [command, "--help"], catch_exceptions=False)
         assert result.exit_code == 0
