@@ -5,12 +5,14 @@ from openpyxl import Workbook
 from openpyxl.cell.cell import Cell
 from openpyxl.worksheet.worksheet import Worksheet
 
-from c3hm.commands.export.generate_rubric import generate_rubric
-from c3hm.data.config import Config
-from c3hm.data.evaluation.criterion import Criterion
-from c3hm.data.evaluation.evaluation import Evaluation
-from c3hm.data.evaluation.indicator import Indicator
+from c3hm.commands.export.export_word import generate_rubric_word
+from c3hm.data.config.config import Config
+from c3hm.data.config.config_parser import config_from_yaml
+from c3hm.data.config.criterion import Criterion
+from c3hm.data.config.evaluation import Evaluation
+from c3hm.data.config.indicator import Indicator
 from c3hm.data.gradesheet import GradeSheet
+from c3hm.data.student.students import Students
 from c3hm.utils.excel import (
     CTHM_OMNIVOX,
     comment_cell_name,
@@ -21,15 +23,16 @@ from c3hm.utils.excel import (
 def grades_from_wb(
     wb: Workbook,
     config: Config,
+    students: Students
 ) -> list[GradeSheet]:
     """
     Lit le fichier Excel et retourne une liste d'évaluations notées
     """
     grade_sheets = []
 
-    for student in config.students:
+    for student in students:
         ws = find_worksheet(wb, student.alias)
-        grade_sheets.append(grades_from_ws(ws, config.rubric.evaluation))
+        grade_sheets.append(grades_from_ws(ws, config.evaluation))
     return grade_sheets
 
 def find_worksheet(wb: Workbook, alias: str) -> Worksheet:
@@ -81,7 +84,7 @@ def grades_from_ws(ws: Worksheet,
     # Pour rendre la vie plus facile, si on met un 0 dans la cellule de note
     # globale, on considère que l'évaluation est notée 0 partout. Par exemple,
     # un travail non remis.
-    default_grade = 0 if grades[eval.id] == 0 else None
+    default_grade = 0 if grades[eval.excel_id] == 0 else None
     for c in eval.criteria:
         collect_comment_grade(ws, c, comments, grades, default_grade)
         for i in c.indicators:
@@ -98,10 +101,10 @@ def collect_comment_grade(ws: Worksheet,
                       comments: dict[str, str],
                       grades: dict[str, float],
                       default_grade = None) -> None:
-    c = get_cell_value(ws, comment_cell_name(x.id), default_value="")
+    c = get_cell_value(ws, comment_cell_name(x.excel_id), default_value="")
     if c and str(c).strip():
-        comments[x.id] = str(c).strip()
-    grades[x.id] = float(get_cell_value(ws, grade_cell_name(x.id), default_grade)) # type: ignore
+        comments[x.excel_id] = str(c).strip()
+        grades[x.excel_id] = float(get_cell_value(ws, grade_cell_name(x.excel_id), default_grade)) # type: ignore
 
 def get_cell_value(ws: Worksheet,
                    name: str,
@@ -140,14 +143,15 @@ def generate_feedback(
     gradebook_path = Path(gradebook_path)
     output_dir = Path(output_dir)
 
-    config = Config.from_user_config(config_path)
+    config = config_from_yaml(config_path)
     wb = openpyxl.load_workbook(gradebook_path,
                                 data_only=True,
                                 read_only=True)
-    grade_sheets = grades_from_wb(wb, config)
+    students = Students.from_file(config.students)
+    grade_sheets = grades_from_wb(wb, config, students)
 
     # Génère le document Word
-    for student in config.students:
+    for student in students:
         grade_sheet = None
         for s in grade_sheets:
             if s.omnivox_code == student.omnivox_code:
@@ -164,7 +168,7 @@ def generate_feedback(
         feedback_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Génère le document Word
-        generate_rubric(config.rubric, feedback_path, grade_sheet, student)
+        generate_rubric_word(config, feedback_path, grade_sheet, student)
 
     # Génère le fichier Excel pour charger les notes dans Omnivox
     generate_xl_for_omnivox(config, grade_sheets, output_dir)
@@ -179,7 +183,7 @@ def generate_xl_for_omnivox(
     Génère un fichier Excel pour charger les notes dans Omnivox.
     """
     output_dir = Path(output_dir)
-    omnivox_path = output_dir / f"{config.rubric.evaluation.name}.xlsx"
+    omnivox_path = output_dir / f"{config.evaluation.name}.xlsx"
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Notes" # type: ignore
@@ -189,9 +193,9 @@ def generate_xl_for_omnivox(
 
     # Remplit le tableau avec les notes et les commentaires
     for sheet in grade_sheets:
-        note = sheet.get_grade(config.rubric.evaluation, config.rubric.evaluation.precision)
-        if sheet.has_comment(config.rubric.evaluation):
-            comment = sheet.get_comment(config.rubric.evaluation)
+        note = sheet.get_grade(config.evaluation, config.evaluation.points_total_nb_of_decimal)
+        if sheet.has_comment(config.evaluation):
+            comment = sheet.get_comment(config.evaluation)
         ws.append([sheet.omnivox_code, note, comment]) # type: ignore
 
     # Sauvegarde le fichier Excel

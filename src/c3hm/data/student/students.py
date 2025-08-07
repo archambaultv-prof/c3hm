@@ -1,8 +1,7 @@
-import csv
 from pathlib import Path
 from typing import Self
 
-from openpyxl import load_workbook
+import polars as pl
 from pydantic import BaseModel, model_validator
 
 from c3hm.data.student.student import Student
@@ -113,12 +112,6 @@ class Students(BaseModel):
         """
         return cls(students=read_student(path))
 
-    def copy(self) -> "Students": # type: ignore
-        """
-        Retourne une copie de l'instance.
-        """
-        return Students(students=[student.copy() for student in self.students])
-
 def read_student(path: str | Path) -> list[Student]:
     path = Path(path)
     if path.suffix.lower() == ".csv":
@@ -131,17 +124,32 @@ def read_student(path: str | Path) -> list[Student]:
             "Utilisez un fichier CSV ou Excel."
         )
 
+_rename_columns_dict = {
+    "Prénom": "first_name",
+    "Nom": "last_name",
+    "Code omnivox": "omnivox_code",
+    "Alias": "alias",
+    "Équipe": "team",
+    "Référence d'équipe": "is_team_reference"
+}
+
+def _from_dataframe(df: pl.DataFrame) -> list[Student]:
+    """
+    Convertit un DataFrame Polars en une liste d'instances de Student.
+    """
+    students = []
+    for row in df.to_dicts():
+        students.append(Student(**row))
+    return students
+
 def read_student_csv(path: str | Path) -> list[Student]:
     """
     Lit un fichier CSV contenant des informations sur les étudiants et retourne
     une liste d'instances de Student.
     """
-    students = []
-    with open(path, encoding="utf-8") as file:
-        csv_data = csv.DictReader(file)
-        for row in csv_data:
-            students.append(Student.from_dict(row))
-    return students
+    df = pl.read_csv(path, encoding="utf-8")
+    df = df.rename(_rename_columns_dict, strict=False)
+    return _from_dataframe(df)
 
 def read_student_excel(path: str | Path) -> list[Student]:
     """
@@ -149,25 +157,6 @@ def read_student_excel(path: str | Path) -> list[Student]:
     une liste de dictionnaires représentant chaque étudiant.
     La structure attendue est la même que pour le fichier CSV.
     """
-    # Nous évitons d'utiliser pandas pour minimiser les dépendances et parce que,
-    # parfois au Collège de Maisonneuve, il n'est pas installé.
-    wb = load_workbook(filename=path, read_only=True, data_only=True)
-    ws = wb.active
-    rows = list(ws.iter_rows(values_only=True)) # type: ignore
-    if not rows:
-        return []
-    headers = [str(h).strip() if h is not None else "" for h in rows[0]]
-    students = []
-    for row in rows[1:]:
-        student = {headers[i]: (str(cell) if cell is not None else "")
-                   for i, cell in enumerate(row)}
-        if is_empty_row(student):
-            continue
-        students.append(Student.from_dict(student))
-    return students
-
-def is_empty_row(row: dict[str, str]) -> bool:
-    """
-    Vérifie si une ligne de données d'étudiant est vide.
-    """
-    return all(value.strip() == "" for value in row.values())
+    df = pl.read_excel(path)
+    df = df.rename(_rename_columns_dict, strict=False)
+    return _from_dataframe(df)

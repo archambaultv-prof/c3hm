@@ -15,15 +15,7 @@ def gradebook_path() -> Path:
     Retourne le chemin vers le fichier gradebook_1.yaml
     """
     d = Path(__file__).parent / "fixtures"
-    return d / "grille_gradebook.xlsx"
-
-@pytest.fixture
-def gradebook_zero_path() -> Path:
-    """
-    Retourne le chemin vers le fichier gradebook_1.yaml
-    """
-    d = Path(__file__).parent / "fixtures"
-    return d / "grille_zero.xlsx"
+    return d / "grille.xlsx"
 
 @pytest.fixture
 def config_full_template_path() -> Path:
@@ -57,11 +49,3 @@ def student_list_csv_path() -> Path:
     """
     d = Path(__file__).parent / "fixtures"
     return d / "liste_etudiants.csv"
-
-@pytest.fixture
-def student_list_xl_path() -> Path:
-    """
-    Retourne le chemin vers le fichier liste_etudiants.csv
-    """
-    d = Path(__file__).parent / "fixtures"
-    return d / "liste_etudiants.xlsx"

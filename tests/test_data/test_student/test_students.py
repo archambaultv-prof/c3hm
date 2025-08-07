@@ -108,14 +108,3 @@ def test_students_iter():
     s = Students(students=students)
     aliases = [student.alias for student in s]
     assert aliases == ["a1", "a2"]
-
-def test_students_copy():
-    students = [
-        make_student(first_name="Alice", last_name="Smith", alias="a1"),
-        make_student(first_name="Bob", last_name="Jones", alias="a2")
-    ]
-    s = Students(students=students)
-    s2 = s.copy()
-    assert s2 is not s
-    assert all(st1.alias == st2.alias for st1, st2 in zip(s.students, s2.students, strict=True))
-    assert all(st1 is not st2 for st1, st2 in zip(s.students, s2.students, strict=True))

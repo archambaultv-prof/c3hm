@@ -3,9 +3,9 @@ from typing import Self
 
 from pydantic import BaseModel, Field, model_validator
 
-from c3hm.data.evaluation.criterion import Criterion
-from c3hm.data.evaluation.evaluation import Evaluation
-from c3hm.data.evaluation.indicator import Indicator
+from c3hm.data.config.criterion import Criterion
+from c3hm.data.config.evaluation import Evaluation
+from c3hm.data.config.indicator import Indicator
 
 
 class GradeSheet(BaseModel):
@@ -29,7 +29,7 @@ class GradeSheet(BaseModel):
         """
         Indique si l'évaluation, le critère ou l'indicateur donné a une note.
         """
-        id = x.id
+        id = x.excel_id
         return id in self.grades
 
     def get_grade(self,
@@ -40,7 +40,9 @@ class GradeSheet(BaseModel):
         """
         Retourne la note pour l'évaluation, le critère ou l'indicateur donné.
         """
-        id = x.id
+        id = x.excel_id
+        if id is None:
+            raise ValueError(f"L'ID de {x.name} est manquant.")
         grade = self.grades[id]
         grade = Decimal(str(round(grade, precision))).quantize(Decimal("0.1") ** precision)
         if grade > x.points and not can_exceed_pts:
@@ -64,14 +66,18 @@ class GradeSheet(BaseModel):
         """
         Indique si l'évaluation, le critère ou l'indicateur donné a un commentaire.
         """
-        id = x.id
+        id = x.excel_id
+        if id is None:
+            raise ValueError(f"L'ID de {x.name} est manquant.")
         return id in self.comments
 
     def get_comment(self, x: Evaluation | Criterion | Indicator) -> str:
         """
         Retourne le commentaire pour l'évaluation, le critère ou l'indicateur donné.
         """
-        id = x.id
+        id = x.excel_id
+        if id is None:
+            raise ValueError(f"L'ID de {x.name} est manquant.")
         return self.comments[id]
 
     def has_criteria_comments(self, eval: Evaluation) -> bool:
