@@ -1,12 +1,14 @@
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Format(BaseModel):
     """
     Représente le format de la grille d'évaluation.
     """
+    model_config = ConfigDict(extra="forbid")
+
     orientation: None | Literal["portrait", "paysage"] = Field(
         default=None,
         description="Orientation de la grille d'évaluation. Peut être 'portrait' ou 'paysage'."
