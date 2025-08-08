@@ -45,50 +45,10 @@ class Student(BaseModel):
         """
         Vérifie si l'étudiant est associé à une équipe.
         """
-        return self.team is not None and self.team.strip() != ""
+        return self.team is not None
 
     def ws_name(self) -> str:
         """
         Retourne le nom de la feuille de calcul pour l'étudiant.
         """
         return self.alias
-
-    def to_dict(self) -> dict:
-        """
-        Retourne un dictionnaire représentant l'étudiant.
-        """
-        return {
-            "code omnivox": self.omnivox_code,
-            "prénom": self.first_name,
-            "nom de famille": self.last_name,
-            "alias": self.alias,
-            "équipe": self.team,
-            "référence d'équipe": self.is_team_reference,
-        }
-
-    @classmethod
-    def from_dict(cls, data: dict) -> "Student":
-        """
-        Crée une instance de Student à partir d'un dictionnaire.
-        """
-        return cls(
-            omnivox_code=data["code omnivox"],
-            first_name=data["prénom"],
-            last_name=data["nom de famille"],
-            alias=data["alias"],
-            team=data.get("équipe"),
-            is_team_reference=data.get("référence d'équipe", False),
-        )
-
-    def copy(self) -> "Student": # type: ignore
-        """
-        Retourne une copie de l'étudiant.
-        """
-        return Student(
-            first_name=self.first_name,
-            last_name=self.last_name,
-            omnivox_code=self.omnivox_code,
-            alias=self.alias,
-            team=self.team,
-            is_team_reference=self.is_team_reference,
-        )

@@ -6,13 +6,13 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import quote_sheetname
 from openpyxl.worksheet.worksheet import Worksheet
 
-from c3hm.data.config import Config
-from c3hm.data.evaluation.criterion import Criterion
-from c3hm.data.evaluation.evaluation import Evaluation
-from c3hm.data.evaluation.indicator import Indicator
-from c3hm.data.rubric.grade_levels import GradeLevels
-from c3hm.data.rubric.rubric import Rubric
+from c3hm.data.config.config import Config
+from c3hm.data.config.criterion import Criterion
+from c3hm.data.config.evaluation import Evaluation
+from c3hm.data.config.grade_level import GradeLevel
+from c3hm.data.config.indicator import Indicator
 from c3hm.data.student.student import Student
+from c3hm.data.student.students import Students
 from c3hm.utils.excel import (
     CTHM_OMNIVOX,
     cell_addr,
@@ -29,28 +29,29 @@ def generate_gradebook(config: Config, output_path: Path | str) -> None:
     """
     Génère un document Excel servant à la correction à partir d’une Rubric
     """
-    if not config.students:
-        raise ValueError("Aucun étudiant dans la configuration.")
+    students = Students.from_file(config.students)
+    if not students:
+        raise ValueError(f"Aucun étudiant dans le fichier {config.students}. ")
 
     wb = pyxl.Workbook()
     for sheet in wb.worksheets:
         wb.remove(sheet)
 
-    teams_list = config.students.list_teams()
+    teams_list = students.list_teams()
     teams_list.sort(key=lambda x: x[0].last_name)
     color_tab = any(len(teams) > 1 for teams in teams_list)
     tab_color = ["DDEBF7", "C7E8CA"]
     for i, teams in enumerate(teams_list):
         ref = teams[0]
         ws = wb.create_sheet(title=ref.ws_name())
-        add_student_sheet(ws, config.rubric, ref, None)
+        add_student_sheet(ws, config, ref, None)
         if color_tab:
             # Colorie l'onglet de l'équipe
             ws.sheet_properties.tabColor = tab_color[i % 2]
         for student in teams[1:]:
             # Crée une feuille pour chaque étudiant
             ws = wb.create_sheet(title=student.ws_name())
-            add_student_sheet(ws, config.rubric, student, ref)
+            add_student_sheet(ws, config, student, ref)
             if color_tab:
                 # Colorie l'onglet de l'équipe
                 ws.sheet_properties.tabColor = tab_color[i % 2]
@@ -58,7 +59,7 @@ def generate_gradebook(config: Config, output_path: Path | str) -> None:
     wb.save(output_path)
 
 def add_student_sheet(ws: Worksheet,
-                      rubric: Rubric,
+                      config: Config,
                       student: Student,
                       ref_student: Student | None) -> None:
     ws.sheet_view.showGridLines = False
@@ -74,7 +75,7 @@ def add_student_sheet(ws: Worksheet,
     ws.column_dimensions['H'].width = 60  # Descripteur
 
     # Titre
-    ws.append([rubric.evaluation.title()])
+    ws.append([config.evaluation.title()])
     ws.cell(row=ws.max_row, column=1).style = "Title"
     ws.append([])
 
@@ -86,17 +87,17 @@ def add_student_sheet(ws: Worksheet,
 
     # Note globale
     print_header(ws)
-    print_grade_row(ws, rubric.evaluation, rubric, ref_student)
+    print_grade_row(ws, config.evaluation, config, ref_student)
     ws.append([])
 
     # Note pour critères
     print_header(ws, descriptor=True)
-    for idx, criterion in enumerate(rubric.evaluation.criteria):
-        print_grade_row(ws, criterion, rubric)
+    for idx, criterion in enumerate(config.evaluation.criteria):
+        print_grade_row(ws, criterion, config)
         if idx > 0:
             set_top_border(ws)
         for indicator in criterion.indicators:
-            print_grade_row(ws, indicator, rubric, ref_student)
+            print_grade_row(ws, indicator, config, ref_student)
 
 def set_top_border(ws):
     top_side = Side(border_style="medium", color=BORDER_GRAY_HEX)
@@ -106,10 +107,9 @@ def set_top_border(ws):
 
 def print_grade_row(ws: Worksheet,
                     data: Evaluation | Criterion | Indicator,
-                    rubric: Rubric,
+                    config: Config,
                     ref_student: Student | None = None
                     ) -> None:
-    levels = rubric.grade_levels
     # Nom
     print_name(ws, data)
 
@@ -118,7 +118,7 @@ def print_grade_row(ws: Worksheet,
     cell.number_format = "0%"
 
     # Commentaire
-    comment_name = comment_cell_name(data.id)
+    comment_name = comment_cell_name(data.excel_id)
     define_ws_named_cell(ws, ws.max_row, 4, comment_name)
     cell = ws.cell(row=ws.max_row, column=4)
     cell.alignment = Alignment(wrap_text=True)
@@ -148,11 +148,11 @@ def print_grade_row(ws: Worksheet,
     print_pts_cell(ws, data, ref_student)
 
     # Niveau calculé
-    print_level_cell(ws, data, levels)
+    print_level_cell(ws, data, config.evaluation.grade_levels)
 
     # Descripteur calculé
     if isinstance(data, Indicator):
-        print_descriptor_cell(ws, data, rubric)
+        print_descriptor_cell(ws, data, config)
 
     # Format pour les lignes calculées
     end = 8 if isinstance(data, Evaluation) else 9
@@ -165,29 +165,29 @@ def print_grade_row(ws: Worksheet,
 
 def print_level_cell(ws: Worksheet,
                      data: Evaluation | Criterion | Indicator,
-                     levels: GradeLevels) -> None:
-    percent = f"{grade_cell_name(data.id)} / {data.points}"
+                     levels: list[GradeLevel]) -> None:
+    percent = f"{grade_cell_name(data.excel_id)} / {data.points}"
     ifs = "="
-    for level in levels.levels:
-        ifs += (f"if({percent} >= {level.min_percentage},")
+    for level in levels:
+        ifs += (f"if({percent} >= {level.minimum / 100},")
         ifs += f'"{level.name}", '
     ifs += '""'  # Niveau par défaut
-    for _ in levels.levels:
+    for _ in levels:
         ifs += ")"  # Ferme les parenthèses pour chaque niveau
     ws.cell(row=ws.max_row, column=7, value=ifs)
 
 def print_descriptor_cell(ws: Worksheet,
-                          data: Indicator,
-                          rubric: Rubric) -> None:
-    levels = rubric.grade_levels
-    desc = rubric.descriptors
-    percent = f"{grade_cell_name(data.id)} / {data.points}"
+                          indicator: Indicator,
+                          config: Config) -> None:
+    levels = config.evaluation.grade_levels
+    desc = indicator.descriptors
+    percent = f"{grade_cell_name(indicator.excel_id)} / {indicator.points}"
     ifs = "="
-    for level in levels.levels:
-        ifs += (f"if({percent} >= {level.min_percentage},")
-        ifs += f'"{desc.get_descriptor(data, level)}", '
+    for i, level in enumerate(levels):
+        ifs += (f"if({percent} >= {level.minimum / 100},")
+        ifs += f'"{desc[i]}", '
     ifs += '""'  # Niveau par défaut
-    for _ in levels.levels:
+    for _ in levels:
         ifs += ")"  # Ferme les parenthèses pour chaque niveau
     ws.cell(row=ws.max_row, column=8, value=ifs)
 
@@ -203,13 +203,13 @@ def print_pts_cell(ws,
     if isinstance(data, Evaluation):
         children = []
         for c in data.criteria:
-            children.append(grade_cell_name(c.id))
+            children.append(grade_cell_name(c.excel_id))
         children_str = ", ".join(children)
         alternative = "sum(" + children_str + ")"
     elif isinstance(data, Criterion):
         children = []
         for i in data.indicators:
-            children.append(grade_cell_name(i.id))
+            children.append(grade_cell_name(i.excel_id))
         children_str = ", ".join(children)
         alternative = "sum(" + children_str + ")"
     else:
@@ -217,7 +217,8 @@ def print_pts_cell(ws,
             # Si on a un étudiant de référence, on utilise sa note
             # pour l'indicateur, sinon on utilise NA(). La note
             # de l'étudiant de référence provient d'une autre feuille
-            alternative = f"{quote_sheetname(ref_student.ws_name())}!{grade_cell_name(data.id)}"
+            alternative = (f"{quote_sheetname(ref_student.ws_name())}!"
+                           f"{grade_cell_name(data.excel_id)}")
         else:
             alternative = "NA()"
 
@@ -232,7 +233,7 @@ def print_pts_cell(ws,
 
     cell = ws.cell(row=ws.max_row, column=6)
     cell.value = formula
-    n = grade_cell_name(data.id)
+    n = grade_cell_name(data.excel_id)
     define_ws_named_cell(ws, ws.max_row, 6, n)
 
 

@@ -1,71 +1,65 @@
-grille:
+
+évaluation:
+
+  nom: 
+
+  total: 100
+
+  total nb de décimales: 0
+
+  pas pour inférence des points: 1
 
   niveaux: [
-    {nom: "Excellent", maximum: 100, minimum: 90},
-    {nom: "Très bien", maximum: 89, minimum: 80},
-    {nom: "Bien", maximum: 79, minimum: 70},
-    {nom: "Passable", maximum: 69, minimum: 60},
-    {nom: "Insuffisant", maximum: 59, minimum: 0}
+    {nom: Excellent, maximum: 100, minimum: 90},
+    {nom: Très bien, maximum: 89, minimum: 80},
+    {nom: Bien, maximum: 79, minimum: 70},
+    {nom: Passable, maximum: 69, minimum: 60},
+    {nom: Insuffisant, maximum: 59, minimum: 0}
   ]
 
-  évaluation:
+  critères:
 
-    nom: 
+  - critère: 
 
-    total: 100
+    total: 
 
-    précision du total: 0
+    indicateurs:
 
-    pas pour inférence des points: 1
+    - indicateur: 
+      points: 
+      descripteurs:
+      - Aucune erreur notable.
+      - Quelques erreurs mineures.
+      - Une erreur significative.
+      - Plusieurs erreurs significatives.
+      - Lacunes importantes ou travail incomplet.
 
-    descripteurs par défaut:
-    - "Aucune erreur notable."
-    - "Quelques erreurs mineures."
-    - "Une erreur significative."
-    - "Plusieurs erreurs significatives."
-    - "Lacunes importantes ou travail incomplet."
+    - indicateur: 
 
-    critères:
+    - indicateur: 
 
-    - critère: 
+  - critère:
 
-      total: 
+    total: 
 
-      indicateurs:
+    indicateurs:
 
-      - indicateur: 
-        points: 
-        descripteurs:
-        - "Aucune erreur notable."
-        - "Quelques erreurs mineures."
-        - "Une erreur significative."
-        - "Plusieurs erreurs significatives."
-        - "Lacunes importantes ou travail incomplet."
+    - indicateur: 
 
-      - indicateur: 
+    - indicateur: 
 
-      - indicateur: 
+    - indicateur: 
 
-    - critère:
+format:
 
-      total: 
+  orientation: paysage # portrait ou paysage
 
-      indicateurs:
+  afficher les points des indicateurs: false
 
-      - indicateur: 
+  largeur des colonnes: []
 
-      - indicateur: 
+  largeur des colonnes avec commentaires: []
 
-      - indicateur: 
+  afficher la description du niveau: true
 
-  format:
-
-    orientation: paysage # portrait ou paysage
-
-    afficher les points des indicateurs: false
-
-    largeur des colonnes: []
-
-    largeur des colonnes avec commentaires: []
-
-étudiants:
+étudiants: étudiants.xlsx

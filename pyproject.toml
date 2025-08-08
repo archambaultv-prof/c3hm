@@ -8,13 +8,13 @@ authors = [
 ]
 requires-python = ">=3.10"
 dependencies = [
-    "click",
-    "openpyxl",
-    "pydantic",
-    "python-docx",
-    "pyyaml",
-    "pywin32",
     "rarfile>=4.2",
+    "polars>=1.32.2",
+    "click>=8.2.1",
+    "pydantic>=2.11.7",
+    "openpyxl>=3.1.5",
+    "python-docx>=1.2.0",
+    "pyyaml>=6.0.2",
 ]
 
 [project.scripts]
@@ -46,10 +46,4 @@ select = [
     "N",     # pep8-naming
     "SIM",   # flake8-simplify
     "ERA",   # eradicate (commented-out code)
-]
-
-[tool.pytest.ini_options]
-addopts = [
-    "--import-mode=importlib",
-    "-p no:faulthandler"  #  pywin32 and COM sometimes prints to stderr, this silences it
 ]

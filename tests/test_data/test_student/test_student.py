@@ -98,36 +98,3 @@ def test_student_ws_name():
         alias="alee"
     )
     assert student.ws_name() == "alee"
-
-def test_student_to_dict_and_from_dict():
-    student = Student(
-        first_name="Sam",
-        last_name="Green",
-        omnivox_code="55555",
-        alias="sgreen",
-        team="TeamD",
-        is_team_reference=True
-    )
-    d = student.to_dict()
-    assert d["code omnivox"] == "55555"
-    assert d["prénom"] == "Sam"
-    assert d["nom de famille"] == "Green"
-    assert d["alias"] == "sgreen"
-    assert d["équipe"] == "TeamD"
-    assert d["référence d'équipe"] is True
-
-    student2 = Student.from_dict(d)
-    assert student2 == student
-
-def test_student_copy():
-    student = Student(
-        first_name="Eva",
-        last_name="White",
-        omnivox_code="66666",
-        alias="ewhite",
-        team="TeamE",
-        is_team_reference=False
-    )
-    student_copy = student.copy()
-    assert student_copy == student
-    assert student_copy is not student

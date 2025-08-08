@@ -3,7 +3,7 @@ from pathlib import Path
 import click
 
 from c3hm.commands.gradebook import generate_gradebook
-from c3hm.data.config import Config
+from c3hm.data.config.config import Config
 
 
 @click.command(
