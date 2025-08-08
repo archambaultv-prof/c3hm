@@ -180,7 +180,10 @@ def add_criterion(table: Table,
         for i, descriptor in enumerate(indicator.descriptors):
             # Descripteur
             cell = row.cells[i + 1]
-            cell.text = descriptor
+            if descriptor is not None:
+                cell.text = descriptor
+            else:
+                cell.text = "N/A"
 
             # Ajoute la note de l'indicateur si disponible
             if grade_sheet and i == i_grade_pos:
@@ -214,6 +217,11 @@ def set_first_row(config: Config, table: Table, grade_sheet: GradeSheet | None =
         points = eval.points_total
         t = f"Note : {total}"
         t += f" / {points}"
+        p.text = t
+        p.style = "Heading 3"
+    else:
+        points = eval.points_total
+        t = f"Total : {points} pts"
         p.text = t
         p.style = "Heading 3"
 

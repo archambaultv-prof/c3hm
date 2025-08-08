@@ -81,14 +81,47 @@ def grades_from_ws(ws: Worksheet,
     grades = {}
 
     collect_comment_grade(ws, eval, comments, grades)
-    # Pour rendre la vie plus facile, si on met un 0 dans la cellule de note
-    # globale, on considère que l'évaluation est notée 0 partout. Par exemple,
-    # un travail non remis.
-    default_grade = 0 if grades[eval.excel_id] == 0 else None
     for c in eval.criteria:
-        collect_comment_grade(ws, c, comments, grades, default_grade)
+        collect_comment_grade(ws, c, comments, grades)
         for i in c.indicators:
-            collect_comment_grade(ws, i, comments, grades, default_grade)
+            collect_comment_grade(ws, i, comments, grades)
+
+    # Gère les entrées vides
+    ## Cas 1, total défini mais rien d'autre
+    if (grades[eval.excel_id] is not None and
+        all(v is None for k, v in grades.items() if k != eval.excel_id)):
+        total = grades[eval.excel_id]
+        for c in eval.criteria:
+            grade = float(c.points) * total / float(eval.points)
+            grades[c.excel_id] = grade
+            for i in c.indicators:
+                grades[i.excel_id] = float(i.points) * total / float(eval.points)
+    ## Cas 2, critères définis mais rien pas les indicateurs
+    else:
+        for c in eval.criteria:
+            if grades[c.excel_id] is None:
+                continue
+            total = grades[c.excel_id]
+            if any(grades[i.excel_id] is not None for i in c.indicators):
+                continue
+            for i in c.indicators:
+                grade = float(i.points) * total / float(c.points)
+                grades[i.excel_id] = grade
+
+    # Vérifie que les notes sont des nombres
+    for k, v in grades.items():
+        if v is None:
+            raise ValueError(f"La note pour {k} doit être un nombre.")
+        if not isinstance(v, int | float):
+            raise ValueError(f"La note pour {k} doit être un nombre.")
+
+    # Avertie si le total du critère est plus petit que la somme des indicateurs
+    for c in eval.criteria:
+        total = sum(grades[i.excel_id] for i in c.indicators if i.excel_id in grades)
+        if total > grades[c.excel_id]:
+            print(f"Avertissement : Dans la feuille {ws.title}, "
+                  f"la somme des indicateurs pour le critère {c.name} "
+                  f"est supérieure à la note du critère.")
 
     return GradeSheet(
         omnivox_code=omnivox_code,
@@ -99,35 +132,25 @@ def grades_from_ws(ws: Worksheet,
 def collect_comment_grade(ws: Worksheet,
                       x : Evaluation | Criterion | Indicator,
                       comments: dict[str, str],
-                      grades: dict[str, float],
-                      default_grade = None) -> None:
-    c = get_cell_value(ws, comment_cell_name(x.excel_id), default_value="")
+                      grades: dict[str, float | None]) -> None:
+    c = get_cell_value(ws, comment_cell_name(x.excel_id))
     if c and str(c).strip():
         comments[x.excel_id] = str(c).strip()
-        grades[x.excel_id] = float(get_cell_value(ws, grade_cell_name(x.excel_id), default_grade)) # type: ignore
+
+    g = get_cell_value(ws, grade_cell_name(x.excel_id))
+    if g is not None:
+        grades[x.excel_id] = float(g) # type: ignore
+    else:
+        grades[x.excel_id] = None
 
 def get_cell_value(ws: Worksheet,
-                   name: str,
-                   default_value = None):
+                   name: str):
     cell = find_named_cell(ws, name)
     if cell is None:
         raise ValueError(f"La cellule nommée '{name}'"
                          f" n'existe pas dans la feuille {ws.title}.")
-    if cell.value is None:
-        if default_value is not None:
-            return default_value
-        else:
-            raise ValueError(
-                f"La cellule nommée '{name}' ne peut pas être vide "
-                f"dans la feuille {ws.title}."
-                )
-    if str(cell.value).strip().upper() == "#N/A":
-        if default_value is not None:
-            return default_value
-        raise ValueError(
-            f"La cellule nommée '{name}' ne peut pas contenir '#N/A'."
-            f" Dans la feuille {ws.title}."
-            )
+    if cell.value is None or str(cell.value).strip().upper() == "#N/A":
+        return None
     return cell.value
 
 

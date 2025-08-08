@@ -12,10 +12,18 @@ def runner():
 @pytest.fixture
 def gradebook_path() -> Path:
     """
-    Retourne le chemin vers le fichier gradebook_1.yaml
+    Retourne le chemin vers le fichier grille.yaml
     """
     d = Path(__file__).parent / "fixtures"
     return d / "grille.xlsx"
+
+@pytest.fixture
+def gradebook2_path() -> Path:
+    """
+    Retourne le chemin vers le fichier grille_inference.yaml
+    """
+    d = Path(__file__).parent / "fixtures"
+    return d / "grille_inference.xlsx"
 
 @pytest.fixture
 def config_full_template_path() -> Path:
