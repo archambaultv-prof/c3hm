@@ -3,7 +3,6 @@ from pathlib import Path
 import click
 
 from c3hm.commands.export.export import export_rubric
-from c3hm.data.config.config import Config
 from c3hm.data.config.config_parser import config_from_yaml
 
 

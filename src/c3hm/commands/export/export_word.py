@@ -8,7 +8,7 @@ from docx.table import Table
 
 from c3hm.data.config.config import Config
 from c3hm.data.config.criterion import Criterion
-from c3hm.data.gradesheet import GradeSheet
+from c3hm.data.gradesheet.gradesheet import GradeSheet
 from c3hm.data.student.student import Student
 from c3hm.utils.word import (
     add_word_table,

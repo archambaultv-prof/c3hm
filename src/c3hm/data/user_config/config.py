@@ -13,5 +13,5 @@ class UserConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     evaluation: UserEvaluation
-    format: Format
-    students: Path = Field(..., description="Chemin vers le fichier des étudiants.")
+    format: Format | None
+    students: Path | None = Field(..., description="Chemin vers le fichier des étudiants.")

@@ -16,7 +16,7 @@ def config_from_yaml(yaml_path: Path | str) -> UserConfig:
         c = config_from_user_dict(config_dict)
         # Si le chemin du fichier etudiants est relatif, le convertir en absolu
         # avec racine le yaml_path.
-        if not c.students.is_absolute():
+        if c.students and not c.students.is_absolute():
             c.students = (yaml_path.parent / c.students).resolve()
         return c
 

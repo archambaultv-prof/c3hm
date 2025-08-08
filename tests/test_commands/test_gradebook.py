@@ -2,13 +2,12 @@ from pathlib import Path
 
 from c3hm.commands.gradebook import generate_gradebook
 from c3hm.data.config.config import Config
-from c3hm.data.config.config_parser import config_from_yaml
 
 
 def test_generate_gradebook(
+        config_full_template: Config,
         config_full_template_path: Path,
         tmp_path: Path,
-        student_list_csv_path: Path,
         output_dir: Path):
     """
     Teste la génération d'un document Excel à partir d'une grille d'évaluation.
@@ -17,9 +16,7 @@ def test_generate_gradebook(
     Recopie le fichier créé dans le répertoire tests/output pour inspection
     manuelle si nécessaire.
     """
-    config = config_from_yaml(config_full_template_path)
-    config.students = student_list_csv_path
-
+    config = config_full_template
     create_gradebook_file(config_full_template_path, tmp_path, output_dir, config)
 
 

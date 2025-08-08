@@ -13,12 +13,10 @@ les profs de cégep qui veulent survivre à la tempête de copies.
 ## 🔭 Juché sur les épaules de géants
 
 Un grand merci à mes collègues du Collège de Maisonneuve, notamment Caroline
-Houle pour avoir partagé ses grilles d'évaluation et macros Excel.
-
-Merci également à Patrice Farand de l'École Polytechnique de Montréal pour m'avoir
-appris à faire une grille d'évaluation.
-
-Le succès de `c3hm` leur revient en bonne partie, toutes les erreurs sont les miennes.
+Houle pour avoir partagé ses grilles d'évaluation et macros Excel. Merci
+également à Patrice Farand de l'École Polytechnique de Montréal pour m'avoir
+appris à faire une grille d'évaluation. Le succès de `c3hm` leur revient en
+bonne partie, toutes les erreurs sont les miennes.
 
 ## 🧰 Fonctionnalités
 
@@ -38,6 +36,8 @@ copies à corriger, `c3hm` vient à ta rescousse. Il te permet de :
   Omnivox.
 - `c3hm template` : Le par cœur, ce n'est pas ton fort ? Pas de souci, `c3hm` peut
   générer un modèle de grille d'évaluation pour toi.
+- `c3hm clean` : Nettoyer les fichiers temporaires et les artefacts de
+  construction après la correction. Encore une fois, ton OneDrive te dira merci !
 
 Pour l'instant, c'est tout, mais on a de grands projets pour l'avenir. Reste à l'écoute !
 

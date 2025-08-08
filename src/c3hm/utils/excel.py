@@ -1,4 +1,6 @@
 import openpyxl.utils as pyxl_utils
+from openpyxl import Workbook
+from openpyxl.cell.cell import Cell
 from openpyxl.utils import absolute_coordinate, quote_sheetname
 from openpyxl.workbook.defined_name import DefinedName
 from openpyxl.worksheet.worksheet import Worksheet
@@ -51,3 +53,37 @@ def cell_addr(row: int, col: int, ws: Worksheet | str | None = None) -> str:
         ws = ws.title
     ws_name = f"{quote_sheetname(ws)}!" if ws is not None else ""
     return f"{ws_name}{pyxl_utils.get_column_letter(col)}{row}"
+
+
+def find_worksheet(wb: Workbook, alias: str) -> Worksheet:
+    """
+    Trouve la feuille de calcul correspondant à l'alias de l'étudiant.
+    Si la feuille n'existe pas, lève une erreur.
+    """
+    for ws in wb.worksheets:
+        if ws.title == alias:
+            return ws
+    raise ValueError(f"La feuille de calcul pour l'alias '{alias}' n'existe pas.")
+
+def find_named_cell(ws: Worksheet, named_cell: str) -> Cell | None:
+    """
+    Trouve une cellule nommée dans une feuille de calcul.
+    Retourne la cellule si elle existe, sinon None.
+    """
+    # Vérifie si la cellule nommée existe
+    if named_cell in ws.defined_names:
+        defn = ws.defined_names[named_cell]
+    else:
+        return None
+
+    for title, coord in defn.destinations:
+        if title == ws.title:
+            try:
+                cell = ws[coord]
+            except IndexError as e:
+                print(f"Erreur lors de la récupération de la cellule '{named_cell}'")
+                print(f"Feuille : {ws.title}")
+                raise e
+            return cell
+
+    return None

@@ -4,6 +4,10 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
+from c3hm.data.config.config import Config
+from c3hm.data.config.config_parser import from_user_config
+from c3hm.data.user_config.config_parser import config_from_yaml
+
 
 @pytest.fixture
 def runner():
@@ -32,6 +36,16 @@ def config_full_template_path() -> Path:
     """
     d = Path(__file__).parent.parent / "src" / "c3hm" / "assets" / "templates" / "config"
     return d / "grille.yaml"
+
+@pytest.fixture
+def config_full_template(config_full_template_path: Path,
+                         student_list_csv_path: Path) -> Config:
+    """
+    Retourne le gabarit complet de la grille d'évaluation.
+    """
+    user_config = config_from_yaml(config_full_template_path)
+    user_config.students = student_list_csv_path
+    return from_user_config(user_config)
 
 @pytest.fixture(scope="session")
 def output_dir() -> Path:

@@ -3,14 +3,13 @@ from pathlib import Path
 
 from c3hm.commands.export.export import export_rubric
 from c3hm.data.config.config import Config
-from c3hm.data.config.config_parser import config_from_yaml
 from c3hm.data.config.grade_level import GradeLevel
 
 
 def test_generate_word_from_rubric(
+        config_full_template: Config,
         config_full_template_path: Path,
         tmp_path: Path,
-        student_list_csv_path,
         output_dir: Path):
     """
     Teste la génération d'un document Word à partir d'une grille d'évaluation.
@@ -20,8 +19,7 @@ def test_generate_word_from_rubric(
     manuelle si nécessaire.
     """
     # Test avec le gabarit
-    config = config_from_yaml(config_full_template_path)
-    config.students = student_list_csv_path
+    config = config_full_template
     doc_file = tmp_path / config_full_template_path.with_suffix(".docx")
     generate_rubric(doc_file, output_dir, config)
 
