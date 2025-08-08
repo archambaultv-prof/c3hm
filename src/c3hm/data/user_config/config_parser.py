@@ -44,9 +44,9 @@ def config_from_user_dict(user_dict: dict) -> UserConfig:
         "descripteurs": "descriptors",
         "indicateur": "name",
         "critère": "name",
-        "afficher les points des indicateurs": "show_indicator_points",
+        "afficher les points des indicateurs": "show_indicators_points",
         "largeur des colonnes": "columns_width",
-        "largeur des colonnes avec commentaires": "columns_width_with_comments",
+        "largeur des colonnes avec commentaires": "columns_width_comments",
         "afficher la description du niveau": "show_grade_level_descriptions"
     }
     d = _rename_keys(user_dict, rename_dict)
