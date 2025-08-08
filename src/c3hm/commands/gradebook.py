@@ -12,7 +12,6 @@ from c3hm.data.config.evaluation import Evaluation
 from c3hm.data.config.grade_level import GradeLevel
 from c3hm.data.config.indicator import Indicator
 from c3hm.data.student.student import Student
-from c3hm.data.student.students import Students
 from c3hm.utils.excel import (
     CTHM_OMNIVOX,
     cell_addr,
@@ -29,7 +28,7 @@ def generate_gradebook(config: Config, output_path: Path | str) -> None:
     """
     Génère un document Excel servant à la correction à partir d’une Rubric
     """
-    students = Students.from_file(config.students)
+    students = config.students
     if not students:
         raise ValueError(f"Aucun étudiant dans le fichier {config.students}. ")
 

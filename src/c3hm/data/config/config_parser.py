@@ -5,8 +5,10 @@ import c3hm.data.user_config.config_parser as ucp
 from c3hm.data.config.config import Config
 from c3hm.data.config.criterion import Criterion
 from c3hm.data.config.evaluation import Evaluation
+from c3hm.data.config.format import Format
 from c3hm.data.config.grade_level import GradeLevel
 from c3hm.data.config.indicator import Indicator
+from c3hm.data.student.students import Students
 from c3hm.data.user_config.config import UserConfig
 from c3hm.data.user_config.criterion import UserCriterion
 from c3hm.data.user_config.evaluation import UserEvaluation
@@ -25,8 +27,13 @@ def from_user_config(user_config: UserConfig) -> Config:
     Charge la configuration à partir d'une configuration utilisateur.
     """
     eval = from_user_eval(user_config.evaluation)
-    return Config(evaluation=eval, format=user_config.format,
-                  students=user_config.students)
+    format = Format() if user_config.format is None else user_config.format
+    if user_config.students is None:
+        students = Students(students=[])
+    else:
+        students = Students.from_file(user_config.students)
+    return Config(evaluation=eval, format=format,
+                  students=students)
 
 def from_user_eval(user_eval: UserEvaluation) -> Evaluation:
     """

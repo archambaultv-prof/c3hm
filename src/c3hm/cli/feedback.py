@@ -3,6 +3,7 @@ from pathlib import Path
 import click
 
 from c3hm.commands.feedback import generate_feedback
+from c3hm.data.config.config_parser import config_from_yaml
 
 
 @click.command(
@@ -49,8 +50,9 @@ def feedback_command(config_path: Path, gradebook_path: Path, output_dir: Path):
     """
     if output_dir is None:
         output_dir = Path.cwd() / "rétroaction"
+    config = config_from_yaml(config_path)
     generate_feedback(
-        config_path=config_path,
+        config=config,
         gradebook_path=gradebook_path,
         output_dir=output_dir
     )
