@@ -81,14 +81,14 @@ def test_student_has_team():
         alias="tjones",
         team="TeamC"
     )
-    assert student.has_team() is True
+    assert student.has_team is True
     student_no_team = Student(
         first_name="Tom",
         last_name="Jones",
         omnivox_code="33333",
         alias="tjones"
     )
-    assert student_no_team.has_team() is False
+    assert student_no_team.has_team is False
 
 def test_student_ws_name():
     student = Student(
@@ -97,4 +97,4 @@ def test_student_ws_name():
         omnivox_code="44444",
         alias="alee"
     )
-    assert student.ws_name() == "alee"
+    assert student.ws_name == "alee"

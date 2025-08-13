@@ -1,18 +1,19 @@
 from decimal import Decimal
 from typing import Self
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, model_validator
 
 from c3hm.data.config.criterion import Criterion
 from c3hm.data.config.evaluation import Evaluation
 from c3hm.data.config.indicator import Indicator
+from c3hm.data.student.student import Student
 
 
 class GradeSheet(BaseModel):
     """
     Représente une feuille de notes dans le carnet de notes.
     """
-    omnivox_code: str = Field(..., min_length=1)
+    student: Student
     comments: dict[str, str]
     grades: dict[str, float]
 

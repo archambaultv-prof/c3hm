@@ -41,14 +41,23 @@ class Student(BaseModel):
                 self.team = None
         return self
 
+    @property
     def has_team(self) -> bool:
         """
         Vérifie si l'étudiant est associé à une équipe.
         """
         return self.team is not None
 
+    @property
     def ws_name(self) -> str:
         """
         Retourne le nom de la feuille de calcul pour l'étudiant.
         """
         return self.alias
+
+    @property
+    def full_name(self) -> str:
+        """
+        Retourne le nom complet de l'étudiant.
+        """
+        return f"{self.first_name} {self.last_name}"

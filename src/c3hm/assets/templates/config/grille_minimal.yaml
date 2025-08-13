@@ -58,8 +58,6 @@ format:
 
   largeur des colonnes: []
 
-  largeur des colonnes avec commentaires: []
-
-  afficher la description du niveau: true
+  afficher la description des niveaux: true
 
 étudiants: étudiants.xlsx

@@ -206,11 +206,8 @@ format:
   # Inscrire null pour une colonne de largeur automatique.
   largeur des colonnes: []
 
-  # Optionnel. Idem, mais avec une colonne de plus pour les commentaires.
-  largeur des colonnes avec commentaires: []
-
-  # Optionnel. Afficher la description du niveau
-  afficher la description du niveau: true
+  # Optionnel. Afficher la description des niveaux (ex: '100 à 90' en dessous de Excellent)
+  afficher la description des niveaux: true
 
 # La liste des étudiants. Un lien relatif ou absolu vers un fichier CSV (utf-8)
 # contenant la liste des étudiants ou un lien vers un fichier excel. L'entête doit
