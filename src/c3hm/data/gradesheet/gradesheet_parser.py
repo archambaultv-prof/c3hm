@@ -77,26 +77,32 @@ def grades_from_ws(ws: Worksheet,
                 grade = float(i.points) * total / float(c.points)
                 grades[i.excel_id] = grade
 
+    gs = GradeSheet(
+        student=student,
+        comments=comments,
+        grades=grades,
+    )
+    _verify_grades(gs, eval)
+
+    return gs
+
+def _verify_grades(gs: GradeSheet, eval: Evaluation) -> None:
     # Vérifie que les notes sont des nombres
-    for k, v in grades.items():
+    for k, v in gs.grades.items():
         if v is None:
             raise ValueError(f"La note pour {k} doit être un nombre.")
         if not isinstance(v, int | float):
             raise ValueError(f"La note pour {k} doit être un nombre.")
 
-    # Avertie si le total du critère est plus petit que la somme des indicateurs
+    # Vérifie que les notes sont cohérentes
     for c in eval.criteria:
-        total = sum(grades[i.excel_id] for i in c.indicators if i.excel_id in grades)
-        if total > grades[c.excel_id]:
-            print(f"Avertissement : Dans la feuille {ws.title}, "
-                  f"la somme des indicateurs pour le critère {c.name} "
-                  f"est supérieure à la note du critère.")
-
-    return GradeSheet(
-        student=student,
-        comments=comments,
-        grades=grades,
-    )
+        c_percent = gs.get_percentage(c)
+        i_min_percent = min([gs.get_percentage(i) for i in c.indicators])
+        if i_min_percent > c_percent:
+            print(f"Avertissement : Dans la feuille de l'étudiant {gs.student.full_name}, "
+                  f"(alias : {gs.student.alias}) "
+                  f"le pourcentage du critère {c.name} est inférieure au plus petit"
+                  "pourcentage des indicateurs.")
 
 def collect_comment_grade(ws: Worksheet,
                       x : Evaluation | Criterion | Indicator,
