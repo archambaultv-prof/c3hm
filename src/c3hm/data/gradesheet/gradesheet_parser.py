@@ -6,6 +6,7 @@ from c3hm.data.config.criterion import Criterion
 from c3hm.data.config.evaluation import Evaluation
 from c3hm.data.config.indicator import Indicator
 from c3hm.data.gradesheet.gradesheet import GradeSheet
+from c3hm.data.student.student import Student
 from c3hm.data.student.students import Students
 from c3hm.utils.excel import (
     CTHM_OMNIVOX,
@@ -28,18 +29,23 @@ def grades_from_wb(
 
     for student in students:
         ws = find_worksheet(wb, student.alias)
-        grade_sheets.append(grades_from_ws(ws, config.evaluation))
+        grade_sheets.append(grades_from_ws(ws, config.evaluation, student))
     return grade_sheets
 
 
 def grades_from_ws(ws: Worksheet,
-                   eval: Evaluation) -> GradeSheet:
+                   eval: Evaluation,
+                   student: Student) -> GradeSheet:
     """
     Lit une feuille de calcul et retourne une évaluation notée.
     Se fit aux noms de cellules définis dans la feuille de calcul.
     """
 
     omnivox_code = str(get_cell_value(ws, CTHM_OMNIVOX))
+    # Double check we have the correct student
+    if omnivox_code.strip().lower() != student.omnivox_code.strip().lower():
+        raise ValueError(f"Le code Omnivox de l'étudiant {student.full_name} ne correspond pas.")
+
     comments = {}
     grades = {}
 
@@ -87,7 +93,7 @@ def grades_from_ws(ws: Worksheet,
                   f"est supérieure à la note du critère.")
 
     return GradeSheet(
-        omnivox_code=omnivox_code,
+        student=student,
         comments=comments,
         grades=grades,
     )

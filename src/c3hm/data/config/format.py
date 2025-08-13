@@ -23,11 +23,6 @@ class Format(BaseModel):
         description="Largeur des colonnes de la grille d'évaluation. "
     )
 
-    columns_width_comments: list[float | None] = Field(
-        default_factory=list,
-        description="Largeur des colonnes de commentaires de la grille d'évaluation. "
-    )
-
     show_grade_level_descriptions: bool = Field(
         default=True,
         description="Indique si les descriptions des niveaux doivent être affichées."

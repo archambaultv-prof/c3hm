@@ -42,14 +42,14 @@ def generate_gradebook(config: Config, output_path: Path | str) -> None:
     tab_color = ["DDEBF7", "C7E8CA"]
     for i, teams in enumerate(teams_list):
         ref = teams[0]
-        ws = wb.create_sheet(title=ref.ws_name())
+        ws = wb.create_sheet(title=ref.ws_name)
         add_student_sheet(ws, config, ref, None)
         if color_tab:
             # Colorie l'onglet de l'équipe
             ws.sheet_properties.tabColor = tab_color[i % 2]
         for student in teams[1:]:
             # Crée une feuille pour chaque étudiant
-            ws = wb.create_sheet(title=student.ws_name())
+            ws = wb.create_sheet(title=student.ws_name)
             add_student_sheet(ws, config, student, ref)
             if color_tab:
                 # Colorie l'onglet de l'équipe
@@ -124,7 +124,7 @@ def print_grade_row(ws: Worksheet,
     if ref_student:
         # Si on a un étudiant de référence, on utilise son commentaire
         # par défaut
-        cell.value = f"={quote_sheetname(ref_student.ws_name())}!{comment_name}" # type: ignore
+        cell.value = f"={quote_sheetname(ref_student.ws_name)}!{comment_name}" # type: ignore
 
     # Note calculée en %
     cell = ws.cell(row=ws.max_row, column=5)
@@ -216,7 +216,7 @@ def print_pts_cell(ws,
             # Si on a un étudiant de référence, on utilise sa note
             # pour l'indicateur, sinon on utilise NA(). La note
             # de l'étudiant de référence provient d'une autre feuille
-            alternative = (f"{quote_sheetname(ref_student.ws_name())}!"
+            alternative = (f"{quote_sheetname(ref_student.ws_name)}!"
                            f"{grade_cell_name(data.excel_id)}")
         else:
             alternative = "NA()"
