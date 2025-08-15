@@ -49,6 +49,8 @@ class UnpackOmnivox(BaseModel):
         for archive in self.folder.glob("*"):
             if archive.is_dir():
                 self._clean_student_archive(archive)
+            elif archive.is_file():
+                archive.rename(archive.parent /self._shorten_omnivox_name(archive.name))
 
     def _clean_student_archive(self, path: Path):
         """
