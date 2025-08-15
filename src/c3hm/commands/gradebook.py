@@ -92,7 +92,7 @@ def add_student_sheet(ws: Worksheet,
     # Note pour critères
     print_header(ws, descriptor=True)
     for idx, criterion in enumerate(config.evaluation.criteria):
-        print_grade_row(ws, criterion, config)
+        print_grade_row(ws, criterion, config, ref_student)
         if idx > 0:
             set_top_border(ws)
         for indicator in criterion.indicators:
@@ -107,7 +107,7 @@ def set_top_border(ws):
 def print_grade_row(ws: Worksheet,
                     data: Evaluation | Criterion | Indicator,
                     config: Config,
-                    ref_student: Student | None = None
+                    ref_student: Student | None
                     ) -> None:
     # Nom
     print_name(ws, data)
@@ -124,7 +124,8 @@ def print_grade_row(ws: Worksheet,
     if ref_student:
         # Si on a un étudiant de référence, on utilise son commentaire
         # par défaut
-        cell.value = f"={quote_sheetname(ref_student.ws_name)}!{comment_name}" # type: ignore
+        default_comment = f"{quote_sheetname(ref_student.ws_name)}!{comment_name}"
+        cell.value = f'=IF({default_comment},{default_comment},"")' # type: ignore
 
     # Note calculée en %
     cell = ws.cell(row=ws.max_row, column=5)
