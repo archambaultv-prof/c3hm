@@ -9,14 +9,7 @@ from c3hm.commands.unpack import PATHS_TO_DELETE
 @click.command(
     name="clean",
     help=(
-        "Prépare un dossier de travaux téléchargés depuis Omnivox pour la correction. "
-        "Fonctionne bien avec l'option Omnivox 'Lister tous les dépôts dans le même répertoire'\n"
-        "Cette commande: \n"
-        "- dézippe le dossier s'il est encore sous format zip;\n"
-        "- dézippe tous les fichiers .zip trouvés dans le dossier;\n"
-        "- supprime les dossiers inutiles comme __MACOSX, node_modules, etc.;\n"
-        "- raccourcit les noms de fichiers/dossier trop longs générés par Omnivox;\n"
-        "- aplatit la structure des dossiers si nécessaire."
+        "Supprime les dossiers inutiles comme __MACOSX, node_modules, etc."
     )
 )
 @click.argument(
