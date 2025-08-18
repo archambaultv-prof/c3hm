@@ -2,12 +2,12 @@ from pathlib import Path
 
 import click
 
-from c3hm.commands.export.export import export_rubric
+from c3hm.commands.export.export_rubric import export_rubric
 from c3hm.data.config.config_parser import config_from_yaml
 
 
 @click.command(
-    name="export",
+    name="rubric",
     help=(
         "Génère la grille d'évaluation à présenter "
         "aux élèves à partir du fichier de configuration."

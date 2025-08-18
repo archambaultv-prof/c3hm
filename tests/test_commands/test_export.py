@@ -1,7 +1,7 @@
 from decimal import Decimal
 from pathlib import Path
 
-from c3hm.commands.export.export import export_rubric
+from c3hm.commands.export.export_rubric import export_rubric
 from c3hm.data.config.config import Config
 from c3hm.data.config.grade_level import GradeLevel
 

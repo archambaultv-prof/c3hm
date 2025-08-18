@@ -55,9 +55,8 @@
   total nb de décimales: 0
 
   # La liste des niveaux de notation.
-  # Chaque niveau a un nom, une valeur par défaut, un maximum et un minimum.
-  # La valeur par défaut est utilisée lorsque l'évaluateur "coche" le niveau
-  # sans préciser de note.
+  # Chaque niveau a un nom, un maximum et un minimum.
+  # Les valeurs sont des pourcentages.
   niveaux: [
     {nom: "Excellent", maximum: 100, minimum: 90},
     {nom: "Très bien", maximum: 89, minimum: 80},
@@ -213,4 +212,4 @@ format:
 # contenant la liste des étudiants ou un lien vers un fichier excel. L'entête doit
 # être : Nom,Prénom,Code omnivox,Alias,Équipe,Référence d'équipe. L'ordre n'est pas important.
 
-étudiants: étudiants.xlsx
+étudiants: étudiants.csv
