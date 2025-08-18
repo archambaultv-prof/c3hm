@@ -69,10 +69,5 @@ pipx install .
 
 ## 🛡️ Licence
 
-Plus généreux qu'un prof qui corrige avec des demi-points bonus.
-
-- Distribué sous la licence MIT.
-- Tu peux aussi utiliser le matériel de ce projet sous la licence [Creative
-  Commons Attribution 4.0 International (CC BY
-  4.0)](https://creativecommons.org/licenses/by/4.0/deed.fr). Cette dernière
-  pourrait être mieux adaptée pour le matériel pédagogique.
+Plus généreux qu'un prof qui corrige avec des demi-points bonus : distribué
+sous la licence MIT.
