@@ -20,6 +20,10 @@ bonne partie ; toutes les erreurs sont les miennes.
 
 ## 🧰 Fonctionnalités
 
+> [!NOTE]
+> Consulter le [tutoriel](./docs/tutorial.md)
+> pour un exemple d'utilisation.
+
 Pendant que tu regrettes ton choix de carrière face à la montagne de
 copies à corriger, `c3hm` vient à ta rescousse. Il te permet de :
 
