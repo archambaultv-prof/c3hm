@@ -13,31 +13,31 @@ les profs de cégep qui veulent survivre à la tempête de copies.
 ## 🔭 Juché sur les épaules de géants
 
 Un grand merci à mes collègues du Collège de Maisonneuve, notamment Caroline
-Houle pour avoir partagé ses grilles d'évaluation et macros Excel. Merci
+Houle pour avoir partagé ses grilles d'évaluation et ses macros Excel. Merci
 également à Patrice Farand de l'École Polytechnique de Montréal pour m'avoir
 appris à faire une grille d'évaluation. Le succès de `c3hm` leur revient en
-bonne partie, toutes les erreurs sont les miennes.
+bonne partie ; toutes les erreurs sont les miennes.
 
 ## 🧰 Fonctionnalités
 
 Pendant que tu regrettes ton choix de carrière face à la montagne de
 copies à corriger, `c3hm` vient à ta rescousse. Il te permet de :
 
-- `c3hm unpack` : Dézipper et nettoyer les remises des étudiants, comme un aspirateur numérique. Bye bye
+- `c3hm rubric` : Générer une grille d'évaluation à partir d'une configuration en YAML.
+- `c3hm unpack` : Dézipper et nettoyer les remises des étudiants, comme un aspirateur numérique. Bye-bye
   `node_modules`, `.venv` et autres joyeusetés. Ton OneDrive sera tellement content !
-- `c3hm export` : Générer une grille d'évaluation à partir d'une description en YAML.
 - `c3hm gradebook` : Générer un tableur Excel pour la correction.
-- `c3hm feedback` : Ouf... il est 3 heures du matin et tu viens de finir
-  ta correction. Bravo, le pire est derrière toi. Mais il te faut encore
-  exporter une rétroaction pour chaque étudiant et remettre tout ça dans Omnivox. Tu en
-  as de la chance, `c3hm` peut le faire pour toi ! Il va créer un fichier pour
+- `c3hm feedback` : Ouf... il est 3 heures du matin et tu viens de finir ta
+  correction. Bravo, le pire est derrière toi. Mais il te faut encore exporter
+  une rétroaction pour chaque étudiant et remettre tout ça dans Omnivox. Tu en
+  as de la chance, `c3hm` peut le faire pour toi ! À partir du
+  tableur Excel généré par `c3hm gradebook`, il va créer un fichier pour
   chaque étudiant, avec un nom qu'Omnivox comprend. Il va même te créer un
-  tableur Excel avec les notes prêtes à être importées dans
-  Omnivox.
-- `c3hm template` : Le par cœur, ce n'est pas ton fort ? Pas de souci, `c3hm` peut
-  générer un modèle de grille d'évaluation pour toi.
+  tableur Excel avec les notes prêtes à être importées dans Omnivox.
 - `c3hm clean` : Nettoyer les fichiers temporaires et les artefacts de
   construction après la correction. Encore une fois, ton OneDrive te dira merci !
+- `c3hm template` : Le par cœur, ce n'est pas ton fort ? Pas de souci, `c3hm` peut
+  générer un modèle de configuration pour toi.
 
 Pour l'instant, c'est tout, mais on a de grands projets pour l'avenir. Reste à l'écoute !
 
