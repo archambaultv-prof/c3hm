@@ -125,7 +125,7 @@ def print_grade_row(ws: Worksheet,
         # Si on a un étudiant de référence, on utilise son commentaire
         # par défaut
         default_comment = f"{quote_sheetname(ref_student.ws_name)}!{comment_name}"
-        cell.value = f'=IF({default_comment},{default_comment},"")' # type: ignore
+        cell.value = f'=IF(ISBLANK({default_comment}),"",{default_comment})' # type: ignore
 
     # Note calculée en %
     cell = ws.cell(row=ws.max_row, column=5)
