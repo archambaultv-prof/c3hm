@@ -60,4 +60,5 @@ format:
 
   afficher la description des niveaux: true
 
+# Colonnes : Nom,Prénom,Code omnivox,Alias,Équipe,Référence d'équipe
 étudiants: étudiants.xlsx
