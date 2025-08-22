@@ -50,7 +50,7 @@ class UnpackOmnivox(BaseModel):
             if archive.is_dir():
                 self._clean_student_archive(archive)
             elif archive.is_file():
-                archive.rename(archive.parent /self._shorten_omnivox_name(archive.name))
+                archive.rename(archive.parent /self._shorten_omnivox_file_name(archive))
 
     def _clean_student_archive(self, path: Path):
         """
@@ -61,7 +61,7 @@ class UnpackOmnivox(BaseModel):
         # Décompresse les archives additionnelles dans le dossier de l'étudiant
         for item in list(path.glob("*.zip")) + list(path.glob("*.rar")) + list(path.glob("*.7z")):
             if item.is_file():
-                output = item.parent / self._shorten_omnivox_name(item.stem)
+                output = item.parent / self._shorten_omnivox_archive_name(item.stem)
                 self._extract_archive(item, output)
             item.unlink()
 
@@ -81,7 +81,7 @@ class UnpackOmnivox(BaseModel):
     def _extract_student_archives(self):
         for archive in self.folder.glob("*"):
             if archive.is_file() and archive.suffix in [".zip", ".rar", ".7z"]:
-                stem = self._shorten_omnivox_name(archive.stem)
+                stem = self._shorten_omnivox_archive_name(archive.stem)
                 output_path = archive.parent / stem
                 self._extract_archive(archive, output_path)
 
@@ -137,11 +137,17 @@ class UnpackOmnivox(BaseModel):
             raise RuntimeError(f"Extraction failed:\n{result.stderr}")
 
 
-    def _shorten_omnivox_name(self, name: str) -> str:
+    def _shorten_omnivox_archive_name(self, name: str) -> str:
         """
-        Garde la partie du nom avant "_Remis_le_".
+        Garde seulement la partie du nom avant "_Remis_le_".
         """
         return name.split("_Remis_le_", maxsplit=1)[0]
+
+    def _shorten_omnivox_file_name(self, name: Path) -> str:
+        """
+        Garde la partie du nom avant "_Remis_le_" et l'extension
+        """
+        return name.stem.split("_Remis_le_", maxsplit=1)[0] + name.suffix
 
     def _flatten_single_folders(self, path: Path):
         # Trouve d'abord le dossier le plus profond dans la chaîne de dossiers uniques
