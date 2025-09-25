@@ -69,9 +69,11 @@ class Students(BaseModel):
         Retourne une liste d'étudiants qui sont dans la même équipe que l'étudiant
         donné, à l'exception de l'étudiant lui-même.
         """
+        if not student.team:
+            return []
         return [
             s for s in self.students
-            if s.team == student.team and s.omnivox_code != student.omnivox_code
+            if s.team and s.team == student.team and s.omnivox_code != student.omnivox_code
         ]
 
     def list_teams(self) -> list[list[Student]]:
