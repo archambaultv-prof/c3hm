@@ -1,5 +1,3 @@
-from decimal import Decimal
-
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -9,11 +7,13 @@ class Indicator(BaseModel):
     """
     model_config = ConfigDict(extra="forbid")
 
-    excel_id: str = Field(..., min_length=1,
-                          description="Identifiant unique de l'indicateur.")
     name: str = Field(..., min_length=1)
-    points: Decimal = Field(..., gt=Decimal("0"),
+    points: float | None = Field(..., gt=0.0,
                             description="Points associés à cet indicateur.")
+
+    grade: float | None = Field(..., ge=0.0)
+    comment: str | None = Field(..., min_length=1)
+
     descriptors: list[str | None] = Field(
         ...,
         min_length=1,

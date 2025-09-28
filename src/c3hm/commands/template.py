@@ -1,19 +1,17 @@
-import shutil
-from importlib import resources
 from pathlib import Path
 
+import yaml
 
-def export_template(output_path: Path | str = "grille.yaml",
-                    template: str = "grille.yaml") -> None:
+from c3hm.data.config import Config
+
+
+def export_template(output_path: Path,
+                    nb_levels: int = 5) -> None:
     """
-    Copie la configuration d'exemple.
+    Génère un fichier de configuration
     """
-    config_path = (resources
-                    .files("c3hm.assets.templates.config")
-                    .joinpath(template))
-    config_path = Path(config_path) # type: ignore
-
-    output_path = Path(output_path)
-
-    shutil.copy(config_path, output_path)
-
+    config = Config.default(nb_levels=nb_levels)
+    with open(output_path, "w", encoding="utf-8") as f:
+        yaml.dump(config.model_dump(mode="json"), f,
+                  sort_keys=False, allow_unicode=True,
+                  indent=2)
