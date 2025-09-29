@@ -167,10 +167,6 @@ def add_criterion(table: Table,
                 cell.text = descriptor
             else:
                 cell.text = "N/A"
-                if indicator.grade and i == i_grade_pos:
-                    raise ValueError(f"Note attribuée à l'indicateur {indicator.name} "
-                                     f"pour l'eleve {config.get_student_full_name()}, "
-                                     f" mais il n'y a pas de descripteur défini pour ce niveau.")
 
             if indicator.grade and i == i_grade_pos:
                 # Ajoute la note de l'indicateur si disponible

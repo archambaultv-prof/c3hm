@@ -56,6 +56,12 @@ def check_all_grades(config: Config) -> None:
                 raise ValueError(f"La note de l'indicateur '{indicator.name}' du critère "
                                  f"'{criterion.name}' doit être entre 0 et le total des points "
                                  f"du critère ({criterion.get_total()}).")
+            i_percent = indicator.get_grade() / indicator.get_total()
+            i_grade_pos = config.get_level_index_by_percentage(i_percent)
+            if indicator.descriptors[i_grade_pos] is None:
+                raise ValueError(f"Note attribuée à l'indicateur {indicator.name} "
+                                    f"pour l'eleve {config.get_student_full_name()}, "
+                                    f" mais il n'y a pas de descripteur défini pour ce niveau.")
 
 def _infer_grades(config: Config) -> None:
     """
