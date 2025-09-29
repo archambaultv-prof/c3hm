@@ -213,7 +213,7 @@ def _check_descriptors(criteria: list[Criterion], nb_levels: int) -> None:
                     f"doit être égal au nombre de niveaux ({nb_levels})."
                 )
             # Au moins un descripteur doit être défini
-            if not any(indicator.descriptors):
+            if all(d is None for d in indicator.descriptors):
                 raise ValueError(
                     f"L'indicateur '{indicator.name}' doit avoir au moins un descripteur défini."
                 )

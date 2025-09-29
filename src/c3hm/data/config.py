@@ -173,7 +173,7 @@ class Config(BaseModel):
                     GradeLevel(name="❌", maximum=59.0, minimum=0.0,
                                default_value=0.0),
                 ]
-                descriptions = [None, None]
+                descriptions = ["", ""]
             case 3:
                 levels = [
                     GradeLevel(name="Très bien", maximum=100.0,
