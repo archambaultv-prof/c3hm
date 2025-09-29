@@ -26,13 +26,13 @@ def parse_user_config(path: Path,
         _check_student_info(config)
         _infer_grades(config)
         if check_grades:
-            _check_grades(config)
+            check_all_grades(config)
     else:
         _remove_student_info_and_grades(config)
     _round_pts(config)  # Arrondit à nouveau après inférence
     return config
 
-def _check_grades(config: Config) -> None:
+def check_all_grades(config: Config) -> None:
     """
     Vérifie que les notes des indicateurs, critères et de l'évaluation
     sont valides.
@@ -73,8 +73,6 @@ def _infer_grades(config: Config) -> None:
     for func in funcs:
         if func(config):
             return
-    raise ValueError("Les notes des indicateurs, critères et de l'évaluation "
-                     "ne peuvent pas être inférées.")
 
 def _infer_grades_from_eval_total(config: Config) -> bool:
     if config.evaluation_grade is None:
