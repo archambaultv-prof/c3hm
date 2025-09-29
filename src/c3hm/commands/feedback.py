@@ -1,5 +1,9 @@
 from pathlib import Path
 
+import openpyxl
+from openpyxl.worksheet.table import Table, TableStyleInfo
+from openpyxl.worksheet.worksheet import Worksheet
+
 from c3hm.commands.rubric.rubric_word import generate_rubric_word
 from c3hm.data.config import Config
 from c3hm.data.config_parser import check_all_grades, parse_user_config
@@ -28,6 +32,138 @@ def generate_feedback(gradebook_path: Path, output_dir: Path):
     for config in configs:
         p = output_dir / f"{config.student_last_name}_{config.student_first_name}.docx"
         generate_rubric_word(config, p)
+
+    # Génère le fichier Excel pour charger les notes dans Omnivox
+    generate_xl_for_omnivox(configs, output_dir)
+
+
+def generate_xl_for_omnivox(
+    configs: list[Config],
+    output_dir: Path | str
+) -> None:
+    """
+    Génère un fichier Excel pour charger les notes dans Omnivox.
+    """
+    if not configs:
+        return
+    output_dir = Path(output_dir)
+    omnivox_path = output_dir / f"{configs[0].evaluation_name}.xlsx"
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    if ws is None:
+        raise ValueError("Aucune feuille de calcul active trouvée.")
+    populate_omnivox_sheet(configs, ws)
+
+    ws = wb.create_sheet()
+    populate_averages_sheet(configs, ws)
+
+    # Sauvegarde le fichier Excel
+    wb.save(omnivox_path)
+
+def populate_omnivox_sheet(configs: list[Config], ws: Worksheet) -> None:
+    ws.title = "Notes pour Omnivox"
+    ws.sheet_view.showGridLines = False  # Disable gridlines
+
+    # En-têtes
+    ws.append(["Code omnivox", "Note", "Commentaire", "Prénom", "Nom"])
+
+    # Remplit le tableau avec les notes et les commentaires
+    for config in configs:
+        note = config.get_grade()
+        comment = config.evaluation_comment
+        ws.append([config.student_omnivox, note, comment,
+                   config.student_first_name, config.student_last_name])
+
+    # Format
+    _insert_table(ws, "NotesOmnivox", "A1:E" + str(ws.max_row))
+    ws.column_dimensions["A"].width = 20
+    ws.column_dimensions["B"].width = 10
+    ws.column_dimensions["C"].width = 70
+    ws.column_dimensions["D"].width = 20
+    ws.column_dimensions["E"].width = 20
+
+
+def populate_averages_sheet(configs: list[Config], ws: Worksheet) -> None:
+
+    ws.title = "Moyennes"
+    ws.sheet_view.showGridLines = False  # Disable gridlines
+
+    # Moyenne globale
+    s = sum(c.get_grade() for c in configs)
+    avg = s / len(configs)
+    avg_percent = avg / configs[0].get_total()
+    ws.append(["Moyenne globale"])
+    ws.cell(ws.max_row, 1).style = "Headline 2"
+    ws.append(["Évaluation", "Moyenne (pts)", "Moyenne (%)"])
+    ws.append(["Évaluation",
+               avg,
+               avg_percent])
+    _insert_table(ws, "MoyenneGlobale", "A2:C3")
+    ws.append([])
+
+    # Moyenne par critères
+    ws.append(["Moyenne par critères"])
+    ws.cell(ws.max_row, 1).style = "Headline 2"
+    crit_header_row = ws.max_row + 1
+    ws.append(["Critère", "Moyenne (pts)", "Moyenne (%)"])
+    crit_count = len(configs[0].criteria)
+    for i in range(crit_count):
+        s = sum(c.criteria[i].get_grade() for c in configs)
+        avg = s / len(configs)
+        avg_percent = avg / configs[0].criteria[i].get_total()
+        ws.append([configs[0].criteria[i].name,
+                   avg,
+                   avg_percent])
+    # Transforme les données en table
+    _insert_table(ws, "MoyenneCriteres", f"A{crit_header_row}:C{crit_header_row + crit_count}")
+    ws.append([])
+
+    # Moyenne par indicateurs
+    ws.append(["Moyenne par indicateurs"])
+    ws.cell(ws.max_row, 1).style = "Headline 2"
+    ind_header_row = ws.max_row + 1
+    ws.append(["Indicateur", "Moyenne (pts)", "Moyenne (%)", "Critère"])
+    ind_total_count = 0
+    for c_idx in range(crit_count):
+        ind_total_count += len(configs[0].criteria[c_idx].indicators)
+        c_name = configs[0].criteria[c_idx].name
+        for i_idx in range(len(configs[0].criteria[c_idx].indicators)):
+            ind_name = configs[0].criteria[c_idx].indicators[i_idx].name
+            s = sum(c.criteria[c_idx].indicators[i_idx].get_grade() for c in configs)
+            avg = s / len(configs)
+            avg_percent = avg / configs[0].criteria[c_idx].indicators[i_idx].get_total()
+            ws.append([ind_name,
+                       avg,
+                       avg_percent,
+                       c_name])
+    # Transforme les données en table
+    _insert_table(ws, "MoyenneIndicateurs",
+                  f"A{ind_header_row}:D{ind_header_row + ind_total_count}")
+
+    # Applique les formats: pts = 0.0, % = 0.0%
+    for row in ws.iter_rows(min_row=2, max_row=ws.max_row):
+        # Colonne B (pts)
+        if len(row) > 1 and isinstance(row[1].value, int | float):
+            row[1].number_format = '0.0'
+        # Colonne C (%)
+        if len(row) > 2 and isinstance(row[2].value, int | float):
+            row[2].number_format = '0.0%'
+    ws.column_dimensions["A"].width = 60
+    ws.column_dimensions["B"].width = 15
+    ws.column_dimensions["C"].width = 15
+    ws.column_dimensions["D"].width = 60
+
+
+def _insert_table(ws: Worksheet, display_name: str, ref: str) -> None:
+    table = Table(displayName=display_name, ref=ref)
+    table.tableStyleInfo = TableStyleInfo(
+        name="TableStyleMedium2",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    ws.add_table(table)
 
 def _fill_in_teammates_grades(configs: list[Config]) -> None:
     """
@@ -59,13 +195,13 @@ def _fill_in_teammates_grades(configs: list[Config]) -> None:
                                      f"{target_config.student_last_name} a déjà été ajustée "
                                      f"depuis un autre coéquipier.")
                 done.add(target_config.get_student_full_name())
-                copy_grades_to(config, target_config)
+                _copy_grades_to(config, target_config)
             if teammate in duplicate_names:
                 raise ValueError(f"Le nom de coéquipier '{teammate}' est ambigu dans la "
                                  f"configuration de {config.student_first_name} "
                                  f"{config.student_last_name}.")
 
-def copy_grades_to(source: Config, target: Config) -> None:
+def _copy_grades_to(source: Config, target: Config) -> None:
     """
     Copie les notes des critères et indicateurs de `source` vers `target`.
     """

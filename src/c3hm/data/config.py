@@ -41,6 +41,14 @@ class Config(BaseModel):
             raise ValueError("Le total des points de l'évaluation n'est pas défini.")
         return self.evaluation_total
 
+    def get_grade(self) -> float:
+        """
+        Retourne la note du critère.
+        """
+        if self.evaluation_grade is None:
+            raise ValueError("La note du critère n'est pas définie.")
+        return self.evaluation_grade
+
     def evaluation_title(self) -> str:
         """
         Retourne le titre de la grille d'évaluation.
