@@ -18,9 +18,31 @@ def parse_user_config(path: Path) -> Config:
     config = Config(**data)
     _check_grade_levels(config.grade_levels)
     _check_descriptors(config.criteria, len(config.grade_levels))
+    _round_pts(config)
     _infer_pts(config)
     return config
 
+
+def _round_pts(config: Config) -> None:
+    """
+    Arrondit les points des indicateurs, critères et de l'évaluation
+    au nombre de décimales spécifié dans la configuration.
+    """
+    ndigits = config.evaluation_total_nb_decimals
+    if config.evaluation_total is not None:
+        config.evaluation_total = round(config.evaluation_total, ndigits)
+    if config.evaluation_grade is not None:
+        config.evaluation_grade = round(config.evaluation_grade, ndigits)
+    for criterion in config.criteria:
+        if criterion.total is not None:
+            criterion.total = round(criterion.total, ndigits + 1)
+        if criterion.grade is not None:
+            criterion.grade = round(criterion.grade, ndigits + 1)
+        for indicator in criterion.indicators:
+            if indicator.points is not None:
+                indicator.points = round(indicator.points, ndigits + 1)
+            if indicator.grade is not None:
+                indicator.grade = round(indicator.grade, ndigits + 1)
 
 def _check_grade_levels(grade_levels: list[GradeLevel]) -> None:
     """

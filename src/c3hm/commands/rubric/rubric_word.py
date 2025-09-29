@@ -220,12 +220,13 @@ def set_first_row(config: Config, table: Table):
     total_cell = hdr_cells[0]
     p = total_cell.paragraphs[0]
     points = config.evaluation_total
+    ndigits = config.evaluation_total_nb_decimals
     if config.is_graded:
         total = config.evaluation_grade
-        t = f"Note : {total} / {points}"
+        t = f"Note : {total:.{ndigits}f} / {points:.{ndigits}f}"
     else:
         pts = "pt" if points == Decimal("1") else "pts"
-        t = f"Total sur {points} {pts}"
+        t = f"Total sur {points:.{ndigits}f} {pts}"
     p.text = t
     p.style = "Heading 3"
 

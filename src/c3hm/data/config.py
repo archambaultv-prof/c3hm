@@ -171,9 +171,9 @@ class Config(BaseModel):
                     GradeLevel(name="Très bien", maximum=100.0,
                                minimum=85.0, default_value=100.0),
                     GradeLevel(name="Bien", maximum=84.0,
-                               minimum=70.0, default_value=75.0),
+                               minimum=70.0, default_value=80.0),
                     GradeLevel(name="Passable", maximum=69.0,
-                               minimum=50.0, default_value=60.0),
+                               minimum=60.0, default_value=60.0),
                     GradeLevel(name="Insuffisant", maximum=59.0,
                                minimum=0.0, default_value=30.0),
                 ]
