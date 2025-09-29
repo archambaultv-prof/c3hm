@@ -1,3 +1,6 @@
+from pathlib import Path
+
+import yaml
 from pydantic import BaseModel, ConfigDict, Field
 
 from c3hm.data.criterion import Criterion
@@ -63,6 +66,15 @@ class Config(BaseModel):
             if percentage * 100 >= level.minimum:
                 return i
         raise ValueError("Aucun niveau de note ne correspond au pourcentage donné.")
+
+    def yaml_dump(self, output_path: Path) -> None:
+        """
+        Retourne la configuration au format YAML.
+        """
+        with open(output_path, "w", encoding="utf-8") as f:
+            yaml.dump(self.model_dump(mode="json"), f,
+                    sort_keys=False, allow_unicode=True,
+                    indent=2)
 
     @staticmethod
     def default(*, nb_levels: int = 3) -> "Config":

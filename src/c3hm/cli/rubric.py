@@ -26,7 +26,7 @@ from c3hm.data.config_parser import parse_user_config
     default=None
 )
 
-def export_rubric_command(config_path: Path, output_path: Path | None):
+def rubric_command(config_path: Path, output_path: Path | None):
     """
     Génère la grille d'évaluation à présenter aux élèves à partir du fichier de configuration.
     """
