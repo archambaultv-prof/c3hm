@@ -185,10 +185,7 @@ def add_criterion(table: Table,
                         run.font.highlight_color = WD_COLOR_INDEX.YELLOW
 
 def add_comment_row(table: Table, comment: str) -> None:
-    current_row = table.rows[-1]  # Get current row
     comment_row = table.add_row()
-    # Merge first column vertically between criterion row and comment row
-    current_row.cells[0].merge(comment_row.cells[0])
     # Merge from second cell to the end on the comment row
     merged_cell = comment_row.cells[1].merge(comment_row.cells[-1])
     p = merged_cell.paragraphs[0]
