@@ -8,10 +8,8 @@ from docx.enum.text import WD_COLOR_INDEX, WD_PARAGRAPH_ALIGNMENT
 from docx.table import Table
 from docx.text.paragraph import Paragraph
 
-from c3hm.data.config.config import Config
-from c3hm.data.config.criterion import Criterion
-from c3hm.data.gradesheet.gradesheet import GradeSheet
-from c3hm.data.student.student import Student
+from c3hm.data.config import Config
+from c3hm.data.criterion import Criterion
 from c3hm.utils.word import (
     add_word_table,
     set_as_table_header,
@@ -45,13 +43,11 @@ def scale_color_schemes(size: int) -> list[str] | None:
 def generate_rubric_word(
         config: Config,
         output_path: Path | str,
-        grade_sheet: GradeSheet | None = None
         ) -> None:
     """
     Génère un document Word pour les étudiants à partir d’un grille d’évaluation (Rubric).
     """
     output_path = Path(output_path)
-    eval = config.evaluation
 
     # forcer l'extension .docx
     if output_path.suffix.lower() != ".docx":
@@ -66,38 +62,42 @@ def generate_rubric_word(
     # Modifier l'orientation de la page au besoin
     if config.format.orientation:
         set_orientation(doc, config.format.orientation)
-    elif len(eval.grade_levels) >= 4:
+    elif len(config.grade_levels) >= 4:
         set_orientation(doc, "paysage")
     else:
         set_orientation(doc, "portrait")
 
     # insérer le titre
     p = doc.paragraphs[0]
-    p.text = eval.title()
+    p.text = config.evaluation_title()
     p.style = "Heading 1"
     p.alignment = docx.enum.text.WD_PARAGRAPH_ALIGNMENT.CENTER
 
     # insérer le nom de l'étudiant
-    if grade_sheet:
+    if config.is_graded:
         p = doc.add_paragraph()
-        add_student_name(p, grade_sheet.student)
+        add_student_name(p, config.get_student_full_name())
 
         # Insérer le commentaire général
-        if grade_sheet.has_comment(eval):
+        if config.evaluation_comment:
             p = doc.add_paragraph()
-            add_comment_runs(p, grade_sheet.get_comment(eval))
+            add_comment_runs(p, config.evaluation_comment)
 
     # insérer la table pour la grille
     col_width = config.format.columns_width
-    nb_columns = len(eval.grade_levels) + 1
+    nb_columns = len(config.grade_levels) + 1
     table = add_word_table(doc, nb_columns, col_width)
 
     # Remplir la première ligne avec le barème
-    set_first_row(config, table, grade_sheet)
+    set_first_row(config, table)
 
     # Remplir le reste avec critères et indicateurs dans l'ordre
-    for criterion in eval.criteria:
-        add_criterion(table, criterion, config, grade_sheet)
+    for criterion in config.criteria:
+        try:
+            add_criterion(table, criterion, config)
+        except Exception as e:
+            raise ValueError(f"Erreur lors de l'ajout du critère '{criterion.name}' "
+                             f"pour l'étudiant '{config.get_student_full_name()}'.") from e
 
     # Ajouter une bordure en bas de la dernière ligne
     last_row = table.rows[-1]
@@ -109,27 +109,25 @@ def generate_rubric_word(
 
 def add_criterion(table: Table,
                   criterion: Criterion,
-                  config: Config,
-                  grade_sheet: GradeSheet | None = None) -> None:
+                  config: Config) -> None:
     """
     Ajoute un critère et ses indicateurs à la table.
     """
-    eval = config.evaluation
     row = table.add_row()
     narrow_nbsp = "\u202F"
 
     # Critère
     p = row.cells[0].paragraphs[0]
     txt = criterion.name
-    pts = "pt" if criterion.points == 1 else "pts"
-    txt += f" ({criterion.points}{narrow_nbsp}{pts})"
+    pts = "pt" if criterion.total == 1 else "pts"
+    txt += f" ({criterion.total}{narrow_nbsp}{pts})"
     p.text = txt
     p.style = "Heading 3"
 
-    if grade_sheet:
-        c_grade = grade_sheet.get_grade(criterion, eval.points_total_nb_of_decimal + 1)
-        c_percentage = grade_sheet.get_percentage(criterion)
-        c_grade_pos = eval.get_index_by_percentage(c_percentage)
+    if config.is_graded:
+        c_grade = criterion.get_grade()
+        c_percentage = c_grade / criterion.get_total()
+        c_grade_pos = config.get_level_index_by_percentage(c_percentage)
         p = row.cells[c_grade_pos + 1].paragraphs[0]
         pts = "pt" if c_grade == 1 else "pts"
         c_percent = f"({c_percentage * 100:.0f}%)"
@@ -137,9 +135,8 @@ def add_criterion(table: Table,
         p.style = "Heading 3"
 
         # Ajoute le commentaire du critère si disponible
-        if grade_sheet.has_comment(criterion):
-            comment = grade_sheet.get_comment(criterion)
-            add_comment_row(table, comment)
+        if criterion.comment:
+            add_comment_row(table, criterion.comment)
 
     # Indicateurs
     for i, indicator in enumerate(criterion.indicators):
@@ -155,12 +152,11 @@ def add_criterion(table: Table,
         run.style = "Emphasis"
 
         # Si l'indicateur est noté, on trouve le niveau de note
-        if grade_sheet:
-            i_percentage = grade_sheet.get_percentage(indicator)
-            i_grade_pos = eval.get_index_by_percentage(i_percentage)
-            if grade_sheet.has_comment(indicator):
-                indicator_comment = grade_sheet.get_comment(indicator)
-                add_comment_row(table, indicator_comment)
+        if indicator.grade:
+            i_percentage = indicator.get_grade() / indicator.get_total()
+            i_grade_pos = config.get_level_index_by_percentage(i_percentage)
+            if indicator.comment:
+                add_comment_row(table, indicator.comment)
         else:
             i_grade_pos = None
 
@@ -171,17 +167,12 @@ def add_criterion(table: Table,
                 cell.text = descriptor
             else:
                 cell.text = "N/A"
-                if grade_sheet and i == i_grade_pos:
-                    raise ValueError(f"Note attribuée à l'indicateur {indicator.name} "
-                                     f"pour l'eleve {grade_sheet.student.full_name}, "
-                                     f" mais il n'y a pas de descripteur défini pour ce niveau.")
 
-            if grade_sheet and i == i_grade_pos:
+            if indicator.grade and i == i_grade_pos:
                 # Ajoute la note de l'indicateur si disponible
                 # et si demandé dans la config
                 if config.format.show_indicators_points:
-                    g = grade_sheet.get_grade(indicator,
-                                              config.evaluation.points_total_nb_of_decimal + 1)
+                    g = indicator.get_grade()
                     run = cell.paragraphs[0].add_run(f" ({g})")
                     run.style = "Emphasis"
                 # On met en surbrillance le descripteur
@@ -190,21 +181,18 @@ def add_criterion(table: Table,
                         run.font.highlight_color = WD_COLOR_INDEX.YELLOW
 
 def add_comment_row(table: Table, comment: str) -> None:
-    current_row = table.rows[-1]  # Get current row
     comment_row = table.add_row()
-    # Merge first column vertically between criterion row and comment row
-    current_row.cells[0].merge(comment_row.cells[0])
     # Merge from second cell to the end on the comment row
     merged_cell = comment_row.cells[1].merge(comment_row.cells[-1])
     p = merged_cell.paragraphs[0]
     # Make the label bold, followed by the comment
     add_comment_runs(p, comment)
 
-def add_student_name(p: Paragraph, student: Student) -> None:
+def add_student_name(p: Paragraph, student: str) -> None:
     label_run = p.add_run("Étudiant : ")
     label_run.bold = True
     label_run.style = "Emphasis"
-    name_run = p.add_run(student.full_name)
+    name_run = p.add_run(student)
     name_run.style = "Emphasis"
 
 def add_comment_runs(p: Paragraph, comment: str) -> None:
@@ -215,27 +203,27 @@ def add_comment_runs(p: Paragraph, comment: str) -> None:
     comment_run = p.add_run(comment)
     comment_run.style = "Emphasis"
 
-def set_first_row(config: Config, table: Table, grade_sheet: GradeSheet | None = None):
+def set_first_row(config: Config, table: Table):
     """
     Remplit la première ligne du tableau avec le barème et les seuils.
     """
-    eval = config.evaluation
 
     # En-tête de la table
     set_as_table_header(table.rows[0])
-    set_row_borders(table.rows[0])
+    set_row_borders(table.rows[0], top=1.0, bottom=0.5)
 
     # Première cellule : Total sur X pts
     hdr_cells = table.rows[0].cells
     total_cell = hdr_cells[0]
     p = total_cell.paragraphs[0]
-    points = eval.points_total
-    if grade_sheet:
-        total = grade_sheet.get_grade(eval, eval.points_total_nb_of_decimal)
-        t = f"Note : {total} / {points}"
+    points = config.evaluation_total
+    ndigits = config.evaluation_total_nb_decimals
+    if config.is_graded:
+        total = config.evaluation_grade
+        t = f"Note : {total:.{ndigits}f} / {points:.{ndigits}f}"
     else:
         pts = "pt" if points == Decimal("1") else "pts"
-        t = f"Total sur {points} {pts}"
+        t = f"Total sur {points:.{ndigits}f} {pts}"
     p.text = t
     p.style = "Heading 3"
 
@@ -244,9 +232,8 @@ def set_first_row(config: Config, table: Table, grade_sheet: GradeSheet | None =
 
 
 def set_grade_levels(config: Config, hdr_cells):
-    eval = config.evaluation
-    color_schemes = scale_color_schemes(len(eval.grade_levels))
-    for i, label in enumerate(eval.grade_levels):
+    color_schemes = scale_color_schemes(len(config.grade_levels))
+    for i, label in enumerate(config.grade_levels):
         cell = hdr_cells[i + 1]
         if color_schemes:
             set_cell_background(cell, color_schemes[i])

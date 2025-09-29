@@ -2,8 +2,8 @@ from pathlib import Path
 
 import click
 
-from c3hm.commands.export.export_rubric import export_rubric
-from c3hm.data.config.config_parser import config_from_yaml
+from c3hm.commands.rubric.rubric import export_rubric
+from c3hm.data.config_parser import parse_user_config
 
 
 @click.command(
@@ -26,11 +26,11 @@ from c3hm.data.config.config_parser import config_from_yaml
     default=None
 )
 
-def export_rubric_command(config_path: Path, output_path: Path | None):
+def rubric_command(config_path: Path, output_path: Path | None):
     """
     Génère la grille d'évaluation à présenter aux élèves à partir du fichier de configuration.
     """
-    config = config_from_yaml(config_path)
+    config = parse_user_config(config_path)
     if not output_path:
         output_path = config_path.with_suffix(".docx")
     export_rubric(config, output_path)

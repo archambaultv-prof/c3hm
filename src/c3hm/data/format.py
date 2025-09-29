@@ -27,3 +27,10 @@ class Format(BaseModel):
         default=True,
         description="Indique si les descriptions des niveaux doivent être affichées."
     )
+
+    @staticmethod
+    def default() -> "Format":
+        """
+        Retourne un format par défaut.
+        """
+        return Format()

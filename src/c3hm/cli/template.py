@@ -18,16 +18,18 @@ from c3hm.commands.template import export_template
     help="Chemin vers le fichier de configuration à générer"
 )
 @click.option(
-    '--full', 'full_template',
-    is_flag=True,
-    default=False,
-    help="Génère un gabarit complet avec toutes les options possibles. "
+    '--levels', '-l', 'nb_levels',
+    type=click.IntRange(2, 5),
+    default=5,
+    help="Indique le nombre de niveaux de performance à inclure dans le modèle de configuration."
 )
 def template_command(output_path: Path,
-                     full_template: bool) -> None:
+                     nb_levels: int) -> None:
     """
     Génère un fichier de configuration commenté.
     """
-    template = "grille.yaml" if full_template else "grille_minimal.yaml"
-    output_path = Path.cwd() / ("grille.yaml" if not output_path else Path(output_path))
-    export_template(output_path, template=template)
+    if output_path is None:
+        output_path = Path.cwd() / "grille.yaml"
+    elif not output_path.is_absolute():
+        output_path = Path.cwd() / output_path
+    export_template(output_path, nb_levels=nb_levels)

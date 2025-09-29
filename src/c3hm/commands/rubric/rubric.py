@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from c3hm.commands.export.export_word import generate_rubric_word
-from c3hm.data.config.config import Config
+from c3hm.commands.rubric.rubric_word import generate_rubric_word
+from c3hm.data.config import Config
 
 
 def export_rubric(

@@ -1,6 +1,6 @@
 [project]
 name = "c3hm"
-version = "0.2.0"
+version = "0.3.0"
 description = "Corriger à 3 heures du matin"
 readme = "README.md"
 authors = [
@@ -9,13 +9,11 @@ authors = [
 requires-python = ">=3.10"
 dependencies = [
     "rarfile>=4.2",
-    "polars>=1.32.2",
     "click>=8.2.1",
     "pydantic>=2.11.7",
-    "openpyxl>=3.1.5",
     "python-docx>=1.2.0",
     "pyyaml>=6.0.2",
-    "fastexcel>=0.14.0",
+    "openpyxl>=3.1.5",
 ]
 
 [project.scripts]

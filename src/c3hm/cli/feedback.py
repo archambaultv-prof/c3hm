@@ -3,7 +3,6 @@ from pathlib import Path
 import click
 
 from c3hm.commands.feedback import generate_feedback
-from c3hm.data.config.config_parser import config_from_yaml
 
 
 @click.command(
@@ -13,22 +12,13 @@ from c3hm.data.config.config_parser import config_from_yaml
         "à partir d’un fichier de correction."
     )
 )
+
 @click.argument(
-    "config_path",
+    "gradebook_dir",
     type=click.Path(
         exists=True,
-        file_okay=True,
-        dir_okay=False,
-        path_type=Path
-    ),
-    required=True
-)
-@click.argument(
-    "gradebook_path",
-    type=click.Path(
-        exists=True,
-        file_okay=True,
-        dir_okay=False,
+        file_okay=False,
+        dir_okay=True,
         path_type=Path
     ),
     required=True
@@ -44,16 +34,16 @@ from c3hm.data.config.config_parser import config_from_yaml
     default=None,
     help="Répertoire de sortie pour les fichiers générés"
 )
-def feedback_command(config_path: Path, gradebook_path: Path, output_dir: Path):
+def feedback_command(gradebook_dir: Path, output_dir: Path):
     """
     Génère un document Word de rétroaction pour les étudiants à partir d’une fichier de correction.
     """
     if output_dir is None:
         output_dir = Path.cwd() / "rétroaction"
-    config = config_from_yaml(config_path)
+    if not gradebook_dir.is_absolute():
+        gradebook_dir = Path.cwd() / gradebook_dir
     generate_feedback(
-        config=config,
-        gradebook_path=gradebook_path,
+        gradebook_path=gradebook_dir,
         output_dir=output_dir
     )
 
