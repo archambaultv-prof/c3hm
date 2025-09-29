@@ -217,7 +217,7 @@ def set_first_row(config: Config, table: Table):
 
     # En-tête de la table
     set_as_table_header(table.rows[0])
-    set_row_borders(table.rows[0])
+    set_row_borders(table.rows[0], top=1.0, bottom=0.5)
 
     # Première cellule : Total sur X pts
     hdr_cells = table.rows[0].cells
