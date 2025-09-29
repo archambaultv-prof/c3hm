@@ -22,7 +22,8 @@ class Config(BaseModel):
     evaluation_grade: float | None = Field(..., ge=0)
     evaluation_comment: str | None = Field(..., min_length=1)
 
-    student_name: str | None = Field(..., min_length=1)
+    student_first_name: str | None = Field(..., min_length=1)
+    student_last_name: str | None = Field(..., min_length=1)
     student_omnivox: str | None = Field(..., min_length=1)
     student_teammates: list[str]
 
@@ -56,12 +57,20 @@ class Config(BaseModel):
         """
         return self.evaluation_grade is not None
 
+    def get_student_full_name(self) -> str:
+        """
+        Retourne le nom complet de l'étudiant.
+        """
+        if self.student_first_name is None or self.student_last_name is None:
+            raise ValueError("Le nom de l'étudiant n'est pas défini.")
+        return f"{self.student_first_name} {self.student_last_name}"
+
     def get_level_index_by_percentage(self, percentage: float) -> int:
         """
         Retourne le niveau de note correspondant à une note donnée.
         """
         if not (0 <= percentage <= 1):
-            raise ValueError("Le pourcentage doit être compris entre 0 et 1.")
+            raise ValueError(f"Le pourcentage ('{percentage}') doit être compris entre 0 et 1.")
         for i, level in enumerate(self.grade_levels):
             if percentage * 100 >= level.minimum:
                 return i
@@ -92,7 +101,8 @@ class Config(BaseModel):
             evaluation_total_nb_decimals=0,
             evaluation_grade=None,
             evaluation_comment=None,
-            student_name=None,
+            student_first_name=None,
+            student_last_name=None,
             student_omnivox=None,
             student_teammates=[],
             grade_levels=levels,

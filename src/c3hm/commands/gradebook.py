@@ -16,7 +16,8 @@ def generate_gradebook(config: Config, students_file: Path, output_dir: Path) ->
     students = read_omnivox_students_file(students_file)
     for student in students:
         c = config.model_copy(deep=True)
-        c.student_name = student.full_name()
+        c.student_first_name = student.first_name
+        c.student_last_name = student.last_name
         c.student_omnivox = student.omnivox_id
         file = output_dir / f"{student.last_name}_{student.first_name}.yaml"
         c.yaml_dump(file)

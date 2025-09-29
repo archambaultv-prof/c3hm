@@ -74,9 +74,9 @@ def generate_rubric_word(
     p.alignment = docx.enum.text.WD_PARAGRAPH_ALIGNMENT.CENTER
 
     # insérer le nom de l'étudiant
-    if config.is_graded and config.student_name:
+    if config.is_graded:
         p = doc.add_paragraph()
-        add_student_name(p, config.student_name)
+        add_student_name(p, config.get_student_full_name())
 
         # Insérer le commentaire général
         if config.evaluation_comment:
@@ -93,7 +93,11 @@ def generate_rubric_word(
 
     # Remplir le reste avec critères et indicateurs dans l'ordre
     for criterion in config.criteria:
-        add_criterion(table, criterion, config)
+        try:
+            add_criterion(table, criterion, config)
+        except Exception as e:
+            raise ValueError(f"Erreur lors de l'ajout du critère '{criterion.name}' "
+                             f"pour l'étudiant '{config.get_student_full_name()}'.") from e
 
     # Ajouter une bordure en bas de la dernière ligne
     last_row = table.rows[-1]
@@ -165,7 +169,7 @@ def add_criterion(table: Table,
                 cell.text = "N/A"
                 if indicator.grade and i == i_grade_pos:
                     raise ValueError(f"Note attribuée à l'indicateur {indicator.name} "
-                                     f"pour l'eleve {config.student_name}, "
+                                     f"pour l'eleve {config.get_student_full_name()}, "
                                      f" mais il n'y a pas de descripteur défini pour ce niveau.")
 
             if indicator.grade and i == i_grade_pos:

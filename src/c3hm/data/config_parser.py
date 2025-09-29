@@ -8,7 +8,9 @@ from c3hm.data.criterion import Criterion
 from c3hm.data.grade_level import GradeLevel
 
 
-def parse_user_config(path: Path) -> Config:
+def parse_user_config(path: Path,
+                      include_grading: bool = False,
+                      check_grades: bool = False) -> Config:
     """
     Parse le fichier de configuration à l'emplacement `path` et retourne
     une instance de `Config` validée.
@@ -20,8 +22,135 @@ def parse_user_config(path: Path) -> Config:
     _check_descriptors(config.criteria, len(config.grade_levels))
     _round_pts(config)
     _infer_pts(config)
+    if include_grading:
+        _check_student_info(config)
+        _infer_grades(config)
+        if check_grades:
+            _check_grades(config)
+    else:
+        _remove_student_info_and_grades(config)
+    _round_pts(config)  # Arrondit à nouveau après inférence
     return config
 
+def _check_grades(config: Config) -> None:
+    """
+    Vérifie que les notes des indicateurs, critères et de l'évaluation
+    sont valides.
+    """
+    if config.evaluation_grade is None:
+        raise ValueError("La note de l'évaluation est requise pour une évaluation notée.")
+    if not (0 <= config.evaluation_grade <= config.get_total()):
+        raise ValueError("La note de l'évaluation doit être entre 0 et le total des points.")
+    for criterion in config.criteria:
+        if criterion.grade is None:
+            raise ValueError(f"La note du critère '{criterion.name}' est requise "
+                             "pour une évaluation notée.")
+        if not (0 <= criterion.grade <= criterion.get_total()):
+            raise ValueError(f"La note du critère '{criterion.name}' doit être entre 0 "
+                             f"et le total des points ({criterion.get_total()}).")
+        for indicator in criterion.indicators:
+            if indicator.grade is None:
+                raise ValueError(f"La note de l'indicateur '{indicator.name}' du critère "
+                                 f"'{criterion.name}' est requise pour une évaluation notée.")
+            if not (0 <= indicator.grade <= criterion.get_total()):
+                raise ValueError(f"La note de l'indicateur '{indicator.name}' du critère "
+                                 f"'{criterion.name}' doit être entre 0 et le total des points "
+                                 f"du critère ({criterion.get_total()}).")
+
+def _infer_grades(config: Config) -> None:
+    """
+    Infère les notes des indicateurs, critères et de l'évaluation
+    à partir des points dans la configuration. Trois possibilités :
+    - Seulement la note de l'évaluation est définie, on l'utilise pour
+      calculer les notes des critères et des indicateurs.
+    - Pour un critère, la note est définie, on l'utilise pour
+      calculer les notes des indicateurs de ce critère.
+    - Pour un critère, la note n'est pas définie, mais les notes
+      des indicateurs sont définies, on les utilise pour calculer
+      la note du critère.
+    """
+    funcs = [_infer_grades_from_eval_total, _infer_grades_bottom_up]
+    for func in funcs:
+        if func(config):
+            return
+    raise ValueError("Les notes des indicateurs, critères et de l'évaluation "
+                     "ne peuvent pas être inférées.")
+
+def _infer_grades_from_eval_total(config: Config) -> bool:
+    if config.evaluation_grade is None:
+        return False
+
+    for criterion in config.criteria:
+        if criterion.grade is not None:
+            return False
+        for indicator in criterion.indicators:
+            if indicator.grade is not None:
+                return False
+
+    # Si tous les critères et indicateurs n'ont pas de note, on utilise
+    # la note de l'évaluation
+    ratio = config.evaluation_grade / config.get_total()
+    for criterion in config.criteria:
+        criterion.grade = criterion.get_total() * ratio
+        for indicator in criterion.indicators:
+            indicator.grade = indicator.get_total() * ratio
+    return True
+
+def _infer_grades_bottom_up(config: Config) -> bool:
+    total = 0
+    for criterion in config.criteria:
+        if criterion.grade is None:
+            # On essaie d'inférer la note du critère à partir des notes des indicateurs
+            crit_total = 0
+            for indicator in criterion.indicators:
+                if indicator.grade is None:
+                    return False
+                crit_total += indicator.grade
+            criterion.grade = crit_total
+        else:
+            nb_none = sum(1 for indicator in criterion.indicators if indicator.grade is None)
+            if nb_none == 0:
+                # We have both criterion and all indicators grades defined
+                continue
+            elif nb_none == len(criterion.indicators):
+                # On a seulement la note du critère, on l'utilise pour les indicateurs
+                ratio = criterion.grade / criterion.get_total()
+                for indicator in criterion.indicators:
+                    indicator.grade = indicator.get_total() * ratio
+            else:
+                return False
+        total += criterion.grade
+    if config.evaluation_grade is None:
+        config.evaluation_grade = total
+    return True
+
+def _remove_student_info_and_grades(config: Config) -> None:
+    """
+    Supprime les informations de l'étudiant et les notes de la configuration.
+    """
+    config.student_first_name = None
+    config.student_last_name = None
+    config.student_omnivox = None
+    config.evaluation_grade = None
+    config.evaluation_comment = None
+    for criterion in config.criteria:
+        criterion.grade = None
+        criterion.comment = None
+        for indicator in criterion.indicators:
+            indicator.grade = None
+            indicator.comment = None
+
+def _check_student_info(config: Config) -> None:
+    """
+    Vérifie que les informations de l'étudiant sont présentes si la configuration
+    est pour une évaluation notée.
+    """
+    if not config.student_first_name:
+        raise ValueError("Le prénom de l'étudiant est requis pour une évaluation notée.")
+    if not config.student_last_name:
+        raise ValueError("Le nom de famille de l'étudiant est requis pour une évaluation notée.")
+    if not config.student_omnivox:
+        raise ValueError("Le numéro Omnivox de l'étudiant est requis pour une évaluation notée.")
 
 def _round_pts(config: Config) -> None:
     """
