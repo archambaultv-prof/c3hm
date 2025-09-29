@@ -14,7 +14,7 @@ class Config(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     evaluation_name: str = Field(..., min_length=1)
-    evaluation_total: float = Field(..., gt=0)
+    evaluation_total: float | None = Field(..., gt=0)
     evaluation_total_nb_decimals: int = Field(..., ge=0)
     evaluation_grade: float | None = Field(..., ge=0)
     evaluation_comment: str | None = Field(..., min_length=1)
@@ -29,7 +29,40 @@ class Config(BaseModel):
 
     format: Format
 
-    students_file: str | None
+    def get_total(self) -> float:
+        """
+        Retourne le total des points de l'évaluation.
+        """
+        if self.evaluation_total is None:
+            raise ValueError("Le total des points de l'évaluation n'est pas défini.")
+        return self.evaluation_total
+
+    def evaluation_title(self) -> str:
+        """
+        Retourne le titre de la grille d'évaluation.
+        """
+        endash = "\u2013"
+        title = "Grille d'évaluation"
+        title += f" {endash} {self.evaluation_name}"
+        return title
+
+    @property
+    def is_graded(self) -> bool:
+        """
+        Indique si l'évaluation est notée.
+        """
+        return self.evaluation_grade is not None
+
+    def get_level_index_by_percentage(self, percentage: float) -> int:
+        """
+        Retourne le niveau de note correspondant à une note donnée.
+        """
+        if not (0 <= percentage <= 1):
+            raise ValueError("Le pourcentage doit être compris entre 0 et 1.")
+        for i, level in enumerate(self.grade_levels):
+            if percentage * 100 >= level.minimum:
+                return i
+        raise ValueError("Aucun niveau de note ne correspond au pourcentage donné.")
 
     @staticmethod
     def default(*, nb_levels: int = 3) -> "Config":
@@ -53,7 +86,6 @@ class Config(BaseModel):
             grade_levels=levels,
             criteria=Config._create_default_criteria(descriptions),
             format=Format.default(),
-            students_file=None,
         )
 
     @staticmethod
