@@ -8,11 +8,11 @@ class Indicator(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: str = Field(..., min_length=1)
-    points: float | None = Field(..., gt=0.0,
+    points: float | None = Field(None, gt=0.0,
                             description="Points associés à cet indicateur.")
 
-    grade: float | None = Field(..., ge=0.0)
-    comment: str | None = Field(..., min_length=1)
+    grade: float | None = Field(None, ge=0.0)
+    comment: str | None = Field(None, min_length=1)
 
     descriptors: list[str | None] = Field(
         ...,

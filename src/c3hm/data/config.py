@@ -18,20 +18,20 @@ class Config(BaseModel):
 
     evaluation_name: str = Field(..., min_length=1)
     evaluation_total: float | None = Field(..., gt=0)
-    evaluation_total_nb_decimals: int = Field(..., ge=0)
-    evaluation_grade: float | None = Field(..., ge=0)
-    evaluation_comment: str | None = Field(..., min_length=1)
+    evaluation_total_nb_decimals: int = Field(0, ge=0)
+    evaluation_grade: float | None = Field(None, ge=0)
+    evaluation_comment: str | None = Field(None, min_length=1)
 
-    student_first_name: str | None = Field(..., min_length=1)
-    student_last_name: str | None = Field(..., min_length=1)
-    student_omnivox: str | None = Field(..., min_length=1)
-    student_teammates: list[str]
+    student_first_name: str | None = Field(None, min_length=1)
+    student_last_name: str | None = Field(None, min_length=1)
+    student_omnivox: str | None = Field(None, min_length=1)
+    student_teammates: list[str] = Field(default_factory=list)
 
     grade_levels: list[GradeLevel]
 
     criteria: list[Criterion]
 
-    format: Format
+    format: Format = Field(default_factory=Format.default)
 
     def get_total(self) -> float:
         """
