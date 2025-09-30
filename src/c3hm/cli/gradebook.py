@@ -9,8 +9,7 @@ from c3hm.data.config_parser import parse_user_config
 @click.command(
     name="gradebook",
     help=(
-        "Génère un fichier Excel de correction à "
-        "partir d’un fichier de configuration."
+        "Génère les grilles de correction à partir du fichier de configuration."
     )
 )
 @click.argument(

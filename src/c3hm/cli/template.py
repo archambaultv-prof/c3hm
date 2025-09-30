@@ -8,7 +8,7 @@ from c3hm.commands.template import export_template
 @click.command(
     name="template",
     help=(
-        "Génère un fichier de configuration commenté."
+        "Génère un fichier de configuration."
     )
 )
 @click.option(
