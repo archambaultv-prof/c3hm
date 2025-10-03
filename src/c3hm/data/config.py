@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Annotated
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
@@ -8,6 +9,7 @@ from c3hm.data.format import Format
 from c3hm.data.grade_level import GradeLevel
 from c3hm.data.indicator import Indicator
 
+NonNegFloat = Annotated[float, Field(ge=0.0)]
 
 class Config(BaseModel):
     """
@@ -18,20 +20,20 @@ class Config(BaseModel):
 
     evaluation_name: str = Field(..., min_length=1)
     evaluation_total: float | None = Field(..., gt=0)
-    evaluation_total_nb_decimals: int = Field(..., ge=0)
-    evaluation_grade: float | None = Field(..., ge=0)
-    evaluation_comment: str | None = Field(..., min_length=1)
+    evaluation_total_nb_decimals: int = Field(0, ge=0)
+    evaluation_grade: NonNegFloat | str | None = Field(None)
+    evaluation_comment: str | None = Field(None, min_length=1)
 
-    student_first_name: str | None = Field(..., min_length=1)
-    student_last_name: str | None = Field(..., min_length=1)
-    student_omnivox: str | None = Field(..., min_length=1)
-    student_teammates: list[str]
+    student_first_name: str | None = Field(None, min_length=1)
+    student_last_name: str | None = Field(None, min_length=1)
+    student_omnivox: str | None = Field(None, min_length=1)
+    student_teammates: list[str] = Field(default_factory=list)
 
     grade_levels: list[GradeLevel]
 
     criteria: list[Criterion]
 
-    format: Format
+    format: Format = Field(default_factory=Format.default)
 
     def get_total(self) -> float:
         """
@@ -45,7 +47,7 @@ class Config(BaseModel):
         """
         Retourne la note du critère.
         """
-        if self.evaluation_grade is None:
+        if self.evaluation_grade is None or isinstance(self.evaluation_grade, str):
             raise ValueError("La note du critère n'est pas définie.")
         return self.evaluation_grade
 
@@ -83,6 +85,15 @@ class Config(BaseModel):
             if percentage * 100 >= level.minimum:
                 return i
         raise ValueError("Aucun niveau de note ne correspond au pourcentage donné.")
+
+    def get_level_by_name(self, name: str) -> GradeLevel:
+        """
+        Retourne le niveau de note correspondant à un nom donné.
+        """
+        for level in self.grade_levels:
+            if level.name == name:
+                return level
+        raise ValueError(f"Aucun niveau de note ne correspond au nom '{name}'.")
 
     def yaml_dump(self, output_path: Path) -> None:
         """

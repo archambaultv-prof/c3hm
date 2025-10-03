@@ -9,7 +9,7 @@ from c3hm.commands.feedback import generate_feedback
     name="feedback",
     help=(
         "Génère un document Word de rétroaction pour les étudiants "
-        "à partir d’un fichier de correction."
+        "à partir des fichiers de correction."
     )
 )
 
