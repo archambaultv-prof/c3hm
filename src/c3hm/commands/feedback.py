@@ -16,13 +16,20 @@ def generate_feedback(gradebook_path: Path, output_dir: Path):
     """
     configs: list[Config] = []
     for file in gradebook_path.glob("*.yaml"):
-        config = parse_user_config(file, include_grading=True, check_grades=False)
-        configs.append(config)
+        try:
+            config = parse_user_config(file, include_grading=True, check_grades=False)
+            configs.append(config)
+        except Exception as e:
+            raise ValueError(f"Erreur lors de l'analyse du fichier {file}: {e}") from e
 
     _fill_in_teammates_grades(configs)
 
     for config in configs:
-        check_all_grades(config)
+        try:
+            check_all_grades(config)
+        except Exception as e:
+            raise ValueError("Erreur lors de la vérification des notes pour "
+                             f"{config.student_first_name} {config.student_last_name}: {e}") from e
 
     if not output_dir.exists():
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -30,7 +37,8 @@ def generate_feedback(gradebook_path: Path, output_dir: Path):
         raise NotADirectoryError(f"{output_dir} est un fichier et non un répertoire.")
 
     for config in configs:
-        p = output_dir / f"{config.student_last_name}_{config.student_first_name}.docx"
+        p = output_dir / (f"{config.student_omnivox}_{config.student_last_name}_"
+                          f"{config.student_first_name}.docx")
         generate_rubric_word(config, p)
 
     # Génère le fichier Excel pour charger les notes dans Omnivox
@@ -177,6 +185,7 @@ def _fill_in_teammates_grades(configs: list[Config]) -> None:
                   f"{config.student_last_name} {config.student_first_name}"):
             if k is None:
                 continue
+            k = k.lower().strip()
             if k in duplicate_names:
                 continue
             if k in known_configs:
@@ -188,6 +197,7 @@ def _fill_in_teammates_grades(configs: list[Config]) -> None:
     done: set[str] = set()
     for config in configs:
         for teammate in config.student_teammates:
+            teammate = teammate.lower().strip()
             if teammate in known_configs:
                 target_config = known_configs[teammate]
                 if target_config.get_student_full_name() in done:

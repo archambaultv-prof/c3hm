@@ -20,7 +20,7 @@ def parse_user_config(path: Path,
     config = Config(**data)
     _check_grade_levels(config.grade_levels)
     _check_descriptors(config.criteria, len(config.grade_levels))
-    _round_pts(config)
+    _round_and_convert_pts(config)
     _infer_pts(config)
     if include_grading:
         _check_student_info(config)
@@ -29,7 +29,7 @@ def parse_user_config(path: Path,
             check_all_grades(config)
     else:
         _remove_student_info_and_grades(config)
-    _round_pts(config)  # Arrondit à nouveau après inférence
+    _round_and_convert_pts(config)  # Arrondit à nouveau après inférence
     return config
 
 def check_all_grades(config: Config) -> None:
@@ -39,11 +39,17 @@ def check_all_grades(config: Config) -> None:
     """
     if config.evaluation_grade is None:
         raise ValueError("La note de l'évaluation est requise pour une évaluation notée.")
+    if isinstance(config.evaluation_grade, str):
+        raise ValueError("La note de l'évaluation doit être un nombre pour une évaluation notée.")
     if not (0 <= config.evaluation_grade <= config.get_total()):
-        raise ValueError("La note de l'évaluation doit être entre 0 et le total des points.")
+        raise ValueError(f"La note de l'évaluation '{config.evaluation_grade}' doit être entre "
+                         f"0 et le total des points {config.get_total()}.")
     for criterion in config.criteria:
         if criterion.grade is None:
             raise ValueError(f"La note du critère '{criterion.name}' est requise "
+                             "pour une évaluation notée.")
+        if isinstance(criterion.grade, str):
+            raise ValueError(f"La note du critère '{criterion.name}' doit être un nombre "
                              "pour une évaluation notée.")
         if not (0 <= criterion.grade <= criterion.get_total()):
             raise ValueError(f"La note du critère '{criterion.name}' doit être entre 0 "
@@ -52,10 +58,14 @@ def check_all_grades(config: Config) -> None:
             if indicator.grade is None:
                 raise ValueError(f"La note de l'indicateur '{indicator.name}' du critère "
                                  f"'{criterion.name}' est requise pour une évaluation notée.")
-            if not (0 <= indicator.grade <= criterion.get_total()):
+            if isinstance(indicator.grade, str):
+                raise ValueError(f"La note de l'indicateur '{indicator.name}' du critère "
+                                 f"'{criterion.name}' doit être un nombre pour une "
+                                 "évaluation notée.")
+            if not (0 <= indicator.grade <= indicator.get_total()):
                 raise ValueError(f"La note de l'indicateur '{indicator.name}' du critère "
                                  f"'{criterion.name}' doit être entre 0 et le total des points "
-                                 f"du critère ({criterion.get_total()}).")
+                                 f"de l'indicateur ({indicator.get_total()}).")
             i_percent = indicator.get_grade() / indicator.get_total()
             i_grade_pos = config.get_level_index_by_percentage(i_percent)
             if indicator.descriptors[i_grade_pos] is None:
@@ -93,7 +103,7 @@ def _infer_grades_from_eval_total(config: Config) -> bool:
 
     # Si tous les critères et indicateurs n'ont pas de note, on utilise
     # la note de l'évaluation
-    ratio = config.evaluation_grade / config.get_total()
+    ratio = config.get_grade() / config.get_total()
     for criterion in config.criteria:
         criterion.grade = criterion.get_total() * ratio
         for indicator in criterion.indicators:
@@ -109,7 +119,7 @@ def _infer_grades_bottom_up(config: Config) -> bool:
             for indicator in criterion.indicators:
                 if indicator.grade is None:
                     return False
-                crit_total += indicator.grade
+                crit_total += indicator.get_grade()
             criterion.grade = crit_total
         else:
             nb_none = sum(1 for indicator in criterion.indicators if indicator.grade is None)
@@ -118,12 +128,12 @@ def _infer_grades_bottom_up(config: Config) -> bool:
                 continue
             elif nb_none == len(criterion.indicators):
                 # On a seulement la note du critère, on l'utilise pour les indicateurs
-                ratio = criterion.grade / criterion.get_total()
+                ratio = criterion.get_grade() / criterion.get_total()
                 for indicator in criterion.indicators:
                     indicator.grade = indicator.get_total() * ratio
             else:
                 return False
-        total += criterion.grade
+        total += criterion.get_grade()
     if config.evaluation_grade is None:
         config.evaluation_grade = total
     return True
@@ -156,7 +166,7 @@ def _check_student_info(config: Config) -> None:
     if not config.student_omnivox:
         raise ValueError("Le numéro Omnivox de l'étudiant est requis pour une évaluation notée.")
 
-def _round_pts(config: Config) -> None:
+def _round_and_convert_pts(config: Config) -> None:
     """
     Arrondit les points des indicateurs, critères et de l'évaluation
     au nombre de décimales spécifié dans la configuration.
@@ -164,18 +174,30 @@ def _round_pts(config: Config) -> None:
     ndigits = config.evaluation_total_nb_decimals
     if config.evaluation_total is not None:
         config.evaluation_total = round(config.evaluation_total, ndigits)
-    if config.evaluation_grade is not None:
+    if isinstance(config.evaluation_grade, float):
         config.evaluation_grade = round(config.evaluation_grade, ndigits)
+    if isinstance(config.evaluation_grade, str):
+        level = config.get_level_by_name(config.evaluation_grade.strip())
+        grade = level.default_value / 100.0 * config.get_total()
+        config.evaluation_grade = round(grade, ndigits)
     for criterion in config.criteria:
         if criterion.total is not None:
             criterion.total = round(criterion.total, ndigits + 1)
-        if criterion.grade is not None:
+        if isinstance(criterion.grade, float):
             criterion.grade = round(criterion.grade, ndigits + 1)
+        if isinstance(criterion.grade, str):
+            level = config.get_level_by_name(criterion.grade.strip())
+            grade = level.default_value / 100.0 * criterion.get_total()
+            criterion.grade = round(grade, ndigits)
         for indicator in criterion.indicators:
             if indicator.points is not None:
                 indicator.points = round(indicator.points, ndigits + 1)
-            if indicator.grade is not None:
+            if isinstance(indicator.grade, float):
                 indicator.grade = round(indicator.grade, ndigits + 1)
+            if isinstance(indicator.grade, str):
+                level = config.get_level_by_name(indicator.grade.strip())
+                grade = level.default_value / 100.0 * indicator.get_total()
+                indicator.grade = round(grade, ndigits)
 
 def _check_grade_levels(grade_levels: list[GradeLevel]) -> None:
     """

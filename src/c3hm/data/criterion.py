@@ -1,7 +1,10 @@
+from typing import Annotated
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from c3hm.data.indicator import Indicator
 
+NonNegFloat = Annotated[float, Field(ge=0.0)]
 
 class Criterion(BaseModel):
     """
@@ -10,9 +13,9 @@ class Criterion(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: str = Field(..., min_length=1)
-    total: float | None = Field(None, gt=0.0)
+    total: NonNegFloat | None = Field(None)
 
-    grade: float | None = Field(None, ge=0.0)
+    grade: NonNegFloat | str | None = Field(None)
     comment: str | None = Field(None, min_length=1)
 
     indicators: list[Indicator] = Field(..., min_length=1)
@@ -29,6 +32,6 @@ class Criterion(BaseModel):
         """
         Retourne la note du critère.
         """
-        if self.grade is None:
+        if self.grade is None or isinstance(self.grade, str):
             raise ValueError("La note du critère n'est pas définie.")
         return self.grade
