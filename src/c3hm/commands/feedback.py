@@ -206,10 +206,14 @@ def _fill_in_teammates_grades(configs: list[Config]) -> None:
                                      f"depuis un autre coéquipier.")
                 done.add(target_config.get_student_full_name())
                 _copy_grades_to(config, target_config)
-            if teammate in duplicate_names:
+            elif teammate in duplicate_names:
                 raise ValueError(f"Le nom de coéquipier '{teammate}' est ambigu dans la "
                                  f"configuration de {config.student_first_name} "
                                  f"{config.student_last_name}.")
+            else:
+                raise ValueError(f"Le coéquipier '{teammate}' de la configuration de "
+                                 f"{config.student_first_name} {config.student_last_name} "
+                                 f"n'a pas été trouvé dans les configurations fournies.")
 
 def _copy_grades_to(source: Config, target: Config) -> None:
     """
