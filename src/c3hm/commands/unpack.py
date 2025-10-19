@@ -50,7 +50,13 @@ class UnpackOmnivox(BaseModel):
             if archive.is_dir():
                 self._clean_student_archive(archive)
             elif archive.is_file():
-                archive.rename(archive.parent /self._shorten_omnivox_file_name(archive))
+                new_name = archive.parent / self._shorten_omnivox_file_name(archive)
+                i = 2
+                while new_name.exists():
+                    new_stem = Path(self._shorten_omnivox_file_name(archive)).stem + f"_{i}"
+                    new_name = archive.parent / f"{new_stem}{new_name.suffix}"
+                    i += 1
+                archive.rename(new_name)
 
     def _clean_student_archive(self, path: Path):
         """
