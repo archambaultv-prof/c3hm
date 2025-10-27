@@ -17,7 +17,7 @@ def generate_gradebook(rubric: Path, students_file: Path, output_dir: Path) -> N
 
     students = read_omnivox_students_file(students_file)
     for student in students:
-        stem = f"{student.omnivox_id} {student.first_name} {student.last_name}.xlsx"
+        stem = f"{student.last_name} {student.first_name} {student.omnivox_id}.xlsx"
         destination = output_dir / stem
         shutil.copyfile(rubric, destination)
 
