@@ -8,25 +8,25 @@ from c3hm.commands.template import export_template
 @click.command(
     name="template",
     help=(
-        "Génère un fichier de configuration."
+        "Génère une de grille d'évaluation."
     )
 )
 @click.option(
     '--output', '-o', 'output_path',
     type=click.Path(path_type=Path),
     default=None,
-    help="Chemin vers le fichier de configuration à générer"
+    help="Chemin vers la grille d'évaluation à générer"
 )
 @click.option(
     '--levels', '-l', 'nb_levels',
     type=click.IntRange(2, 5),
-    default=5,
-    help="Indique le nombre de niveaux de performance à inclure dans le modèle de configuration."
+    default=4,
+    help="Indique le nombre de niveaux de performance à inclure dans la grille (entre 2 et 5)."
 )
 def template_command(output_path: Path,
                      nb_levels: int) -> None:
     """
-    Génère un fichier de configuration commenté.
+    Génère une grille d'évaluation.
     """
     if output_path is None:
         output_path = Path.cwd() / "grille.yaml"

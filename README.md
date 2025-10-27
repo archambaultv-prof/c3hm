@@ -25,7 +25,6 @@ copies à corriger, `c3hm` vient à ta rescousse. Il te permet de :
 
 - `c3hm template` : Le par cœur, ce n'est pas ton fort ? Pas de souci, `c3hm` peut
   générer un modèle de configuration pour toi.
-- `c3hm rubric` : Générer une grille d'évaluation à partir d'une configuration en YAML.
 - `c3hm unpack` : Dézipper et nettoyer les remises des étudiants, comme un aspirateur numérique. Bye-bye
   `node_modules`, `.venv` et autres joyeusetés. Ton OneDrive sera tellement content !
 - `c3hm gradebook` : Générer des grilles d'évaluation. Tu n'auras qu'à remplir
@@ -34,8 +33,7 @@ copies à corriger, `c3hm` vient à ta rescousse. Il te permet de :
   correction. Bravo, le pire est derrière toi. Mais il te faut encore exporter
   une rétroaction pour chaque étudiant et remettre tout ça dans Omnivox. Tu en
   as de la chance, `c3hm` peut le faire pour toi ! À partir des grilles
-  d'évaluation générées par `c3hm gradebook`, il va créer un fichier pour
-  chaque étudiant, avec un nom qu'Omnivox comprend. Il va même te créer un
+  d'évaluation générées par `c3hm gradebook`, il va créer un
   tableur Excel avec les notes prêtes à être importées dans Omnivox.
 - `c3hm clean` : Nettoyer les fichiers temporaires et les artefacts de
   construction après la correction. Encore une fois, ton OneDrive te dira merci !
