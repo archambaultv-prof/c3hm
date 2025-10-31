@@ -29,7 +29,7 @@ def template_command(output_path: Path,
     Génère une grille d'évaluation.
     """
     if output_path is None:
-        output_path = Path.cwd() / "grille.yaml"
+        output_path = Path.cwd() / "grille.xlsx"
     elif not output_path.is_absolute():
         output_path = Path.cwd() / output_path
     export_template(output_path, nb_levels=nb_levels)
