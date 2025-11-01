@@ -66,7 +66,7 @@ def export_template(output_path: Path,
     ws.column_dimensions["C"].width = 12
     for i in range(nb_levels):
         col_letter = chr(ord("D") + i)
-        ws.column_dimensions[col_letter].width = 12
+        ws.column_dimensions[col_letter].width = 15
     ws.column_dimensions[chr(ord("D") + nb_levels)].width = 12  # Grade column
     ws.column_dimensions[chr(ord("D") + nb_levels + 1)].width = 70  # Comment column
 
@@ -116,12 +116,14 @@ def export_template(output_path: Path,
         ws.cell(row=criterion_row, column=3).style = "Explanatory Text"
 
         for level_idx in range(nb_levels):
+            perc = int(GRADE_PERCENTAGES[nb_levels][level_idx] * 100)
             ws.cell(row=criterion_row,
                     column=4 + level_idx,
-                    value=GRADE_LEVELS[nb_levels][level_idx])
+                    value=f"{GRADE_LEVELS[nb_levels][level_idx]} ({perc}%)")
             color = GRADE_COLORS[nb_levels][level_idx]
             cell = ws.cell(row=criterion_row, column=4 + level_idx)
             cell.fill = PatternFill(start_color=color, end_color=color, fill_type="solid")
+            cell.alignment = Alignment(horizontal="center")
 
         pts_range = f"{grade_letter}{criterion_row + 1}:{grade_letter}{criterion_row + GRID_SIZE}"
         ws.cell(row=criterion_row, column=grade_col,
@@ -148,6 +150,28 @@ def export_template(output_path: Path,
             formula = f"=IF(COUNTA({counta_range})>1,NA()," + "+".join(xs) + ")"
             ws.cell(row=indicator_row, column=grade_col, value = formula)
 
+    # Pénalités pour retard, français, fautes significatives
+    penalty_row = 9 + GRID_SIZE * (GRID_SIZE + 1) + 1
+    ws.cell(row=penalty_row, column=3 + nb_levels + 1, value="Points")
+    ws.cell(row=penalty_row, column=3 + nb_levels + 2, value="Commentaire")
+
+    ws.cell(row=penalty_row + 1, column=2, value="Pénalités")
+    ws.cell(row=penalty_row + 1, column=2).style = "Headline 1"
+    ws.cell(row=penalty_row + 1, column=3 + nb_levels + 1, value=0)
+
+    ws.cell(row=penalty_row + 2, column=2,
+            value="En plus de la grille ci-dessus, il est possible "
+                  "que des points soient retirés pour :")
+    ws.cell(row=penalty_row + 3, column=2, value="- un retard")
+    ws.cell(row=penalty_row + 4, column=2, value="- des fautes de français")
+    ws.cell(row=penalty_row + 5, column=2,
+            value="- une erreur significative (non respect "
+                  "des conventions d'usage, absence de commentaires lorsque nécessaire, "
+                  "code spaghetti, code qui plante ou ne démarre pas, etc.)")
+    for i in range(4):
+        ws.cell(row=penalty_row + 2 + i, column=2).style = "Explanatory Text"
+
+
     # Save workbook
     wb.save(output_path)
 
@@ -171,4 +195,6 @@ def all_indicators_range(col_letter: str) -> str:
         row_start = 10 + i * (GRID_SIZE + 1)
         row_end = row_start + GRID_SIZE - 1
         r.append(f"{col_letter}{row_start}:{col_letter}{row_end}")
+    penalty_row = 9 + GRID_SIZE * (GRID_SIZE + 1) + 2
+    r.append(f"{col_letter}{penalty_row}")
     return ",".join(r)

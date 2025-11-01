@@ -60,7 +60,6 @@ def populate_omnivox_sheet(gradebook_path: Path, ws: Worksheet) -> None:
             d[x] = cell.value # type: ignore
         note = d["cthm_note"]
         note = parse_grade(note)
-        print(note)
         matricule = d["cthm_matricule"]
         comment = d["cthm_commentaire"]
         nom = d["cthm_nom"]
