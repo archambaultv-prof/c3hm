@@ -144,8 +144,10 @@ def export_template(output_path: Path,
             for level_idx in range(nb_levels):
                 cell_letter = chr(ord("D") + level_idx)
                 cell_coord = f"{cell_letter}{indicator_row}"
-                percent = GRADE_PERCENTAGES[nb_levels][level_idx]
-                xs.append(f"IF(ISTEXT({cell_coord}),C{indicator_row}*{percent},{cell_coord})")
+                default_percent = GRADE_PERCENTAGES[nb_levels][level_idx]
+                grade_or_percent = (f'IF(LEFT(CELL("format", {cell_coord}),1)="P",'
+                                    f'C{indicator_row}*{cell_coord},{cell_coord})')
+                xs.append(f"IF(ISTEXT({cell_coord}),C{indicator_row}*{default_percent},{grade_or_percent})")
             counta_range = f"D{indicator_row}:{chr(ord('D') + nb_levels - 1)}{indicator_row}"
             formula = f"=IF(COUNTA({counta_range})>1,NA()," + "+".join(xs) + ")"
             ws.cell(row=indicator_row, column=grade_col, value = formula)
