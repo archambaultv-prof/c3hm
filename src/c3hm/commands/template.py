@@ -36,6 +36,20 @@ GRADE_PERCENTAGES = {
     5: [1.0, 0.9, 0.75, 0.6, 0],
 }
 
+def distribute_points(total_points: int, num_items: int) -> list[int]:
+    """
+    Distribue un nombre total de points équitablement entre un nombre d'items.
+    Les valeurs ne diffèrent pas de plus de 1.
+    """
+    base_value = total_points // num_items
+    remainder = total_points % num_items
+
+    # Les 'remainder' premiers items reçoivent base_value + 1, les autres base_value
+    points = [base_value + 1 if i < remainder else base_value for i in range(num_items)]
+
+    return points
+
+
 def export_template(output_path: Path,
                     nb_levels: int = 4,
                     criteria_indicators: list[int] | None = None) -> None:
@@ -55,6 +69,9 @@ def export_template(output_path: Path,
         raise ValueError("Chaque critère doit avoir au moins un indicateur.")
 
     nb_criteria = len(criteria_indicators)
+    total_indicators = sum(criteria_indicators)
+    indicator_points = distribute_points(100, total_indicators)
+
     grade_col = 4 + nb_levels
     grade_letter = chr(ord("D") + nb_levels).upper()
     comment_col = grade_col + 1
@@ -75,10 +92,10 @@ def export_template(output_path: Path,
     # Set column widths
     ws.column_dimensions["A"].width = 2.5
     ws.column_dimensions["B"].width = 25
-    ws.column_dimensions["C"].width = 12
+    ws.column_dimensions["C"].width = 13
     for i in range(nb_levels):
         col_letter = chr(ord("D") + i)
-        ws.column_dimensions[col_letter].width = 15
+        ws.column_dimensions[col_letter].width = 17
     ws.column_dimensions[chr(ord("D") + nb_levels)].width = 12  # Grade column
     ws.column_dimensions[chr(ord("D") + nb_levels + 1)].width = 70  # Comment column
 
@@ -106,15 +123,15 @@ def export_template(output_path: Path,
     ws.cell(row=5, column=3, value=f"{get_current_session()}")
     ws.cell(row=5, column=4, value="Cours")
     set_header_style(ws.cell(row=5, column=4)) # type: ignore
-    ws.cell(row=5, column=5, value="420-XXX-MA")
+
     ws.cell(row=5, column=6, value="Évaluation")
     set_header_style(ws.cell(row=5, column=6)) # type: ignore
-    ws.cell(row=5, column=7, value="Travail pratique X")
+
 
     # Create grid
 
     ws.cell(row=8, column=3,
-            value=f'=_xlfn.CONCAT("Total sur ",SUM({all_indicators_range("C", criteria_indicators)})," points")')
+            value=f'=_xlfn.CONCAT("Total sur ",SUM({all_indicators_range("C", criteria_indicators, include_penalty=False)})," points")')
     ws.cell(row=8, column=3).style = "Explanatory Text"
     for criterion_idx in range(nb_criteria):
         # Déterminer la ligne du critère
@@ -130,6 +147,10 @@ def export_template(output_path: Path,
 
         for level_idx in range(nb_levels):
             perc = int(GRADE_PERCENTAGES[nb_levels][level_idx] * 100)
+            if perc == 0:
+                perc = f"< {int(GRADE_PERCENTAGES[nb_levels][level_idx - 1] * 100)}"
+            elif perc < 100:
+                perc = f"≥ {perc}"
             ws.cell(row=criterion_row,
                     column=4 + level_idx,
                     value=f"{GRADE_LEVELS[nb_levels][level_idx]} ({perc}%)")
@@ -147,10 +168,18 @@ def export_template(output_path: Path,
         # Create indicators
         for indicator_idx in range(nb_indicators):
             indicator_row = criterion_row + indicator_idx + 1
+            # Calculer l'index global de l'indicateur
+            global_indicator_idx = sum(criteria_indicators[:criterion_idx]) + indicator_idx
+
             ws.cell(row=indicator_row, column=2,
                     value=f"Indicateur {criterion_idx + 1}.{indicator_idx + 1}")
-            ws.cell(row=indicator_row, column=3, value=6 + (1 if indicator_idx == 0 else 0))
+            ws.cell(row=indicator_row, column=3, value=indicator_points[global_indicator_idx])
             ws.cell(row=indicator_row, column=3).style = "Explanatory Text"
+
+            # Centrer les cellules de niveau de performance
+            for level_idx in range(nb_levels):
+                cell = ws.cell(row=indicator_row, column=4 + level_idx)
+                cell.alignment = Alignment(horizontal="center")
 
             # Insert grade formula
             xs = []
@@ -171,7 +200,7 @@ def export_template(output_path: Path,
     ws.cell(row=penalty_row, column=3 + nb_levels + 1, value="Points")
     ws.cell(row=penalty_row, column=3 + nb_levels + 2, value="Commentaire")
 
-    ws.cell(row=penalty_row + 1, column=2, value="Pénalités")
+    ws.cell(row=penalty_row + 1, column=2, value="Bonus / Malus")
     ws.cell(row=penalty_row + 1, column=2).style = "Headline 1"
     ws.cell(row=penalty_row + 1, column=3 + nb_levels + 1, value=0)
 
@@ -205,14 +234,16 @@ def set_header_style(cell: Cell):
     cell.style = "Headline 4"
     cell.alignment = Alignment(horizontal="right")
 
-def all_indicators_range(col_letter: str, criteria_indicators: list[int]) -> str:
+def all_indicators_range(col_letter: str, criteria_indicators: list[int],
+                         include_penalty: bool = True) -> str:
     r = []
     for criterion_idx, nb_indicators in enumerate(criteria_indicators):
         row_start = 10 + sum(criteria_indicators[:criterion_idx]) + criterion_idx
         row_end = row_start + nb_indicators - 1
         r.append(f"{col_letter}{row_start}:{col_letter}{row_end}")
     total_indicators = sum(criteria_indicators)
-    nb_criteria = len(criteria_indicators)
-    penalty_row = 9 + total_indicators + nb_criteria + 2
-    r.append(f"{col_letter}{penalty_row}")
+    if include_penalty:
+        nb_criteria = len(criteria_indicators)
+        penalty_row = 9 + total_indicators + nb_criteria + 2
+        r.append(f"{col_letter}{penalty_row}")
     return ",".join(r)
