@@ -6,6 +6,7 @@ from openpyxl.cell.cell import Cell
 from openpyxl.styles import Alignment, PatternFill
 from openpyxl.utils import absolute_coordinate, get_column_letter, quote_sheetname
 from openpyxl.workbook.defined_name import DefinedName
+from openpyxl.worksheet.worksheet import Worksheet
 
 DEFAULT_GRID_SIZE = 4  # Nombre par défaut de critères et d'indicateurs
 
@@ -36,6 +37,9 @@ GRADE_PERCENTAGES = {
     5: [1.0, 0.8, 0.6, 0.3, 0],
 }
 
+TEAM_WS_NAME = "Équipe"
+STUDENT_WS_PREFIX = "Étudiant "
+
 def distribute_points(total_points: int, num_items: int) -> list[int]:
     """
     Distribue un nombre total de points équitablement entre un nombre d'items.
@@ -52,6 +56,7 @@ def distribute_points(total_points: int, num_items: int) -> list[int]:
 
 def export_template(output_path: Path,
                     nb_levels: int = 5,
+                    team_size: int = 1,
                     criteria_indicators: list[int] | None = None) -> None:
     """
     Génère une grille d'évaluation sous format Excel.
@@ -59,7 +64,7 @@ def export_template(output_path: Path,
     # Valider les paramètres
     if criteria_indicators is None:
         criteria_indicators = [DEFAULT_GRID_SIZE] * DEFAULT_GRID_SIZE
-    check_template_params(nb_levels, criteria_indicators)
+    check_template_params(nb_levels, criteria_indicators, team_size)
 
     # Infèrer des valeurs utiles
     nb_criteria = len(criteria_indicators)
@@ -72,24 +77,38 @@ def export_template(output_path: Path,
     criteria_row = 10
 
     # Create new workbook
-    wb = Workbook()
-    ws = wb.active
-    if ws is None:
-        raise RuntimeError("Impossible de créer la feuille de calcul.")
-    ws.title = "Grille"
-    ws.sheet_view.showGridLines = False
+    wb = create_workbook(team_size)
 
-    set_columns_width(ws, nb_levels)
-    create_front_matter(wb, ws, grade_letter, criteria_indicators, criteria_row)
+    for ws in wb.worksheets:
+        set_columns_width(ws, nb_levels)
+        create_front_matter(wb, ws, grade_letter, criteria_indicators, criteria_row)
 
-    # Create grid
-    create_grid(ws, nb_levels, criteria_indicators,
-                indicator_points, nb_criteria,
-                grade_col, comment_col,
-                criteria_row)
+        # Create grid
+        create_grid(wb, ws, nb_levels, criteria_indicators,
+                    indicator_points, nb_criteria,
+                    grade_col, comment_col,
+                    criteria_row)
 
     # Save workbook
     wb.save(output_path)
+
+def create_workbook(team_size: int) -> Workbook:
+    wb = Workbook()
+    if team_size == 1:
+        ws = wb.active
+        if ws is None:
+            ws = wb.create_sheet()
+        ws.title = "Grille"
+    else:
+        ws = wb.active
+        if ws is None:
+            ws = wb.create_sheet()
+        ws.title = TEAM_WS_NAME
+        for i in range(team_size):
+            ws = wb.create_sheet(title=f"{STUDENT_WS_PREFIX}{i + 1}")
+    for ws in wb.worksheets:
+        ws.sheet_view.showGridLines = False
+    return wb
 
 def get_current_semester() -> str:
     """
@@ -128,7 +147,8 @@ def all_indicators_range(col_letter: str, criteria_indicators: list[int],
     return ",".join(r)
 
 def check_template_params(nb_levels: int,
-                          criteria_indicators: list[int] | None) -> None:
+                          criteria_indicators: list[int] | None,
+                          team_size: int) -> None:
     """
     Valide les paramètres pour la génération de la grille d'évaluation.
     """
@@ -141,48 +161,88 @@ def check_template_params(nb_levels: int,
     if any(n < 1 for n in criteria_indicators):
         raise ValueError("Chaque critère doit avoir au moins un indicateur.")
 
-def create_defined_name(wb, ws, name, cell_coord):
+    if team_size < 1:
+        raise ValueError("La taille de l'équipe doit être au moins 1.")
+
+def create_defined_name(wb: Workbook, ws: Worksheet, name: str, cell_coord: str) -> None:
     """
-    Crée un nom défini dans le classeur Excel.
+    Crée un nom défini au niveau de la feuille Excel.
     """
     ref = f"{quote_sheetname(ws.title)}!{absolute_coordinate(cell_coord)}"
-    defn = DefinedName(name, attr_text=ref)
-    wb.defined_names[name] = defn
+    local_sheet_id = wb.worksheets.index(ws) # type: ignore
+    defn = DefinedName(name, attr_text=ref, localSheetId=local_sheet_id)
+    ws.defined_names[name] = defn
 
-def create_front_matter(wb, ws, grade_letter, criteria_indicators, criteria_row):
+def create_front_matter(
+    wb: Workbook,
+    ws: Worksheet,
+    grade_letter: str,
+    criteria_indicators: list[int],
+    criteria_row: int,
+) -> None:
     """
     Crée la partie avant la grille dans la feuille Excel (nom, matricule, note, commentaire).
     """
-    ws.cell(row=2, column=2, value="Matricule")
-    create_defined_name(wb, ws, "cthm_matricule", "C2")
+    team_ws = wb[TEAM_WS_NAME] if ws.title.startswith(STUDENT_WS_PREFIX) else None
 
-    set_header_style(ws.cell(row=2, column=2)) # type: ignore
-    ws.cell(row=2, column=4, value="Nom")
-    create_defined_name(wb, ws, "cthm_nom", "E2")
+    # Nom et matricule uniquement si ce n'est pas la feuille équipe
+    if ws.title != TEAM_WS_NAME:
+        ws.cell(row=2, column=2, value="Matricule")
+        set_header_style(ws.cell(row=2, column=2)) # type: ignore
+        create_defined_name(wb, ws, "cthm_matricule", "C2")
 
-    set_header_style(ws.cell(row=2, column=4)) # type: ignore
+        ws.cell(row=2, column=4, value="Nom")
+        set_header_style(ws.cell(row=2, column=4)) # type: ignore
+        create_defined_name(wb, ws, "cthm_nom", "E2")
+
+    # Note globale
     ws.cell(row=3, column=2, value="Note")
+    set_header_style(ws.cell(row=3, column=2)) # type: ignore
     create_defined_name(wb, ws, "cthm_note", "C3")
     ws.cell(row=3, column=3,
             value=f'=_xlfn.CONCAT(SUM({all_indicators_range(grade_letter,
                                                             criteria_indicators,
                                                             criteria_row=criteria_row)})," points")')
 
-    set_header_style(ws.cell(row=3, column=2)) # type: ignore
+    # Commentaire global
     ws.cell(row=3, column=4, value="Commentaire")
+    set_header_style(ws.cell(row=3, column=4)) # type: ignore
+    if team_ws:
+        ref = f'{quote_sheetname(team_ws.title)}!{absolute_coordinate("E3")}'
+        ws.cell(row=3, column=5,
+                value=f'={if_blank_null_str(ref)}')
     create_defined_name(wb, ws, "cthm_commentaire", "E3")
 
-    set_header_style(ws.cell(row=3, column=4)) # type: ignore
+    # Session
     ws.cell(row=5, column=2, value="Session")
     set_header_style(ws.cell(row=5, column=2)) # type: ignore
-    ws.cell(row=5, column=3, value=f"{get_current_semester()}")
+    if team_ws:
+        ref = f'{quote_sheetname(team_ws.title)}!{absolute_coordinate("C5")}'
+        ws.cell(row=5, column=3,
+                value=f'={if_blank_null_str(ref)}')
+    else:
+        ws.cell(row=5, column=3, value=f"{get_current_semester()}")
+
+    # Cours
     ws.cell(row=5, column=4, value="Cours")
     set_header_style(ws.cell(row=5, column=4)) # type: ignore
+    if team_ws:
+        ref = f'{quote_sheetname(team_ws.title)}!{absolute_coordinate("E5")}'
+        ws.cell(row=5, column=5,
+                value=f'={if_blank_null_str(ref)}')
 
+    # Évaluation
     ws.cell(row=5, column=6, value="Évaluation")
     set_header_style(ws.cell(row=5, column=6)) # type: ignore
+    if team_ws:
+        ref = f'{quote_sheetname(team_ws.title)}!{absolute_coordinate("G5")}'
+        ws.cell(row=5, column=7,
+                value=f'={if_blank_null_str(ref)}')
 
-def set_columns_width(ws, nb_levels: int):
+def if_blank_null_str(cell_coord: str) -> str:
+    return f'IF(ISBLANK({cell_coord}),"",{cell_coord})'
+
+def set_columns_width(ws: Worksheet, nb_levels: int) -> None:
     ws.column_dimensions["A"].width = 2.5
     ws.column_dimensions["B"].width = 25
     ws.column_dimensions["C"].width = 13
@@ -192,16 +252,21 @@ def set_columns_width(ws, nb_levels: int):
     ws.column_dimensions[chr(ord("D") + nb_levels)].width = 12  # Grade column
     ws.column_dimensions[chr(ord("D") + nb_levels + 1)].width = 70  # Comment column
 
-def create_grid(ws, nb_levels: int,
-                criteria_indicators: list[int],
-                indicator_points: list[int],
-                nb_criteria: int,
-                grade_col: int,
-                comment_col: int,
-                criteria_row: int) -> None:
+def create_grid(
+    wb: Workbook,
+    ws: Worksheet,
+    nb_levels: int,
+    criteria_indicators: list[int],
+    indicator_points: list[int],
+    nb_criteria: int,
+    grade_col: int,
+    comment_col: int,
+    criteria_row: int,
+) -> None:
     """
     Crée la grille d'évaluation dans la feuille Excel.
     """
+    team_ws = wb[TEAM_WS_NAME] if ws.title.startswith(STUDENT_WS_PREFIX) else None
 
     grade_letter = get_column_letter(grade_col)
 
@@ -274,18 +339,39 @@ def create_grid(ws, nb_levels: int,
                                     f'C{indicator_row}*{cell_coord},{cell_coord})')
                 xs.append(f"IF(ISTEXT({cell_coord}),C{indicator_row}*{default_percent},{grade_or_percent})")
             counta_range = f"D{indicator_row}:{chr(ord('D') + nb_levels - 1)}{indicator_row}"
-            formula = f"=IF(COUNTA({counta_range})>1,NA()," + "+".join(xs) + ")"
+            if team_ws:
+                team_ref = f'{quote_sheetname(team_ws.title)}!{absolute_coordinate(grade_letter + str(indicator_row))}'
+                grade = f"IF(COUNTA({counta_range})=0,{team_ref},{'+'.join(xs)})"
+            else:
+                grade = "+".join(xs)
+            formula = f"=IF(COUNTA({counta_range})>1,NA(),{grade})"
             ws.cell(row=indicator_row, column=grade_col, value = formula)
+
+            # Insert comment formula if needed
+            if team_ws:
+                ref = f'{quote_sheetname(team_ws.title)}!{absolute_coordinate(get_column_letter(comment_col) + str(indicator_row))}'
+                ws.cell(row=indicator_row, column=comment_col,
+                        value=f'={if_blank_null_str(ref)}')
 
     # Pénalités pour retard, français, fautes significatives
     nb_indicators = sum(criteria_indicators)
     penalty_row = criteria_row + nb_indicators + nb_criteria + 1
     ws.cell(row=penalty_row, column=3 + nb_levels + 1, value="Points")
+    if team_ws:
+        ref = f'{quote_sheetname(team_ws.title)}!{absolute_coordinate(get_column_letter(3 + nb_levels + 1) + str(penalty_row + 1))}'
+        ws.cell(row=penalty_row + 1, column=3 + nb_levels + 1,
+                value=f'={ref}')
+    else:
+        ws.cell(row=penalty_row + 1, column=3 + nb_levels + 1, value=0)
+
     ws.cell(row=penalty_row, column=3 + nb_levels + 2, value="Commentaire")
+    if team_ws:
+        ref = f'{quote_sheetname(team_ws.title)}!{absolute_coordinate(get_column_letter(3 + nb_levels + 2) + str(penalty_row + 1))}'
+        ws.cell(row=penalty_row + 1, column=3 + nb_levels + 2,
+                value=f'={if_blank_null_str(ref)}')
 
     ws.cell(row=penalty_row + 1, column=2, value="Bonus / Malus")
     ws.cell(row=penalty_row + 1, column=2).style = "Headline 1"
-    ws.cell(row=penalty_row + 1, column=3 + nb_levels + 1, value=0)
 
     ws.cell(row=penalty_row + 2, column=2,
             value="En plus de la grille ci-dessus, il est possible "
