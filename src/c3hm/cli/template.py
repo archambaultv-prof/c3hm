@@ -20,7 +20,7 @@ from c3hm.commands.template import export_template
 @click.option(
     '--levels', '-l', 'nb_levels',
     type=click.IntRange(2, 5),
-    default=4,
+    default=5,
     help="Indique le nombre de niveaux de performance à inclure dans la grille (entre 2 et 5)."
 )
 @click.option(
