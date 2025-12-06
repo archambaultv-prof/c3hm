@@ -1,4 +1,5 @@
 from pathlib import Path
+import shutil
 
 import openpyxl
 from openpyxl.worksheet.table import Table, TableStyleInfo
@@ -12,8 +13,70 @@ def generate_feedback(gradebook_path: Path, output_dir: Path):
     """
 
     # Génère le fichier Excel pour charger les notes dans Omnivox
+    copy_xl_sheets(gradebook_path, output_dir)
     generate_xl_for_omnivox(gradebook_path, output_dir)
 
+
+def copy_xl_sheets(
+    gradebook_path: Path,
+    output_dir: Path | str
+) -> None:
+    """
+    Copie les feuilles Excel de rétroaction dans le répertoire de sortie.
+    """
+    output_dir = Path(output_dir)
+    if not output_dir.exists():
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+    xl_files = list(gradebook_path.glob("*.xlsx"))
+    for xl_file in xl_files:
+        xl_wb = openpyxl.load_workbook(xl_file, read_only=True, data_only=True)
+
+        # Check how many students are in the file
+        students: list[tuple[str, str]] = []
+        for ws in xl_wb.worksheets:
+            # Check for defined range
+            if "cthm_matricule" not in ws.defined_names:
+                continue
+            named_range = ws.defined_names["cthm_matricule"]
+            _, dest = next(named_range.destinations)
+            matricule = ws[dest].value
+
+            named_range = ws.defined_names["cthm_nom"]
+            _, dest = next(named_range.destinations)
+            nom = ws[dest].value
+            students.append((matricule, nom))
+        if not students:
+            # No students found, skip file
+            continue
+        elif len(students) == 1:
+            # Simply copy the file
+            destination = output_dir / f"{students[0][0]} {students[0][1]}.xlsx"
+            shutil.copyfile(xl_file, destination)
+            continue
+        else:
+            # Multiple students, create a file per student and remove other
+            # students' sheet
+            for matricule, nom in students:
+                destination = output_dir / f"{matricule} {nom}.xlsx"
+                shutil.copyfile(xl_file, destination)
+                wb = openpyxl.load_workbook(destination)
+                sheets_to_remove = []
+                for ws in wb.worksheets:
+                    # Check for defined range
+                    if "cthm_matricule" not in ws.defined_names:
+                        continue
+                    named_range = ws.defined_names["cthm_matricule"]
+                    _, dest = next(named_range.destinations)
+                    cell = ws[dest]
+                    if cell.value != matricule:
+                        sheets_to_remove.append(ws.title)
+                    else:
+                        ws.title = str(matricule)
+                for sheet_name in sheets_to_remove:
+                    std = wb[sheet_name]
+                    wb.remove(std)
+                wb.save(destination)
 
 def generate_xl_for_omnivox(
     gradebook_path: Path,
