@@ -7,7 +7,7 @@ from openpyxl.worksheet.worksheet import Worksheet
 
 def generate_feedback(gradebook_path: Path, output_dir: Path):
     """
-    Génère un document Word de rétroaction pour les étudiants à partir d’une fichier de correction
+    Génère un document Excel de rétroaction pour les étudiants à partir d’une fichier de correction
     et un résumé des notes en format Excel.
     """
 
@@ -29,7 +29,7 @@ def generate_xl_for_omnivox(
     wb = openpyxl.Workbook()
     ws = wb.active
     if ws is None:
-        raise ValueError("Aucune feuille de calcul active trouvée.")
+        ws = wb.create_sheet()
     populate_omnivox_sheet(gradebook_path, ws)
 
     # Sauvegarde le fichier Excel
@@ -45,25 +45,27 @@ def populate_omnivox_sheet(gradebook_path: Path, ws: Worksheet) -> None:
     # Trouves tous les fichiers excel
     xl_files = list(gradebook_path.glob("*.xlsx"))
     for xl_file in xl_files:
+        has_grades = False
         xl_wb = openpyxl.load_workbook(xl_file, read_only=True, data_only=True)
-        # Check for defined range
-        if "cthm_matricule" not in xl_wb.defined_names:
-            print(f"Avertissement: Le fichier {xl_file} ne contient pas de "
-                  "plage nommée 'cthm_matricule'. Il sera ignoré.")
-            continue
-        d = {}
-        for x in ["cthm_note", "cthm_matricule", "cthm_commentaire", "cthm_nom"]:
-            named_range = xl_wb.defined_names[x]
-            title, dest = next(named_range.destinations)
-            x_ws = xl_wb[title]
-            cell = x_ws[dest]
-            d[x] = cell.value # type: ignore
-        note = d["cthm_note"]
-        note = parse_grade(note)
-        matricule = d["cthm_matricule"]
-        comment = d["cthm_commentaire"]
-        nom = d["cthm_nom"]
-        ws.append([matricule, note, comment, nom])
+        for grade_ws in xl_wb.worksheets:
+            # Check for defined range
+            if "cthm_matricule" not in grade_ws.defined_names:
+                continue
+            has_grades = True
+            d = {}
+            for x in ["cthm_note", "cthm_matricule", "cthm_commentaire", "cthm_nom"]:
+                named_range = grade_ws.defined_names[x]
+                _, dest = next(named_range.destinations)
+                cell = grade_ws[dest]
+                d[x] = cell.value # type: ignore
+            note = d["cthm_note"]
+            note = parse_grade(note)
+            matricule = d["cthm_matricule"]
+            comment = d["cthm_commentaire"]
+            nom = d["cthm_nom"]
+            ws.append([matricule, note, comment, nom])
+        if not has_grades:
+            print(f"Aucune note trouvée dans le fichier {xl_file}, il sera ignoré.")
 
     # Format
     _insert_table(ws, "NotesOmnivox", "A1:D" + str(ws.max_row))
