@@ -289,8 +289,13 @@ def create_grid(
         # Déterminer la ligne du critère
         nb_indicators = criteria_indicators[criterion_idx]
         criterion_row = criteria_row + sum(criteria_indicators[:criterion_idx]) + criterion_idx
-        ws.cell(row=criterion_row, column=2,
-                value=f"Critère {criterion_idx + 1}")
+        if team_ws:
+            ref = f'{quote_sheetname(team_ws.title)}!{absolute_coordinate("B" + str(criterion_row))}'
+            ws.cell(row=criterion_row, column=2,
+                    value=f'={ref}')
+        else:
+            ws.cell(row=criterion_row, column=2,
+                    value=f"Critère {criterion_idx + 1}")
         ws.cell(row=criterion_row, column=2).style = "Headline 1"
 
         pts_range = f"C{criterion_row + 1}:C{criterion_row + nb_indicators}"
@@ -319,9 +324,17 @@ def create_grid(
             # Calculer l'index global de l'indicateur
             global_indicator_idx = sum(criteria_indicators[:criterion_idx]) + indicator_idx
 
-            ws.cell(row=indicator_row, column=2,
-                    value=f"Indicateur {criterion_idx + 1}.{indicator_idx + 1}")
-            ws.cell(row=indicator_row, column=3, value=indicator_points[global_indicator_idx])
+            if team_ws:
+                ref = f'{quote_sheetname(team_ws.title)}!{absolute_coordinate("B" + str(indicator_row))}'
+                ws.cell(row=indicator_row, column=2,
+                        value=f'={ref}')
+                ref_points = f'{quote_sheetname(team_ws.title)}!{absolute_coordinate("C" + str(indicator_row))}'
+                ws.cell(row=indicator_row, column=3,
+                        value=f'={ref_points}')
+            else:
+                ws.cell(row=indicator_row, column=2,
+                        value=f"Indicateur {criterion_idx + 1}.{indicator_idx + 1}")
+                ws.cell(row=indicator_row, column=3, value=indicator_points[global_indicator_idx])
             ws.cell(row=indicator_row, column=3).style = "Explanatory Text"
 
             # Centrer les cellules de niveau de performance
