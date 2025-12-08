@@ -1,5 +1,5 @@
-from pathlib import Path
 import shutil
+from pathlib import Path
 
 import openpyxl
 from openpyxl.worksheet.table import Table, TableStyleInfo
@@ -76,6 +76,7 @@ def copy_xl_sheets(
                 for sheet_name in sheets_to_remove:
                     std = wb[sheet_name]
                     wb.remove(std)
+                wb.active = wb.sheetnames.index(str(matricule))
                 wb.save(destination)
 
 def generate_xl_for_omnivox(
