@@ -23,6 +23,7 @@ from c3hm.commands.feedback import generate_feedback
     ),
     required=True
 )
+
 @click.option(
     "--output", "-o",
     "output_dir",
@@ -34,9 +35,17 @@ from c3hm.commands.feedback import generate_feedback
     default=None,
     help="Répertoire de sortie pour les fichiers générés"
 )
-def feedback_command(gradebook_dir: Path, output_dir: Path):
+
+@click.option(
+    "--students", "-s",
+    type=click.Path(file_okay=True, dir_okay=False, exists=True, path_type=Path),
+    default=None,
+    help="Fichier contenant la liste des étudiants"
+)
+
+def feedback_command(gradebook_dir: Path, output_dir: Path, students: Path | None):
     """
-    Génère un document Word de rétroaction pour les étudiants à partir d’une fichier de correction.
+    Génère un document rétroaction pour les étudiants à partir d’une fichier de correction.
     """
     if not gradebook_dir.is_absolute():
         gradebook_dir = Path.cwd() / gradebook_dir
@@ -44,6 +53,7 @@ def feedback_command(gradebook_dir: Path, output_dir: Path):
         output_dir = gradebook_dir / Path("rétroaction")
     generate_feedback(
         gradebook_path=gradebook_dir,
-        output_dir=output_dir
+        output_dir=output_dir,
+        students_file=students
     )
 

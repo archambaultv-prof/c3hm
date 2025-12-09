@@ -1,4 +1,5 @@
 import csv
+import re
 from pathlib import Path
 
 from pydantic import BaseModel, Field
@@ -33,3 +34,27 @@ def read_omnivox_students_file(students_file: Path) -> list[Student]:
             )
             students.append(student)
     return students
+
+def find_student_by_name(name: str, student_list: list[Student]) -> Student:
+    """
+    Trouve un étudiant dans la liste par son nom ou une partie de son nom.
+    Le nom peut contenir plusieurs parties (prénom et/ou nom).
+    """
+    names = [x.strip().lower() for x in re.split(r"[\s-]+", name)]
+    found = []
+    for student in student_list:
+        first_names = [x.strip().lower() for x in re.split(r"[\s-]+", student.first_name)]
+        last_names = [x.strip().lower() for x in re.split(r"[\s-]+", student.last_name)]
+        match = True
+        for n in names:
+            if n not in first_names and n not in last_names:
+                match = False
+                break
+        if match:
+            found.append(student)
+    if len(found) == 1:
+        return found[0]
+    elif len(found) > 1:
+        raise ValueError(f"Multiple students found for name '{name}'")
+    else:
+        raise ValueError(f"No student found for name '{name}'")
