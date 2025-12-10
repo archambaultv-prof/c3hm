@@ -194,6 +194,9 @@ def create_front_matter(
         ws.cell(row=2, column=4, value="Nom")
         set_header_style(ws.cell(row=2, column=4)) # type: ignore
         create_defined_name(wb, ws, "cthm_nom", "E2")
+    else:
+        ws.cell(row=2, column=3, value="Cette feuille Excel est la grille d'évaluation globale pour l'équipe. La note d'un étudiant peut être modulée via sa propre feuille Excel d'évaluation.")
+        ws.cell(row=2, column=3).style = "Explanatory Text"
 
     # Note globale
     ws.cell(row=3, column=2, value="Note")
@@ -270,10 +273,14 @@ def create_grid(
 
     grade_letter = get_column_letter(grade_col)
 
+    if team_ws and ws.title != team_ws.title:
+        extra_info = ". Par défaut la note de chaque critère est celle de l'équipe."
+    else:
+        extra_info = ""
     ws.cell(row=8, column=3,
             value=f'=_xlfn.CONCAT("Total sur ",SUM({all_indicators_range("C", criteria_indicators,
                                                                          criteria_row=criteria_row,
-                                                                         include_penalty=False)})," points")')
+                                                                         include_penalty=False)})," points{extra_info}")')
     ws.cell(row=8, column=3).style = "Explanatory Text"
     total_str = "La note pour chaque critère est soit "
     for level_idx in range(nb_levels):
