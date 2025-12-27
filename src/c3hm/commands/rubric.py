@@ -2,7 +2,7 @@ import subprocess
 import textwrap
 from pathlib import Path
 
-from tomlkit import parse
+import yaml
 
 PREAMBULE = textwrap.dedent("""
     #set text(
@@ -48,7 +48,7 @@ RUBRIC_TABLE_HEADER = textwrap.dedent("""
 DEFAULT_DESCRIPTORS = [
     "Le travail répond parfaitement aux attentes.",
     "Le travail répond bien aux attentes avec quelques erreurs mineures.",
-    "Le travail répond partiellement aux attentes mais comporte des erreurs significatives.",
+    "Le travail répond partiellement aux attentes avec des erreurs significatives.",
     "Le travail répond faiblement aux attentes et nécessite des améliorations significatives.",
     "Le travail ne répond pas aux attentes."
 ]
@@ -56,7 +56,7 @@ DEFAULT_DESCRIPTORS = [
 def export_rubric(input_path: Path, output_path: Path) -> None:
     with open(input_path, encoding="utf-8") as f:
         content = f.read()
-    rubric_data = parse(content)
+    rubric_data = yaml.safe_load(content)
 
     s = [PREAMBULE, ""]
     s.append(f"/ Cours: {rubric_data['cours']}")
@@ -86,8 +86,6 @@ def table_rows(data: dict) -> list[str]:
     return rows
 
 def compile_typst_file(input_path: Path, output_path: Path) -> None:
-
-
     result = subprocess.run(
         ["typst", "compile", str(input_path), str(output_path)],
         capture_output=True,

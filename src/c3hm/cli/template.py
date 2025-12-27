@@ -8,7 +8,7 @@ from c3hm.commands.template import export_template
 @click.command(
     name="template",
     help=(
-        "Génère une de grille d'évaluation."
+        "Génère une de grille d'évaluation sous format TOML."
     )
 )
 @click.option(
@@ -23,7 +23,7 @@ def template_command(output_path: Path) -> None:
     Génère une grille d'évaluation.
     """
     if output_path is None:
-        output_path = Path.cwd() / "grille.toml"
+        output_path = Path.cwd() / "grille.yaml"
     elif not output_path.is_absolute():
         output_path = Path.cwd() / output_path
 
