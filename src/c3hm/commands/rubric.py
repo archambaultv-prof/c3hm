@@ -51,11 +51,11 @@ def rubric_table_header(grade: float | None = None) -> str:
     return s
 
 DEFAULT_DESCRIPTORS = [
-    "Le travail répond parfaitement aux attentes.",
-    "Le travail répond bien aux attentes avec quelques erreurs mineures.",
-    "Le travail répond partiellement aux attentes avec des erreurs significatives.",
-    "Le travail répond faiblement aux attentes et nécessite des améliorations significatives.",
-    "Le travail ne répond pas aux attentes."
+    "Entièrement conforme aux attentes.",
+    "Globalement conforme aux attentes : quelques éléments perfectibles.",
+    "Partiellement conforme aux attentes : une erreur significative.",
+    "Faiblement conforme aux attentes : erreurs significatives, erreur grave ou démarche inadéquate.",
+    "Non conforme aux attentes."
 ]
 
 def export_rubric(input_path: Path, output_path: Path) -> None:
