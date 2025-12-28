@@ -8,6 +8,7 @@ from openpyxl.worksheet.table import Table, TableStyleInfo
 from openpyxl.worksheet.worksheet import Worksheet
 
 from c3hm.commands.rubric import export_rubric_data
+from c3hm.data.rubric import validate_rubric
 from c3hm.data.student import Student, find_student_by_name, read_omnivox_students_file
 
 
@@ -83,6 +84,7 @@ def process_yaml_files(
                 data_student = copy.deepcopy(data)
                 data_student["nom"] = name
                 data_student["matricule"] = matricule
+                validate_rubric(data_student, graded=True)
                 grade = 0.0
                 for node in data_student["critères"]:
                     if "section" in node:

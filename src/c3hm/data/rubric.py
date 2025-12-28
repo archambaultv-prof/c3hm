@@ -1,4 +1,4 @@
-def validate_rubric(rubric: dict) -> None:
+def validate_rubric(rubric: dict, graded: bool = False) -> None:
     """Validate that the rubric has the required structure."""
     assert_non_empty_string(rubric, "cours")
     assert_non_empty_string(rubric, "session")
@@ -6,6 +6,23 @@ def validate_rubric(rubric: dict) -> None:
     assert_total_points(rubric)
     validate_descriptors(rubric)
 
+    if graded:
+        assert_non_empty_string(rubric, "nom")
+        assert_non_empty_string(rubric, "matricule")
+        none_if_missing_or_empty(rubric, "commentaire")
+        for item in rubric.get("critères", []):
+            none_if_missing_or_empty(item, "commentaire")
+
+def none_if_missing_or_empty(d: dict, field_name: str) -> None:
+    if field_name not in d:
+        d[field_name] = None
+        return
+    value = d[field_name]
+    if isinstance(value, str):
+        if value.strip() == "":
+            d[field_name] = None
+    else:
+        raise ValueError(f"Le champ '{field_name}' doit être une chaîne de caractères.")
 
 def assert_non_empty_string(d: dict, field_name: str) -> None:
     value = d.get(field_name)
