@@ -94,14 +94,14 @@ def export_rubric_data(rubric_data: dict, output_path: Path) -> None:
         if points is not None and points != 0:
             raison = bonus_malus.get("raison")
             points_str = f"{points} pts"
-            s.append("#heading(numbering: none, level: 2)[Bonus / Malus]")
+            s.append("#heading(numbering: none, level: 1)[Bonus / Malus]")
             s.append(f"/ Points: {points_str}")
             if raison is not None:
                 s.append(f"/ Raison: {raison}")
             s.append("")
     else:
         s.append('')
-        s.append("#heading(numbering: none, level: 2)[Bonus / Malus]")
+        s.append("#heading(numbering: none, level: 1)[Bonus / Malus]")
         s.append("En plus de la grille ci-dessus, il est possible que des points de bonus ou de malus soient appliqués,"
                  " notamment pour:")
         s.append("- un retard dans la remise du travail")
@@ -109,16 +109,10 @@ def export_rubric_data(rubric_data: dict, output_path: Path) -> None:
         s.append("- une erreur significative (non respect des consignes, code spaghetti, code qui plante ou ne démarre pas, etc.)")
 
     # Commentaire
-    if "nom" in rubric_data:
-        comment = None
-        if "commentaire" in rubric_data and rubric_data["commentaire"] is not None and rubric_data["commentaire"].strip():
-            comment = rubric_data["commentaire"]
-        elif rubric_data["note"] >= 90:
-            comment = "Très bon travail!"
-        if comment:
-            s.append("#heading(numbering: none, level: 2)[Commentaire]")
-            s.append(comment)
-            s.append("")
+    if "nom" in rubric_data and rubric_data["commentaire"]:
+        s.append("#heading(numbering: none, level: 1)[Commentaire]")
+        s.append(rubric_data["commentaire"])
+        s.append("")
 
     # Compilation
     output_typst = output_path.with_suffix(".typ")
