@@ -51,6 +51,8 @@ def feedback_command(gradebook_dir: Path, output_dir: Path, students: Path | Non
         gradebook_dir = Path.cwd() / gradebook_dir
     if output_dir is None:
         output_dir = gradebook_dir / Path("rétroaction")
+    if output_dir.exists():
+        raise FileExistsError(f"Le répertoire {output_dir} existe déjà.")
     generate_feedback(
         gradebook_path=gradebook_dir,
         output_dir=output_dir,

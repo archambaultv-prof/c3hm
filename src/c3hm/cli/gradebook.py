@@ -41,6 +41,8 @@ def gradebook_command(rubric_path: Path, students: Path | None, teams: int | Non
     """
     if not output_dir:
         output_dir = Path.cwd() / Path("grilles de correction")
+    if output_dir.exists():
+        raise FileExistsError(f"Le répertoire {output_dir} existe déjà.")
     if not rubric_path.is_absolute():
         rubric_path = Path.cwd() / rubric_path
     if not students and not teams:
