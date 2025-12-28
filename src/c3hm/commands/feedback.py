@@ -1,5 +1,6 @@
 import copy
 from pathlib import Path
+from zipfile import ZIP_DEFLATED, ZipFile
 
 import openpyxl
 import yaml
@@ -31,7 +32,18 @@ def generate_feedback(gradebook_path: Path, output_dir: Path, students_file: Pat
     students = read_omnivox_students_file(students_file) if students_file else None
     students = process_yaml_files(gradebook_path, output_dir, students)
     generate_xl_for_omnivox(students, output_dir)
+    zip_pdfs(output_dir)
 
+
+def zip_pdfs(dir: Path) -> None:
+    """
+    Crée une archive ZIP contenant tous les fichiers PDF dans le répertoire de sortie.
+    """
+    pattern = "*.pdf"
+    pdf_files = dir.glob(pattern)
+    with ZipFile(dir / "travaux.zip", "w", compression=ZIP_DEFLATED) as zipf:
+        for pdf_file in pdf_files:
+            zipf.write(pdf_file, pdf_file.name)
 
 def process_yaml_files(
     gradebook_path: Path,
@@ -84,12 +96,18 @@ def process_yaml_files(
                 if bonus_malus.get("points") is not None:
                     grade += bonus_malus["points"]
                 data_student["note"] = round(grade, 0)
+                if "commentaire" in data_student and data_student["commentaire"] is not None and data_student["commentaire"].strip():
+                    data_student["commentaire"] = data_student["commentaire"].strip()
+                elif data_student["note"] >= 90:
+                    data_student["commentaire"] = "Très bon travail!"
+                else:
+                    data_student["commentaire"] = None
                 export_rubric_data(data_student, destination)
                 student = FeedBackStudent(
                     name=name,
                     matricule=matricule,
                     grade=grade,
-                    comment="")
+                    comment=data_student["commentaire"])
                 all_students.append(student)
         except Exception as e:
             raise RuntimeError(f"Erreur lors de la génération des fichiers de rétroaction pour le fichier '{yaml_file}'") from e
