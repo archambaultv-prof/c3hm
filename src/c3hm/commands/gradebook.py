@@ -1,7 +1,6 @@
 import copy
+import json
 from pathlib import Path
-
-import yaml
 
 from c3hm.data.student import read_omnivox_students_file
 
@@ -16,8 +15,7 @@ def generate_gradebook(rubric: Path, students_file: Path | None, teams: int | No
         output_dir.mkdir(parents=True, exist_ok=True)
 
     with open(rubric, encoding="utf-8") as f:
-        content = f.read()
-    rubric_data = yaml.safe_load(content)
+        rubric_data = json.load(f)
 
     if students_file:
         generate_gradebook_from_students_file(rubric_data, students_file, output_dir)
@@ -35,10 +33,10 @@ def generate_gradebook_from_students_file(rubric: dict, students_file: Path, out
         update_criteria(new_rubric)
         add_bonus_malus(new_rubric)
         add_global_comment(new_rubric)
-        stem = f"{student.last_name} {student.first_name} {student.omnivox_id}.yaml"
+        stem = f"{student.last_name} {student.first_name} {student.omnivox_id}.json"
         destination = output_dir / stem
         with open(destination, "w", encoding="utf-8") as f:
-            yaml.dump(new_rubric, f, allow_unicode=True, indent=4, sort_keys=False)
+            json.dump(new_rubric, f, ensure_ascii=False, indent=4)
 
 def add_bonus_malus(new_d):
     new_d["bonus malus"] = {
@@ -53,10 +51,10 @@ def generate_gradebook_from_teams(rubric: dict, teams: int, output_dir: Path) ->
     add_bonus_malus(new_rubric)
     add_global_comment(new_rubric)
     for team_number in range(1, teams + 1):
-        stem = f"Équipe {team_number}.yaml"
+        stem = f"Équipe {team_number}.json"
         destination = output_dir / stem
         with open(destination, "w", encoding="utf-8") as f:
-            yaml.dump(new_rubric, f, allow_unicode=True, indent=4, sort_keys=False)
+            json.dump(new_rubric, f, ensure_ascii=False, indent=4)
 
 def add_global_comment(d: dict) -> None:
     d["commentaire"] = None

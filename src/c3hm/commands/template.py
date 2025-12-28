@@ -1,7 +1,6 @@
+import json
 from datetime import date
 from pathlib import Path
-
-import yaml
 
 from c3hm.data.rubric import DEFAULT_DESCRIPTORS
 
@@ -44,7 +43,7 @@ def export_template(output_path: Path) -> None:
     }
 
     with open(output_path, "w", encoding="utf-8") as f:
-        yaml.dump(d, f, allow_unicode=True, indent=4, sort_keys=False)
+        json.dump(d, f, ensure_ascii=False, indent=4)
 
 def get_current_semester() -> str:
     """

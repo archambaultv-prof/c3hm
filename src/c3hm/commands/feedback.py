@@ -1,9 +1,9 @@
 import copy
+import json
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import openpyxl
-import yaml
 from openpyxl.worksheet.table import Table, TableStyleInfo
 from openpyxl.worksheet.worksheet import Worksheet
 
@@ -31,7 +31,7 @@ def generate_feedback(gradebook_path: Path, output_dir: Path, students_file: Pat
 
     # Génère le fichier Excel pour charger les notes dans Omnivox
     students = read_omnivox_students_file(students_file) if students_file else None
-    students = process_yaml_files(gradebook_path, output_dir, students)
+    students = process_json_files(gradebook_path, output_dir, students)
     generate_xl_for_omnivox(students, output_dir)
     zip_pdfs(output_dir)
 
@@ -46,7 +46,7 @@ def zip_pdfs(dir: Path) -> None:
         for pdf_file in pdf_files:
             zipf.write(pdf_file, pdf_file.name)
 
-def process_yaml_files(
+def process_json_files(
     gradebook_path: Path,
     output_dir: Path | str,
     student_list: list[Student] | None
@@ -58,12 +58,12 @@ def process_yaml_files(
     if not output_dir.exists():
         output_dir.mkdir(parents=True, exist_ok=True)
 
-    yaml_files = list(gradebook_path.glob("*.yaml"))
+    json_files = list(gradebook_path.glob("*.json"))
     all_students: list[FeedBackStudent] = []
-    for yaml_file in yaml_files:
+    for json_file in json_files:
         try:
-            with open(yaml_file, encoding="utf-8") as f:
-                data = yaml.safe_load(f)
+            with open(json_file, encoding="utf-8") as f:
+                data = json.load(f)
 
             students: list[tuple[str, str]] = []
             if "étudiant" in data:
@@ -73,10 +73,10 @@ def process_yaml_files(
                     if s["nom"] is not None or s.get("matricule") is not None:
                         students.append(extract_student(s, student_list))
             else:
-                raise ValueError("Le fichier YAML doit contenir une section 'étudiant' ou 'étudiants'.")
+                raise ValueError("Le fichier JSON doit contenir une section 'étudiant' ou 'étudiants'.")
 
             if not students:
-                print(f"Aucun étudiant trouvé dans le fichier '{yaml_file}', aucun fichier de rétroaction généré.")
+                print(f"Aucun étudiant trouvé dans le fichier '{json_file}', aucun fichier de rétroaction généré.")
                 continue
 
             for (name, matricule) in students:
@@ -112,7 +112,7 @@ def process_yaml_files(
                     comment=data_student["commentaire"])
                 all_students.append(student)
         except Exception as e:
-            raise RuntimeError(f"Erreur lors de la génération des fichiers de rétroaction pour le fichier '{yaml_file}'") from e
+            raise RuntimeError(f"Erreur lors de la génération des fichiers de rétroaction pour le fichier '{json_file}'") from e
 
     return all_students
 

@@ -8,7 +8,7 @@ from c3hm.commands.rubric import export_rubric
 @click.command(
     name="rubric",
     help=(
-        "Génère une de grille d'évaluation PDF à partir d’un fichier de configuration toml."
+        "Génère une de grille d'évaluation PDF à partir d’un fichier de configuration json."
     )
 )
 @click.argument(
@@ -25,7 +25,7 @@ from c3hm.commands.rubric import export_rubric
 
 def rubric_command(input_path: Path, output_path: Path) -> None:
     """
-    Génère une grille d'évaluation PDF à partir d’un fichier de configuration toml.
+    Génère une grille d'évaluation PDF à partir d’un fichier de configuration json.
     """
     if output_path is None:
         output_path = Path.cwd() / "grille.pdf"

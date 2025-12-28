@@ -1,8 +1,7 @@
+import json
 import subprocess
 import textwrap
 from pathlib import Path
-
-import yaml
 
 from c3hm.data.rubric import DEFAULT_DESCRIPTORS, validate_rubric
 
@@ -54,8 +53,7 @@ def rubric_table_header(grade: float | None = None) -> str:
 
 def export_rubric(input_path: Path, output_path: Path) -> None:
     with open(input_path, encoding="utf-8") as f:
-        content = f.read()
-    rubric = yaml.safe_load(content)
+        rubric = json.load(f)
     export_rubric_data(rubric, output_path)
 
 def export_rubric_data(rubric_data: dict, output_path: Path) -> None:
