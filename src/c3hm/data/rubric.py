@@ -21,6 +21,8 @@ def none_if_missing_or_empty(d: dict, field_name: str) -> None:
     if isinstance(value, str):
         if value.strip() == "":
             d[field_name] = None
+    elif value is None:
+        return
     else:
         raise ValueError(f"Le champ '{field_name}' doit être une chaîne de caractères.")
 
