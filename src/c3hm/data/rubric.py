@@ -1,3 +1,11 @@
+DEFAULT_DESCRIPTORS = [
+    "Entièrement conforme aux attentes.",
+    "Globalement conforme aux attentes : quelques éléments perfectibles.",
+    "Partiellement conforme aux attentes : une erreur significative.",
+    "Faiblement conforme aux attentes : erreurs significatives, erreur grave ou démarche inadéquate.",
+    "Non conforme aux attentes."
+]
+
 def validate_rubric(rubric: dict, graded: bool = False) -> None:
     """Validate that the rubric has the required structure."""
     assert_non_empty_string(rubric, "cours")

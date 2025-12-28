@@ -4,7 +4,7 @@ from pathlib import Path
 
 import yaml
 
-from c3hm.data.rubric import validate_rubric
+from c3hm.data.rubric import DEFAULT_DESCRIPTORS, validate_rubric
 
 PREAMBULE = textwrap.dedent("""
     #set text(
@@ -50,13 +50,7 @@ def rubric_table_header(grade: float | None = None) -> str:
         s += 'table.header([Critère (100 pts)],[Très bien (100%)],[Bien (80%)],[Passable (60%)],[À améliorer (30%)],[Insuffisant (0%)], table.hline(stroke: 1pt)),'
     return s
 
-DEFAULT_DESCRIPTORS = [
-    "Entièrement conforme aux attentes.",
-    "Globalement conforme aux attentes : quelques éléments perfectibles.",
-    "Partiellement conforme aux attentes : une erreur significative.",
-    "Faiblement conforme aux attentes : erreurs significatives, erreur grave ou démarche inadéquate.",
-    "Non conforme aux attentes."
-]
+
 
 def export_rubric(input_path: Path, output_path: Path) -> None:
     with open(input_path, encoding="utf-8") as f:

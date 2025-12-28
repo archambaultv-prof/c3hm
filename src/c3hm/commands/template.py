@@ -3,6 +3,8 @@ from pathlib import Path
 
 import yaml
 
+from c3hm.data.rubric import DEFAULT_DESCRIPTORS
+
 
 def export_template(output_path: Path) -> None:
     """
@@ -17,13 +19,7 @@ def export_template(output_path: Path) -> None:
             {
                 "critère": "Critère 1",
                 "points": 20,
-                "descripteurs": [
-                    "Description pour très bien.",
-                    "Description pour bien.",
-                    "Description pour passable.",
-                    "Description pour à améliorer.",
-                    "Description pour insuffisant."
-                ]
+                "descripteurs": DEFAULT_DESCRIPTORS
             },
             {
                 "critère": "Critère 2",
