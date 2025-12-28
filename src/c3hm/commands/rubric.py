@@ -150,7 +150,7 @@ def table_rows(data: dict) -> list[str]:
                 else:
                     descriptor_cells.append(f'[{desc}]')
 
-            pts = f"{item['note']} / {item['points']}" if "note" in item else f"{item['points']}~pts"
+            pts = f"{item['note']}~/~{item['points']}" if "note" in item else f"{item['points']}~pts"
             rows.append(f'[{item["critère"]} ({pts})], {", ".join(descriptor_cells)},')
 
             # Ajout d'un commentaire si présent
