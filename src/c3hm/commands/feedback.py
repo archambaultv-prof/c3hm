@@ -8,8 +8,8 @@ from openpyxl.worksheet.table import Table, TableStyleInfo
 from openpyxl.worksheet.worksheet import Worksheet
 
 from c3hm.commands.rubric import export_rubric_data
-from c3hm.data.rubric import validate_rubric
-from c3hm.data.student import Student, find_student_by_name, read_omnivox_students_file
+from c3hm.data.rubric import process_single_student_rubric, validate_student
+from c3hm.data.student import Student, read_omnivox_students_file
 
 
 class FeedBackStudent:
@@ -65,13 +65,16 @@ def process_json_files(
             with open(json_file, encoding="utf-8") as f:
                 data = json.load(f)
 
-            students: list[tuple[str, str]] = []
+            students: list[dict] = []
             if "étudiant" in data:
-                students.append(extract_student(data["étudiant"], student_list))
+                validate_student(data, student_list)
+                students.append(data)
             elif "étudiants" in data:
                 for s in data["étudiants"]:
-                    if s["nom"] is not None or s.get("matricule") is not None:
-                        students.append(extract_student(s, student_list))
+                    data2 = copy.deepcopy(data)
+                    data2["étudiant"] = copy.deepcopy(s)
+                    validate_student(data2, student_list)
+                    students.append(data2)
             else:
                 raise ValueError("Le fichier JSON doit contenir une section 'étudiant' ou 'étudiants'.")
 
@@ -79,36 +82,16 @@ def process_json_files(
                 print(f"Aucun étudiant trouvé dans le fichier '{json_file}', aucun fichier de rétroaction généré.")
                 continue
 
-            for (name, matricule) in students:
+            for student_data in students:
+                name = student_data["étudiant"]["nom"]
+                matricule = student_data["étudiant"]["matricule"]
                 destination = output_dir / f"{name} {matricule}.pdf"
-                data_student = copy.deepcopy(data)
-                data_student["nom"] = name
-                data_student["matricule"] = matricule
-                validate_rubric(data_student, graded=True)
-                grade = 0.0
-                for node in data_student["critères"]:
-                    if "section" in node:
-                        continue
-                    if "pourcentage" not in node:
-                        raise ValueError("Chaque critère doit contenir un pourcentage.")
-                    node["pourcentage"] = parse_percent(node["pourcentage"])
-                    node["note"] = round(node["pourcentage"] * node["points"], 1)
-                    grade += node["note"]
-                bonus_malus = data_student.get("bonus malus", {})
-                if bonus_malus.get("points") is not None:
-                    grade += bonus_malus["points"]
-                data_student["note"] = round(grade, 0)
-                if "commentaire" in data_student and data_student["commentaire"] is not None and data_student["commentaire"].strip():
-                    data_student["commentaire"] = data_student["commentaire"].strip()
-                elif data_student["note"] >= 90:
-                    data_student["commentaire"] = "Très bon travail!"
-                else:
-                    data_student["commentaire"] = None
+                data_student = process_single_student_rubric(student_data)
                 export_rubric_data(data_student, destination)
                 student = FeedBackStudent(
                     name=name,
                     matricule=matricule,
-                    grade=grade,
+                    grade=data_student["note"],
                     comment=data_student["commentaire"])
                 all_students.append(student)
         except Exception as e:
@@ -116,14 +99,6 @@ def process_json_files(
 
     return all_students
 
-def extract_student(s: dict, student_list: list[Student] | None) -> tuple[str, str]:
-    if "matricule" not in s:
-        if not student_list:
-            raise ValueError("Le fichier d'étudiants doit être fourni pour faire la correspondance par nom.")
-        s1 = find_student_by_name(s["nom"], student_list)
-        return s1.full_name(), s1.omnivox_id
-    else:
-        return s["nom"], s["matricule"]
 
 def generate_xl_for_omnivox(
     students: list[FeedBackStudent],
@@ -162,31 +137,6 @@ def populate_omnivox_sheet(students: list[FeedBackStudent], omnivox_worksheet: W
     omnivox_worksheet.column_dimensions["B"].width = 10
     omnivox_worksheet.column_dimensions["C"].width = 70
     omnivox_worksheet.column_dimensions["D"].width = 40
-
-def parse_percent(note: str | float | int | None) -> float:
-    if note is None:
-        raise ValueError("La note ne peut pas être None")
-    if isinstance(note, float | int):
-        grade = float(note)
-    elif isinstance(note, str):
-        note = note.strip().lower()
-        if note in ("tb", "très bien", "tres bien"):
-            grade =  1.0
-        elif note in ("b", "bien"):
-            grade =  0.80
-        elif note in ("p", "passable"):
-            grade =  0.6
-        elif note in ("a", "à améliorer", "a ameliorer"):
-            grade =  0.30
-        elif note in ("i", "insuffisant"):
-            grade =  0.0
-        else:
-            grade =  float(note)
-    else:
-        raise TypeError(f"Type de note inattendu: {type(note)}")
-    if not (0.0 <= grade <= 1.0):
-        raise ValueError(f"La note doit être entre 0 et 1. Valeur reçue: {note}")
-    return grade
 
 def _insert_table(ws: Worksheet, display_name: str, ref: str) -> None:
     table = Table(displayName=display_name, ref=ref)

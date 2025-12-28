@@ -3,7 +3,7 @@ import subprocess
 import textwrap
 from pathlib import Path
 
-from c3hm.data.rubric import DEFAULT_DESCRIPTORS, validate_rubric
+from c3hm.data.rubric import DEFAULT_DESCRIPTORS, is_single_student_rubric, process_single_student_rubric, validate_rubric
 
 PREAMBULE = textwrap.dedent("""
     #set text(
@@ -50,10 +50,11 @@ def rubric_table_header(grade: float | None = None) -> str:
     return s
 
 
-
 def export_rubric(input_path: Path, output_path: Path) -> None:
     with open(input_path, encoding="utf-8") as f:
         rubric = json.load(f)
+    if is_single_student_rubric(rubric):
+        rubric = process_single_student_rubric(rubric)
     export_rubric_data(rubric, output_path)
 
 def export_rubric_data(rubric_data: dict, output_path: Path) -> None:
@@ -61,9 +62,9 @@ def export_rubric_data(rubric_data: dict, output_path: Path) -> None:
 
     # Préambule et en-tête
     s = [PREAMBULE, ""]
-    if "nom" in rubric_data:
-        matricule = f" ({rubric_data['matricule']})" if "matricule" in rubric_data else ""
-        s.append(f'#title("Grille d’évaluation - {rubric_data['nom']}{matricule}")')
+    if is_single_student_rubric(rubric_data):
+        matricule = f" ({rubric_data['étudiant']['matricule']})" if "matricule" in rubric_data["étudiant"] else ""
+        s.append(f'#title("Grille d’évaluation - {rubric_data["étudiant"]["nom"]}{matricule}")')
     else:
         s.append('#title("Grille d’évaluation")')
     s.append(f"/ Cours: {rubric_data['cours']}")
@@ -71,7 +72,7 @@ def export_rubric_data(rubric_data: dict, output_path: Path) -> None:
     s.append(f"/ Évaluation: {rubric_data['évaluation']}")
 
     # Tableau des critères
-    if "nom" in rubric_data:
+    if is_single_student_rubric(rubric_data):
         s.append(rubric_table_header(rubric_data["note"]))
     else:
         s.append(rubric_table_header())
@@ -79,7 +80,7 @@ def export_rubric_data(rubric_data: dict, output_path: Path) -> None:
     s.extend([")", ""])
 
     # Bonus malus
-    if "nom" in rubric_data:
+    if is_single_student_rubric(rubric_data):
         s.append('')
         bonus_malus = rubric_data.get("bonus malus", {})
         points = bonus_malus.get("points")
@@ -101,7 +102,7 @@ def export_rubric_data(rubric_data: dict, output_path: Path) -> None:
         s.append("- une erreur significative (non respect des consignes, code spaghetti, code qui plante ou ne démarre pas, etc.)")
 
     # Commentaire
-    if "nom" in rubric_data and rubric_data["commentaire"]:
+    if is_single_student_rubric(rubric_data) and rubric_data["commentaire"]:
         s.append("#heading(numbering: none, level: 1)[Commentaire]")
         s.append(rubric_data["commentaire"])
         s.append("")
@@ -124,10 +125,10 @@ def table_rows(data: dict) -> list[str]:
             rows.append(f'[*{item["section"]}*], [], [], [], [], [],')
         elif "critère" in item:
             # Détermination de la colonne à colorer selon `percentage`
-            percentage = item.get("pourcentage")
             highlight_idx = None
             highlight_color = None
-            if percentage is not None:
+            percentage = item.get("pourcentage")
+            if is_single_student_rubric(data) and percentage is not None:
                 if percentage == 1.0:
                     highlight_idx, highlight_color = 0, "PERFECT_GREEN"      # Très bien (100%)
                 elif percentage >= 0.8:

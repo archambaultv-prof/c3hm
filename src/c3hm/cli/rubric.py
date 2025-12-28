@@ -28,7 +28,8 @@ def rubric_command(input_path: Path, output_path: Path) -> None:
     Génère une grille d'évaluation PDF à partir d’un fichier de configuration json.
     """
     if output_path is None:
-        output_path = Path.cwd() / "grille.pdf"
+        stem = input_path.stem
+        output_path = Path.cwd() / f"{stem}.pdf"
     elif not output_path.is_absolute():
         output_path = Path.cwd() / output_path
 
