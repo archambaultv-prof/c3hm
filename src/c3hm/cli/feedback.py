@@ -8,7 +8,7 @@ from c3hm.commands.feedback import generate_feedback
 @click.command(
     name="feedback",
     help=(
-        "Génère un document Excel de rétroaction pour les étudiants "
+        "Génère un document PDF de rétroaction pour les étudiants "
         "à partir des fichiers de correction."
     )
 )

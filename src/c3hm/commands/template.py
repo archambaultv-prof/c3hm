@@ -1,5 +1,6 @@
 from datetime import date
 from pathlib import Path
+
 import yaml
 
 
@@ -42,7 +43,7 @@ def export_template(output_path: Path) -> None:
             {
                 "critère": "Critère 5",
                 "points": 20
-            }
+            },
         ]
     }
 

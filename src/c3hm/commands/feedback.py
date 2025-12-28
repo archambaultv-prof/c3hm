@@ -1,11 +1,12 @@
-import shutil
+import copy
 from pathlib import Path
 
 import openpyxl
-from openpyxl.workbook.workbook import Workbook
+import yaml
 from openpyxl.worksheet.table import Table, TableStyleInfo
 from openpyxl.worksheet.worksheet import Worksheet
 
+from c3hm.commands.rubric import export_rubric_data
 from c3hm.data.student import Student, find_student_by_name, read_omnivox_students_file
 
 
@@ -14,140 +15,95 @@ class FeedBackStudent:
     Classe représentant un étudiant pour la génération de rétroaction.
     Contient les informations présentes dans le fichier de rétroaction.
     """
-    def __init__(self, student: Student, sheet_name: str,
-                 grade: float | str | int, comment: str):
-        self.student = student
-        self.sheet_name = sheet_name
-        self.grade = parse_grade(grade)
+    def __init__(self, name: str, matricule: str, grade: float, comment: str):
+        self.name = name
+        self.matricule = matricule
+        self.grade = grade
         self.comment = comment
 
-def generate_feedback(gradebook_path: Path, output_dir: Path, students_file: Path):
+def generate_feedback(gradebook_path: Path, output_dir: Path, students_file: Path | None):
     """
     Génère un document Excel de rétroaction pour les étudiants à partir d’une fichier de correction
     et un résumé des notes en format Excel.
     """
 
     # Génère le fichier Excel pour charger les notes dans Omnivox
-    students = read_omnivox_students_file(students_file)
-    students = copy_xl_sheets(gradebook_path, output_dir, students)
+    students = read_omnivox_students_file(students_file) if students_file else None
+    students = process_yaml_files(gradebook_path, output_dir, students)
     generate_xl_for_omnivox(students, output_dir)
 
 
-def copy_xl_sheets(
+def process_yaml_files(
     gradebook_path: Path,
     output_dir: Path | str,
-    student_list: list[Student]
+    student_list: list[Student] | None
 ) -> list[FeedBackStudent]:
     """
-    Copie les feuilles Excel de rétroaction dans le répertoire de sortie.
+    Pour chaque fichier de correction dans le répertoire, génère un fichier PDF
     """
     output_dir = Path(output_dir)
     if not output_dir.exists():
         output_dir.mkdir(parents=True, exist_ok=True)
 
-    xl_files = list(gradebook_path.glob("*.xlsx"))
+    yaml_files = list(gradebook_path.glob("*.yaml"))
     all_students: list[FeedBackStudent] = []
-    for xl_file in xl_files:
+    for yaml_file in yaml_files:
         try:
-            xl_wb = openpyxl.load_workbook(xl_file, read_only=True, data_only=True)
+            with open(yaml_file, encoding="utf-8") as f:
+                data = yaml.safe_load(f)
 
-            # Check how many students are in the file
-            students = extract_students_from_workbook(student_list, xl_file, xl_wb)
+            students: list[tuple[str, str]] = []
+            if "étudiant" in data:
+                students.append(extract_student(data["étudiant"], student_list))
+            elif "étudiants" in data:
+                for s in data["étudiants"]:
+                    if s["nom"] is not None or s.get("matricule") is not None:
+                        students.append(extract_student(s, student_list))
+            else:
+                raise ValueError("Le fichier YAML doit contenir une section 'étudiant' ou 'étudiants'.")
 
             if not students:
-                print(f"Aucun étudiant trouvé dans le fichier '{xl_file}', on passe au suivant.")
+                print(f"Aucun étudiant trouvé dans le fichier '{yaml_file}', aucun fichier de rétroaction généré.")
                 continue
 
-            # Multiple students, create a file per student and remove other
-            # students' sheet
-            for student in students:
-                destination = output_dir / f"{student.student.omnivox_id} {student.student.full_name()}.xlsx"
-                shutil.copyfile(xl_file, destination)
-                wb = openpyxl.load_workbook(destination)
-
-                filter_student_sheets(student, wb)
-                update_omnivox_id_in_workbook(student, wb)
-
-                wb.save(destination)
-
+            for (name, matricule) in students:
+                destination = output_dir / f"{name} {matricule}.pdf"
+                data_student = copy.deepcopy(data)
+                data_student["nom"] = name
+                data_student["matricule"] = matricule
+                grade = 0.0
+                for node in data_student["critères"]:
+                    if "section" in node:
+                        continue
+                    if "pourcentage" not in node:
+                        raise ValueError("Chaque critère doit contenir un pourcentage.")
+                    node["pourcentage"] = parse_percent(node["pourcentage"])
+                    node["note"] = round(node["pourcentage"] * node["points"], 1)
+                    grade += node["note"]
+                bonus_malus = data_student.get("bonus malus", {})
+                if bonus_malus.get("points") is not None:
+                    grade += bonus_malus["points"]
+                data_student["note"] = round(grade, 0)
+                export_rubric_data(data_student, destination)
+                student = FeedBackStudent(
+                    name=name,
+                    matricule=matricule,
+                    grade=grade,
+                    comment="")
+                all_students.append(student)
         except Exception as e:
-            raise RuntimeError(f"Erreur lors de la génération des fichiers de rétroaction pour le fichier '{xl_file}'") from e
+            raise RuntimeError(f"Erreur lors de la génération des fichiers de rétroaction pour le fichier '{yaml_file}'") from e
 
-        all_students.extend(students)
     return all_students
 
-def filter_student_sheets(student: FeedBackStudent, wb: Workbook) -> None:
-    sheets_to_remove = []
-    for ws in wb.worksheets:
-        # On garde les feuilles qui ne contiennent pas de rétroaction pour un étudiant
-        # (ex: feuille d'équipe)
-        if "cthm_nom" not in ws.defined_names:
-            continue
-
-        # On garde bien sûr la feuille de l'étudiant
-        if ws.title == student.sheet_name:
-            continue
-
-        sheets_to_remove.append(ws.title)
-
-    for sheet_name in sheets_to_remove:
-        std = wb[sheet_name]
-        wb.remove(std)
-
-def extract_students_from_workbook(student_list: list[Student], xl_file: Path, xl_wb: Workbook) -> list[FeedBackStudent]:
-    students: list[FeedBackStudent] = []
-    for ws in xl_wb.worksheets:
-                # Check for defined range
-        if "cthm_matricule" not in ws.defined_names:
-            continue
-        named_range = ws.defined_names["cthm_matricule"]
-        _, dest = next(named_range.destinations)
-        matricule = ws[dest].value
-
-        named_range = ws.defined_names["cthm_nom"]
-        _, dest = next(named_range.destinations)
-        nom = ws[dest].value
-
-        named_range = ws.defined_names["cthm_note"]
-        _, dest = next(named_range.destinations)
-        note = ws[dest].value
-
-        named_range = ws.defined_names["cthm_commentaire"]
-        _, dest = next(named_range.destinations)
-        comment = ws[dest].value
-
-        if matricule is None and nom is None:
-            continue  # Feuille non utilisée
-
-
-        student = find_student_by_name(nom, student_list)
-        matricule = student.omnivox_id
-        students.append(FeedBackStudent(student=student, sheet_name=ws.title, grade=note,
-                                        comment=comment))
-
-    return students
-
-def update_omnivox_id_in_workbook(student: FeedBackStudent, wb: Workbook) -> None:
-    nb_found = 0
-    for ws in wb.worksheets:
-                    # Check for defined range
-        if "cthm_matricule" not in ws.defined_names:
-            continue
-
-        # Double check that only one sheet has cthm_matricule
-        nb_found += 1
-        if nb_found > 1:
-            raise ValueError(f"Multiple sheets with 'cthm_matricule' found in workbook '{student.student.full_name()}'")
-
-        named_range = ws.defined_names["cthm_matricule"]
-        _, dest = next(named_range.destinations)
-        cell = ws[dest]
-        cell.value = student.student.omnivox_id
-
-        named_range = ws.defined_names["cthm_nom"]
-        _, dest = next(named_range.destinations)
-        cell = ws[dest]
-        cell.value = student.student.full_name()
+def extract_student(s: dict, student_list: list[Student] | None) -> tuple[str, str]:
+    if "matricule" not in s:
+        if not student_list:
+            raise ValueError("Le fichier d'étudiants doit être fourni pour faire la correspondance par nom.")
+        s1 = find_student_by_name(s["nom"], student_list)
+        return s1.full_name(), s1.omnivox_id
+    else:
+        return s["nom"], s["matricule"]
 
 def generate_xl_for_omnivox(
     students: list[FeedBackStudent],
@@ -178,7 +134,7 @@ def populate_omnivox_sheet(students: list[FeedBackStudent], omnivox_worksheet: W
 
     # Trouves tous les fichiers excel
     for student in students:
-        omnivox_worksheet.append([student.student.omnivox_id, student.grade, student.comment, student.student.full_name()])
+        omnivox_worksheet.append([student.matricule, student.grade, student.comment, student.name])
 
     # Format
     _insert_table(omnivox_worksheet, "NotesOmnivox", "A1:D" + str(omnivox_worksheet.max_row))
@@ -187,16 +143,30 @@ def populate_omnivox_sheet(students: list[FeedBackStudent], omnivox_worksheet: W
     omnivox_worksheet.column_dimensions["C"].width = 70
     omnivox_worksheet.column_dimensions["D"].width = 40
 
-def parse_grade(note: str | float | int | None) -> float | None:
+def parse_percent(note: str | float | int | None) -> float:
     if note is None:
         raise ValueError("La note ne peut pas être None")
-    if isinstance(note, float | int | None):
-        return note
+    if isinstance(note, float | int):
+        grade = float(note)
     elif isinstance(note, str):
-        note = note.strip().split(" ")[0].strip().replace(",", ".")
-        return float(note)
+        note = note.strip().lower()
+        if note in ("tb", "très bien", "tres bien"):
+            grade =  1.0
+        elif note in ("b", "bien"):
+            grade =  0.80
+        elif note in ("p", "passable"):
+            grade =  0.6
+        elif note in ("a", "à améliorer", "a ameliorer"):
+            grade =  0.30
+        elif note in ("i", "insuffisant"):
+            grade =  0.0
+        else:
+            grade =  float(note)
     else:
         raise TypeError(f"Type de note inattendu: {type(note)}")
+    if not (0.0 <= grade <= 1.0):
+        raise ValueError(f"La note doit être entre 0 et 1. Valeur reçue: {note}")
+    return grade
 
 def _insert_table(ws: Worksheet, display_name: str, ref: str) -> None:
     table = Table(displayName=display_name, ref=ref)

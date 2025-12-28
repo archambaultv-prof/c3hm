@@ -29,28 +29,34 @@ def generate_gradebook(rubric: Path, students_file: Path | None, teams: int | No
 def generate_gradebook_from_students_file(rubric: dict, students_file: Path, output_dir: Path) -> None:
     students = read_omnivox_students_file(students_file)
     for student in students:
-        new_d = {"étudiant": {"nom": f"{student.full_name()}",
+        new_rubric: dict = {"étudiant": {"nom": f"{student.full_name()}",
                               "matricule": f"{student.omnivox_id}"}}
-        new_d.update(copy.deepcopy(rubric))
-        d = new_d
-        update_criteria(d)
-        add_global_comment(d)
+        new_rubric.update(copy.deepcopy(rubric))
+        update_criteria(new_rubric)
+        add_bonus_malus(new_rubric)
+        add_global_comment(new_rubric)
         stem = f"{student.last_name} {student.first_name} {student.omnivox_id}.yaml"
         destination = output_dir / stem
         with open(destination, "w", encoding="utf-8") as f:
-            yaml.dump(d, f, allow_unicode=True, indent=4, sort_keys=False)
+            yaml.dump(new_rubric, f, allow_unicode=True, indent=4, sort_keys=False)
+
+def add_bonus_malus(new_d):
+    new_d["bonus malus"] = {
+            "points": None,
+            "raison": None
+        }
 
 def generate_gradebook_from_teams(rubric: dict, teams: int, output_dir: Path) -> None:
     new_rubric = {"étudiants": [{"nom": None}, {"nom": None}, {"nom": None}, {"nom": None}]}
     new_rubric.update(copy.deepcopy(rubric))
-    rubric = new_rubric
-    update_criteria(rubric)
-    add_global_comment(rubric)
+    update_criteria(new_rubric)
+    add_bonus_malus(new_rubric)
+    add_global_comment(new_rubric)
     for team_number in range(1, teams + 1):
         stem = f"Équipe {team_number}.yaml"
         destination = output_dir / stem
         with open(destination, "w", encoding="utf-8") as f:
-            yaml.dump(rubric, f, allow_unicode=True, indent=4, sort_keys=False)
+            yaml.dump(new_rubric, f, allow_unicode=True, indent=4, sort_keys=False)
 
 def add_global_comment(d: dict) -> None:
     d["commentaire"] = None
@@ -61,5 +67,5 @@ def update_criteria(d: dict) -> None:
             continue
         if "section" in node:
             continue
-        node["note"] = None
+        node["pourcentage"] = None
         node["commentaire"] = None
