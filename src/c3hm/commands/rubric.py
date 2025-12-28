@@ -11,7 +11,6 @@ PREAMBULE = textwrap.dedent("""
         lang: "fr",
         hyphenate: true,
     )
-
     #set page(
         paper: "us-letter",
         flipped: true,
@@ -29,6 +28,7 @@ PREAMBULE = textwrap.dedent("""
     #set table.cell(inset: (x: 0.5em, y: 0.75em)) // To go around the issue with hline and row-gutters
     #show table.cell.where(y: 0): set text(weight: "bold")
     #show table.cell: set text(size: 10pt)
+    #show table.cell: set par(justify: false)
     """)
 
 def rubric_table_header(grade: float | None = None) -> str:
