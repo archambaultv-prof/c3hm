@@ -31,6 +31,7 @@ def template_command(output_path: Path, force: bool) -> None:
     original_output_path = output_path
     if output_path is None:
         output_path = Path.cwd() / "grille.yaml"
+        original_output_path = output_path
     elif not output_path.is_absolute():
         output_path = Path.cwd() / output_path
 
