@@ -108,6 +108,18 @@ def export_rubric_data(rubric_data: dict, output_path: Path) -> None:
         s.append("- des fautes de français")
         s.append("- une erreur significative (non respect des consignes, code spaghetti, code qui plante ou ne démarre pas, etc.)")
 
+    # Commentaire
+    if "nom" in rubric_data:
+        comment = None
+        if "commentaire" in rubric_data and rubric_data["commentaire"] is not None and rubric_data["commentaire"].strip():
+            comment = rubric_data["commentaire"]
+        elif rubric_data["note"] >= 90:
+            comment = "Très bon travail!"
+        if comment:
+            s.append("#heading(numbering: none, level: 2)[Commentaire]")
+            s.append(comment)
+            s.append("")
+
     # Compilation
     output_typst = output_path.with_suffix(".typ")
     with open(output_typst, "w", encoding="utf-8") as f:
@@ -152,6 +164,10 @@ def table_rows(data: dict) -> list[str]:
 
             pts = f"{item['note']} / {item['points']}" if "note" in item else f"{item['points']} pts"
             rows.append(f'[{item["critère"]} ({pts})], {", ".join(descriptor_cells)},')
+
+            # Ajout d'un commentaire si présent
+            if "nom" in data and "commentaire" in item and item["commentaire"] is not None and item["commentaire"].strip():
+                rows.append(f'[#align(right)[_Commentaire_]], table.cell(colspan: 5)[{item["commentaire"]}],')
         else:
             raise ValueError("Chaque élément doit être une section ou un critère.")
     return rows
