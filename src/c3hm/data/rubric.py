@@ -115,16 +115,16 @@ def parse_percent(note: str | float | int | None) -> float:
     if isinstance(note, float | int):
         grade = float(note)
     elif isinstance(note, str):
-        note = note.strip().lower()
-        if note in ("tb", "très bien", "tres bien"):
+        note = note.strip().lower().replace("é", "e").replace("è", "e").replace("ê", "e").replace("à", "a").replace("ç", "c")
+        if note in ("av", "avance"):
             grade =  1.0
-        elif note in ("b", "bien"):
-            grade =  0.80
-        elif note in ("p", "passable"):
-            grade =  0.6
-        elif note in ("a", "à améliorer", "a ameliorer"):
-            grade =  0.30
-        elif note in ("i", "insuffisant"):
+        elif note in ("ac", "acquis"):
+            grade =  0.75
+        elif note in ("p", "presque", "ca y est presque"):
+            grade =  0.5
+        elif note in ("ap", "en apprentissage", "apprentissage"):
+            grade =  0.25
+        elif note in ("i", "insuffisant", "donnees insuffisantes"):
             grade =  0.0
         else:
             grade =  float(note)

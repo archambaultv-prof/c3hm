@@ -44,9 +44,10 @@ def rubric_table_header(grade: float | None = None) -> str:
         },
         """)
     if grade is not None:
-        s += f'table.header([Note : {grade:.0f} / 100],[Très bien (100%)],[Bien (80%)],[Passable (60%)],[À améliorer (30%)],[Insuffisant (0%)], table.hline(stroke: 1pt)),'
+        s += f'table.header([Note : {grade:.0f} / 100],'
     else:
-        s += 'table.header([Critère (100 pts)],[Très bien (100%)],[Bien (80%)],[Passable (60%)],[À améliorer (30%)],[Insuffisant (0%)], table.hline(stroke: 1pt)),'
+        s += 'table.header([Critère],'
+    s += '[Avancé],[Acquis],[Ça y est presque!],[En apprentissage],[Données insuffisantes], table.hline(stroke: 1pt)),'
     return s
 
 
@@ -130,15 +131,15 @@ def table_rows(data: dict) -> list[str]:
             percentage = item.get("pourcentage")
             if is_single_student_rubric(data) and percentage is not None:
                 if percentage == 1.0:
-                    highlight_idx, highlight_color = 0, "PERFECT_GREEN"      # Très bien (100%)
-                elif percentage >= 0.8:
-                    highlight_idx, highlight_color = 1, "VERY_GOOD_GREEN"    # Bien (80%)
-                elif percentage >= 0.6:
-                    highlight_idx, highlight_color = 2, "HALF_WAY_YELLOW"    # Passable (60%)
-                elif percentage >= 0.3:
-                    highlight_idx, highlight_color = 3, "MINIMAL_RED"        # À améliorer (30%)
+                    highlight_idx, highlight_color = 0, "PERFECT_GREEN"      # Avancé (100%)
+                elif percentage >= 0.75:
+                    highlight_idx, highlight_color = 1, "VERY_GOOD_GREEN"    # Acquis (75%)
+                elif percentage >= 0.5:
+                    highlight_idx, highlight_color = 2, "HALF_WAY_YELLOW"    # Ça y est presque! (50%)
+                elif percentage >= 0.25:
+                    highlight_idx, highlight_color = 3, "MINIMAL_RED"        # En apprentissage (25%)
                 else:
-                    highlight_idx, highlight_color = 4, "BAD_RED"            # Insuffisant (0%)
+                    highlight_idx, highlight_color = 4, "BAD_RED"            # Données insuffisantes (0%)
 
             # Construction des cellules de descripteurs, avec coloration si nécessaire
             descs = item.get("descripteurs", DEFAULT_DESCRIPTORS)
@@ -149,8 +150,8 @@ def table_rows(data: dict) -> list[str]:
                 else:
                     descriptor_cells.append(f'[{desc}]')
 
-            pts = f"{item['note']}~/~{item['points']}" if "note" in item else f"{item['points']}~pts"
-            rows.append(f'[{item["critère"]} ({pts})], {", ".join(descriptor_cells)},')
+            pts = f" ({item['note']}~/~{item['points']})" if "note" in item else ""
+            rows.append(f'[{item["critère"]}{pts}], {", ".join(descriptor_cells)},')
 
             # Ajout d'un commentaire si présent
             if "nom" in data and "commentaire" in item and item["commentaire"] is not None and item["commentaire"].strip():
