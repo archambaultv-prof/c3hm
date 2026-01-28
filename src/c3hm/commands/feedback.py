@@ -7,7 +7,7 @@ import openpyxl
 from openpyxl.worksheet.table import Table, TableStyleInfo
 from openpyxl.worksheet.worksheet import Worksheet
 
-from c3hm.commands.rubric import export_rubric_data
+from c3hm.commands.rubric import export_rubric
 from c3hm.data.rubric import process_single_student_rubric, validate_student
 from c3hm.data.student import Student, read_omnivox_students_file
 
@@ -87,7 +87,7 @@ def process_json_files(
                 matricule = student_data["étudiant"]["matricule"]
                 destination = output_dir / f"{name} {matricule}.pdf"
                 data_student = process_single_student_rubric(student_data)
-                export_rubric_data(data_student, destination)
+                export_rubric(data_student, destination)
                 student = FeedBackStudent(
                     name=name,
                     matricule=matricule,

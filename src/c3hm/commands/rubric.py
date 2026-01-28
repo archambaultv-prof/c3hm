@@ -3,162 +3,37 @@ import subprocess
 import textwrap
 from pathlib import Path
 
-from c3hm.data.rubric import DEFAULT_DESCRIPTORS, is_single_student_rubric, process_single_student_rubric, validate_rubric
-
-PREAMBULE = textwrap.dedent("""
-    #set text(
-        lang: "fr",
-        hyphenate: true,
-    )
-    #set page(
-        paper: "us-letter",
-        flipped: true,
-        numbering: "1 / 1",
-        margin: (x: 0.5in, y: 0.5in)
-    )
-    #set par(justify: true)
-
-    #let PERFECT_GREEN   = rgb("#C8FFC8")
-    #let VERY_GOOD_GREEN = rgb("#F0FFB0")
-    #let HALF_WAY_YELLOW = rgb("#FFF8C2")
-    #let MINIMAL_RED     = rgb("#FFE4C8")
-    #let BAD_RED         = rgb("#FFC8C8")
-
-    #set table.cell(inset: (x: 0.5em, y: 0.75em)) // To go around the issue with hline and row-gutters
-    #show table.cell.where(y: 0): set text(weight: "bold")
-    #show table.cell: set text(size: 10pt)
-    #show table.cell: set par(justify: false)
-    """)
-
-def rubric_table_header(grade: float | None = None) -> str:
-    s = textwrap.dedent("""
-        #table(
-        columns: (1fr, 1fr, 1fr, 1fr, 1fr, 1fr),
-        stroke: none,
-        fill: (x, y) => if y == 0 {
-            if x == 1 { PERFECT_GREEN }
-            else if x == 2 { VERY_GOOD_GREEN }
-            else if x == 3 { HALF_WAY_YELLOW }
-            else if x == 4 { MINIMAL_RED }
-            else if x == 5 { BAD_RED }
-        },
-        """)
-    if grade is not None:
-        s += f'table.header([Note : {grade:.0f} / 100],'
-    else:
-        s += 'table.header([Critère],'
-    s += '[Avancé],[Acquis],[Ça y est presque!],[En apprentissage],[Données insuffisantes], table.hline(stroke: 1pt)),'
-    return s
+from c3hm.data.rubric import Rubric
+from c3hm.data.rubric_typst import RubricTypstRepo
 
 
-def export_rubric(input_path: Path, output_path: Path) -> None:
+
+def export_rubric_from_json(input_path: Path, output_path: Path) -> None:
     with open(input_path, encoding="utf-8") as f:
-        rubric = json.load(f)
-    if is_single_student_rubric(rubric):
-        rubric = process_single_student_rubric(rubric)
-    export_rubric_data(rubric, output_path)
+        d = json.load(f)
+    r = Rubric.from_dict(d)
+    export_rubric(r, output_path)
 
-def export_rubric_data(rubric_data: dict, output_path: Path) -> None:
-    validate_rubric(rubric_data)
+def export_rubric(rubric: Rubric, output_path: Path) -> None:
+    rubric.validate()
 
-    # Préambule et en-tête
-    s = [PREAMBULE, ""]
-    if is_single_student_rubric(rubric_data):
-        matricule = f" ({rubric_data['étudiant']['matricule']})" if "matricule" in rubric_data["étudiant"] else ""
-        s.append(f'#title("Grille d’évaluation - {rubric_data["étudiant"]["nom"]}{matricule}")')
-    else:
-        s.append('#title("Grille d’évaluation")')
-    s.append(f"/ Cours: {rubric_data['cours']}")
-    s.append(f"/ Session: {rubric_data['session']}")
-    s.append(f"/ Évaluation: {rubric_data['évaluation']}")
-
-    # Tableau des critères
-    if is_single_student_rubric(rubric_data):
-        s.append(rubric_table_header(rubric_data["note"]))
-    else:
-        s.append(rubric_table_header())
-    s.extend(table_rows(rubric_data))
-    s.extend([")", ""])
-
-    # Bonus malus
-    if is_single_student_rubric(rubric_data):
-        s.append('')
-        bonus_malus = rubric_data.get("bonus malus", {})
-        points = bonus_malus.get("points")
-        if points is not None and points != 0:
-            raison = bonus_malus.get("raison")
-            points_str = f"{points} pts"
-            s.append("#heading(numbering: none, level: 1)[Bonus / Malus]")
-            s.append(f"/ Points: {points_str}")
-            if raison is not None:
-                s.append(f"/ Raison: {raison}")
-            s.append("")
-    else:
-        s.append('')
-        s.append("#heading(numbering: none, level: 1)[Bonus / Malus]")
-        s.append("En plus de la grille ci-dessus, il est possible que des points de bonus ou de malus soient appliqués,"
-                 " notamment pour:")
-        s.append("- un retard dans la remise du travail")
-        s.append("- des fautes de français")
-        s.append("- une erreur significative (non respect des consignes, code spaghetti, code qui plante ou ne démarre pas, etc.)")
-
-    # Commentaire
-    if is_single_student_rubric(rubric_data) and rubric_data["commentaire"]:
-        s.append("#heading(numbering: none, level: 1)[Commentaire]")
-        s.append(rubric_data["commentaire"])
-        s.append("")
-
-    # Compilation
+    # Write Typst file
+    repo = RubricTypstRepo(rubric)
     output_typst = output_path.with_suffix(".typ")
-    with open(output_typst, "w", encoding="utf-8") as f:
-        f.write("\n".join(s))
+    repo.write_typst_file(output_typst)
 
-    output_path = output_path.with_suffix(".pdf")
-    compile_typst_file(output_typst, output_path)
+    output_suffix = output_path.suffix.lower()
+    match output_suffix:
+        case ".typ":
+             # Rien à faire de plus
+             pass
+        case ".pdf":
+            # Compile to PDF
+            compile_typst_file(output_typst, output_path)
+            output_typst.unlink()
+        case _:
+            raise ValueError(f"Le format de sortie '{output_suffix}' n'est pas supporté. Veuillez utiliser '.typ' ou '.pdf'.")
 
-    # Nettoyage du fichier temporaire
-    output_typst.unlink()
-
-def table_rows(data: dict) -> list[str]:
-    rows = []
-    for item in data["critères"]:
-        if "section" in item:
-            rows.append(f'[*{item["section"]}*], [], [], [], [], [],')
-        elif "critère" in item:
-            # Détermination de la colonne à colorer selon `percentage`
-            highlight_idx = None
-            highlight_color = None
-            percentage = item.get("pourcentage")
-            if is_single_student_rubric(data) and percentage is not None:
-                if percentage == 1.0:
-                    highlight_idx, highlight_color = 0, "PERFECT_GREEN"      # Avancé (100%)
-                elif percentage >= 0.75:
-                    highlight_idx, highlight_color = 1, "VERY_GOOD_GREEN"    # Acquis (75%)
-                elif percentage >= 0.5:
-                    highlight_idx, highlight_color = 2, "HALF_WAY_YELLOW"    # Ça y est presque! (50%)
-                elif percentage >= 0.25:
-                    highlight_idx, highlight_color = 3, "MINIMAL_RED"        # En apprentissage (25%)
-                else:
-                    highlight_idx, highlight_color = 4, "BAD_RED"            # Données insuffisantes (0%)
-
-            # Construction des cellules de descripteurs, avec coloration si nécessaire
-            descs = item.get("descripteurs", DEFAULT_DESCRIPTORS)
-            descriptor_cells = []
-            for i, desc in enumerate(descs):
-                if highlight_idx is not None and i == highlight_idx:
-                    descriptor_cells.append(f'box(fill: {highlight_color})[{desc}]')
-                else:
-                    descriptor_cells.append(f'[{desc}]')
-
-            pts = f" ({item['note']}~/~{item['points']})" if "note" in item else ""
-            rows.append(f'[{item["critère"]}{pts}], {", ".join(descriptor_cells)},')
-
-            # Ajout d'un commentaire si présent
-            if "nom" in data and "commentaire" in item and item["commentaire"] is not None and item["commentaire"].strip():
-                rows.append(f'[#align(right)[_Commentaire_]], table.cell(colspan: 5)[{item["commentaire"]}],')
-        else:
-            raise ValueError("Chaque élément doit être une section ou un critère.")
-    return rows
 
 def compile_typst_file(input_path: Path, output_path: Path) -> None:
     result = subprocess.run(

@@ -1,8 +1,9 @@
 from pathlib import Path
+import textwrap
 
 import click
 
-from c3hm.commands.rubric import export_rubric
+from c3hm.commands.rubric import export_rubric_from_json
 
 
 @click.command(
@@ -33,4 +34,4 @@ def rubric_command(input_path: Path, output_path: Path) -> None:
     elif not output_path.is_absolute():
         output_path = Path.cwd() / output_path
 
-    export_rubric(input_path, output_path)
+    export_rubric_from_json(input_path, output_path)

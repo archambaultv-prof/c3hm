@@ -1,43 +1,235 @@
+from datetime import date
+from typing import Any
+
 from c3hm.data.student import Student, find_student_by_name
 
-DEFAULT_DESCRIPTORS = [
-    "Entièrement conforme aux attentes.",
-    "Globalement conforme aux attentes : quelques éléments perfectibles.",
-    "Partiellement conforme aux attentes : une erreur significative.",
-    "Faiblement conforme aux attentes : erreurs significatives, erreur grave ou démarche inadéquate.",
-    "Non conforme aux attentes."
-]
 
+class Indicator:
+    def __init__(self, label: str, points: float, descriptors: list[str] | None = None):
+        self.label = label
+        self.points = points
+        self.descriptors = descriptors or []
 
+    def validate(self) -> None:
+        _assert_non_empty_string(self.label, field_name="indicateur")
+        if not isinstance(self.points, int | float) or self.points < 0:
+            raise ValueError(f"Le champ 'points' de l'indicateur '{self.label}' doit être un nombre positif.")
+        for desc in self.descriptors:
+            _assert_non_empty_string(desc, field_name="descripteur")
+
+    def to_dict(self) -> dict:
+        d = {
+            "indicateur": self.label,
+            "points": self.points,
+        }
+        if self.descriptors:
+            d["descripteurs"] = self.descriptors
+        return d
+
+    @classmethod
+    def from_dict(cls, data: dict) -> 'Indicator':
+        label = data["indicateur"]
+        points = data["points"]
+        descriptors = data.get("descripteurs", [])
+        return cls(label=label, points=points, descriptors=descriptors)
+
+class Criterion:
+    def __init__(self, label: str, indicators: list[Indicator]):
+        self.label = label
+        self.indicators = indicators
+
+    def points(self) -> float:
+        return sum(indicator.points for indicator in self.indicators)
+
+    def to_dict(self) -> dict:
+        return {
+            "critère": self.label,
+            "indicateurs": [indicator.to_dict() for indicator in self.indicators],
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> 'Criterion':
+        label = data["critère"]
+        indicators = [Indicator.from_dict(ind_data) for ind_data in data.get("indicateurs", [])]
+        return cls(label=label, indicators=indicators)
+
+    def validate(self) -> None:
+        _assert_non_empty_string(self.label, field_name="critère")
+        if not self.indicators or not isinstance(self.indicators, list):
+            raise ValueError(f"Le critère '{self.label}' doit contenir une liste d'indicateurs non vide.")
+        for indicator in self.indicators:
+            indicator.validate()
+
+        # Même nombre de descripteurs pour chaque indicateur
+        nb_of_descriptors = len(self.indicators[0].descriptors)
+        for indicator in self.indicators[1:]:
+            if len(indicator.descriptors) != nb_of_descriptors:
+                raise ValueError(f"Tous les indicateurs du critère '{self.label}' doivent avoir le même nombre de descripteurs.")
+
+class Grid:
+    def __init__(self, criteria: list[Criterion]):
+        self.criteria = criteria
+
+    def to_dict(self) -> list[dict]:
+        return [criterion.to_dict() for criterion in self.criteria]
+
+    def is_analytic(self) -> bool:
+        return any(criterion.indicators and criterion.indicators[0].descriptors for criterion in self.criteria)
+
+    def is_holistic(self) -> bool:
+        return not self.is_analytic()
+
+    def nb_of_descriptors(self) -> int:
+        return len(self.criteria[0].indicators[0].descriptors)
+
+    @classmethod
+    def from_dict(cls, data: list[dict]) -> 'Grid':
+        criteria = [Criterion.from_dict(crit_data) for crit_data in data]
+        return cls(criteria=criteria)
+
+    def validate(self) -> None:
+        sum_points = 0.0
+        if not self.criteria or not isinstance(self.criteria, list):
+            raise ValueError("La grille doit contenir une liste de critères non vide.")
+        for criterion in self.criteria:
+            criterion.validate()
+            sum_points += criterion.points()
+        if sum_points != 100.0:
+            raise ValueError(f"La somme totale des points des critères doit être égale à 100. Total trouvé: {sum_points}")
+
+        # Même nombre de descripteurs pour chaque critère
+        nb_of_descriptors = len(self.criteria[0].indicators[0].descriptors)
+        for criterion in self.criteria[1:]:
+            if len(criterion.indicators[0].descriptors) != nb_of_descriptors:
+                raise ValueError("Tous les critères doivent avoir le même nombre de descripteurs pour leurs indicateurs.")
+
+class Rubric:
+    def __init__(self, course: str, session: str, evaluation: str, grid: Grid):
+        self.course = course
+        self.session = session
+        self.evaluation = evaluation
+        self.grid = grid
+
+    def to_dict(self) -> dict:
+        d = {
+            "cours": self.course,
+            "session": self.session,
+            "évaluation": self.evaluation,
+            "grille": self.grid.to_dict(),
+        }
+        return d
+
+    @classmethod
+    def from_dict(cls, data: dict) -> 'Rubric':
+        course = data["cours"]
+        session = data["session"]
+        evaluation = data["évaluation"]
+        grid = Grid.from_dict(data["grille"])
+        return cls(course=course, session=session, evaluation=evaluation, grid=grid)
+
+    def validate(self) -> None:
+        _assert_non_empty_string(self.course, field_name="cours")
+        _assert_non_empty_string(self.session, field_name="session")
+        _assert_non_empty_string(self.evaluation, field_name="évaluation")
+        self.grid.validate()
+
+    @classmethod
+    def template(cls, analytic: bool = False) -> 'Rubric':
+        """
+        Retourne une grille d'évaluation modèle. Cette grille n'est pas valide
+        au sens de la validation car elle n'a pas de nom de cours et
+        d'évaluation.
+        """
+        criteria = [
+            Criterion(
+                label="Critère 1",
+                indicators=[
+                    Indicator(
+                        label="Indicateur 1",
+                        points=20,
+                    ),
+                    Indicator(
+                        label="Indicateur 2",
+                        points=20,
+                    ),
+                ]
+            ),
+            Criterion(
+                label="Critère 2",
+                indicators=[
+                    Indicator(
+                        label="Indicateur 3",
+                        points=20,
+                    ),
+                    Indicator(
+                        label="Indicateur 4",
+                        points=20,
+                    ),
+                    Indicator(
+                        label="Indicateur 5",
+                        points=20,
+                    ),
+                ]
+            ),
+        ]
+        g = Grid(criteria=criteria)
+        if analytic:
+            for criterion in g.criteria:
+                for indicator in criterion.indicators:
+                    indicator.descriptors = [
+                        "Descripteur 1",
+                        "Descripteur 2",
+                        "Descripteur 3",
+                        "Descripteur 4",
+                        "Descripteur 5",
+                    ]
+        r = cls(
+            course="",
+            session=_get_current_semester(),
+            evaluation="",
+            grid=g
+        )
+        return r
+
+def _get_current_semester() -> str:
+    """
+    Retourne le semestre actuel
+    """
+    today = date.today()
+    year = today.year
+    if today.month <= 5:
+        return f"Hiver {year}"
+    elif today.month <= 7:
+        return f"Été {year}"
+    else:
+        return f"Automne {year}"
 
 def is_single_student_rubric(rubric: dict) -> bool:
     """Détermine si la grille d'évaluation est pour un étudiant individuel."""
     return "étudiant" in rubric
 
-def validate_student(s: dict, student_list: list[Student] | None) -> None:
-    if "étudiant" not in s:
+def validate_student(rubric: dict, student_list: list[Student] | None) -> None:
+    if "étudiant" not in rubric:
         raise ValueError("La grille de l'étudiant doit contenir une section 'étudiant'.")
-    student = s["étudiant"]
+    student = rubric["étudiant"]
     if "nom" not in student or not isinstance(student["nom"], str) or student["nom"].strip() == "":
         raise ValueError("Le champ 'nom' de l'étudiant doit être une chaîne de caractères non vide.")
     if "matricule" not in student:
         if not student_list:
             raise ValueError("Le fichier d'étudiants doit être fourni pour faire la correspondance par nom.")
         s1 = find_student_by_name(student["nom"], student_list)
-        s["étudiant"]["matricule"] = s1.omnivox_id
-        s["étudiant"]["nom"] = s1.full_name()
+        rubric["étudiant"]["matricule"] = s1.omnivox_id
+        rubric["étudiant"]["nom"] = s1.full_name()
 
 def validate_rubric(rubric: dict) -> None:
     """Validate that the rubric has the required structure."""
-    assert_non_empty_string(rubric, "cours")
-    assert_non_empty_string(rubric, "session")
-    assert_non_empty_string(rubric, "évaluation")
+
     assert_total_points(rubric)
     validate_descriptors(rubric)
 
     if is_single_student_rubric(rubric):
-        assert_non_empty_string(rubric["étudiant"], "nom")
-        assert_non_empty_string(rubric["étudiant"], "matricule")
+        _assert_non_empty_string(rubric["étudiant"], "nom")
+        _assert_non_empty_string(rubric["étudiant"], "matricule")
         none_if_missing_or_empty(rubric, "commentaire")
         for item in rubric.get("critères", []):
             none_if_missing_or_empty(item, "commentaire")
@@ -55,8 +247,7 @@ def none_if_missing_or_empty(d: dict, field_name: str) -> None:
     else:
         raise ValueError(f"Le champ '{field_name}' doit être une chaîne de caractères.")
 
-def assert_non_empty_string(d: dict, field_name: str) -> None:
-    value = d.get(field_name)
+def _assert_non_empty_string(value: Any, field_name: str) -> None:
     if value is None or not isinstance(value, str) or value.strip() == "":
         raise ValueError(f"Le champ '{field_name}' doit être une chaîne de caractères non vide.")
 

@@ -23,8 +23,14 @@ from c3hm.commands.template import export_template
     default=False,
     help="Force l'écrasement du fichier de sortie s'il existe"
 )
+@click.option(
+    '--analytic', '-a', 'analytic',
+    is_flag=True,
+    default=False,
+    help="Génère une grille d'évaluation analytique (par défaut, une grille holistique)."
+)
 
-def template_command(output_path: Path, force: bool) -> None:
+def template_command(output_path: Path, force: bool, analytic: bool) -> None:
     """
     Génère une grille d'évaluation.
     """
@@ -37,4 +43,4 @@ def template_command(output_path: Path, force: bool) -> None:
 
     if output_path.exists() and not force:
         raise FileExistsError(f"Le fichier {original_output_path} existe déjà. Utilisez -f pour l'écraser.")
-    export_template(output_path)
+    export_template(output_path, analytic=analytic)
