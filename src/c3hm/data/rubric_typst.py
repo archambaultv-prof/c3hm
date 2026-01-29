@@ -1,19 +1,20 @@
-from pathlib import Path
 import textwrap
+from pathlib import Path
+
 from c3hm.data.rubric import Rubric
 
 
-class RubricTypstRepo:
+class TypstWriter:
     def __init__(self, rubric: Rubric):
         self.rubric = rubric
 
     def write_typst_file(self, output_path: Path) -> None:
         with open(output_path, "w", encoding="utf-8") as f:
             content = [self._preamble()]
-            content.append(f'#title("Grille d’évaluation")')
+            content.append(f'#title("Grille d’évaluation") - {self.rubric.evaluation}')
             content.append(f"/ Cours: {self.rubric.course}")
             content.append(f"/ Session: {self.rubric.session}")
-            content.append(f"/ Évaluation: {self.rubric.evaluation}")
+            content.append(self._warning_note())
             content.append(self._grid_table())
             f.write("\n".join(content))
 
@@ -50,12 +51,6 @@ class RubricTypstRepo:
         return "\n".join(s)
 
     def _grid_table_header(self) -> str:
-        if self.rubric.grid.is_analytic():
-            return self._grid_table_header_analytic()
-        else:
-            return self._grid_table_header_holistic()
-
-    def _grid_table_header_analytic(self) -> str:
         s = textwrap.dedent("""
             #table(
             columns: (1fr, 1fr, 1fr, 1fr, 1fr, 1fr),
@@ -68,38 +63,30 @@ class RubricTypstRepo:
                 else if x == 5 { BAD_RED }
             },
             """)
-        s += 'table.header([Critère],'
-        s += '[Avancé],[Acquis],[Ça y est presque!],[En apprentissage],[Données insuffisantes], table.hline(stroke: 1pt)),'
+        s += 'table.header([Critère (100~pts)],'
+        if self.rubric.show_levels_percentage:
+            s += '[Avancé (100%)],[Acquis (75%)],[Ça y est presque! (50%)],[En apprentissage (25%)],[Non démontré (0%)],'
+        else:
+            s += '[Avancé],[Acquis],[Ça y est presque!],[En apprentissage],[Non démontré],'
+        s += ' table.hline(stroke: 1pt)),'
         return s
 
-    def _grid_table_header_holistic(self) -> str:
-        s = textwrap.dedent("""
-            #table(
-            columns: (2fr, 3fr),
-            stroke: none,
+    def _warning_note(self) -> str:
+        return textwrap.dedent("""
+            La grille ci-dessous sert de guide pour soutenir le jugement
+            professionnel de l’enseignant et n’est pas exhaustive. La note
+            finale peut être ajustée en présence d’une erreur significative ou
+            d’un non-respect des attentes implicites de qualité (bonnes
+            pratiques, conventions, lisibilité, sécurité, etc.). Une erreur
+            significative peut entraîner la révision du poids d’un critère.
             """)
-        s += 'table.header([Critère],[Indicateurs], table.hline(stroke: 1pt)),'
-        return s
 
     def _table_rows(self) -> list[str]:
-        if self.rubric.grid.is_holistic():
-            return self._table_rows_holistic()
-        else:
-            return self._table_rows_analytic()
-
-    def _table_rows_holistic(self) -> list[str]:
         rows = []
         for criterion in self.rubric.grid.criteria:
-            labels = [i.label for i in criterion.indicators]
-            labels_list = "\n".join([f"- {label}" for label in labels])
-            rows.append(f'[*{criterion.label}*], [{labels_list}],')
-        return rows
-
-    def _table_rows_analytic(self) -> list[str]:
-        rows = []
-        for item in self.rubric.grid.criteria:
-            rows.append(f'[*{item.label}*], [], [], [], [], [],')
-            for indicator in item.indicators:
+            pts = f" ({criterion.points()}~pts)" if self.rubric.show_criteria_points else ""
+            rows.append(f'[*{criterion.label}{pts}*], [], [], [], [], [],')
+            for indicator in criterion.indicators:
                 # Détermination de la colonne à colorer selon `percentage`
                 highlight_idx = None
                 highlight_color = None
@@ -124,6 +111,5 @@ class RubricTypstRepo:
                     else:
                         descriptor_cells.append(f'[{desc}]')
 
-                # pts = f" ({item.note}~/~{item.points})" if hasattr(item, "note") else ""
-                rows.append(f'[{item.label}], {", ".join(descriptor_cells)},')
+                rows.append(f'[{indicator.label}], {", ".join(descriptor_cells)},')
         return rows

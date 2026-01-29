@@ -1,11 +1,9 @@
 import json
 import subprocess
-import textwrap
 from pathlib import Path
 
 from c3hm.data.rubric import Rubric
-from c3hm.data.rubric_typst import RubricTypstRepo
-
+from c3hm.data.rubric_typst import TypstWriter
 
 
 def export_rubric_from_json(input_path: Path, output_path: Path) -> None:
@@ -16,13 +14,15 @@ def export_rubric_from_json(input_path: Path, output_path: Path) -> None:
 
 def export_rubric(rubric: Rubric, output_path: Path) -> None:
     rubric.validate()
+    output_suffix = output_path.suffix.lower()
+    if output_suffix not in {".typ", ".pdf"}:
+        raise ValueError(f"Le format de sortie '{output_suffix}' n'est pas supporté. Veuillez utiliser '.typ' ou '.pdf'.")
 
     # Write Typst file
-    repo = RubricTypstRepo(rubric)
+    writer = TypstWriter(rubric)
     output_typst = output_path.with_suffix(".typ")
-    repo.write_typst_file(output_typst)
+    writer.write_typst_file(output_typst)
 
-    output_suffix = output_path.suffix.lower()
     match output_suffix:
         case ".typ":
              # Rien à faire de plus
@@ -31,8 +31,6 @@ def export_rubric(rubric: Rubric, output_path: Path) -> None:
             # Compile to PDF
             compile_typst_file(output_typst, output_path)
             output_typst.unlink()
-        case _:
-            raise ValueError(f"Le format de sortie '{output_suffix}' n'est pas supporté. Veuillez utiliser '.typ' ou '.pdf'.")
 
 
 def compile_typst_file(input_path: Path, output_path: Path) -> None:

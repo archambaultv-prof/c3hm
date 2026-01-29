@@ -5,15 +5,17 @@ from c3hm.data.student import Student, find_student_by_name
 
 
 class Indicator:
-    def __init__(self, label: str, points: float, descriptors: list[str] | None = None):
+    def __init__(self, label: str, points: float, descriptors: list[str]):
         self.label = label
         self.points = points
-        self.descriptors = descriptors or []
+        self.descriptors = descriptors
 
     def validate(self) -> None:
         _assert_non_empty_string(self.label, field_name="indicateur")
         if not isinstance(self.points, int | float) or self.points < 0:
             raise ValueError(f"Le champ 'points' de l'indicateur '{self.label}' doit être un nombre positif.")
+        if len(self.descriptors) != 5:
+            raise ValueError(f"L'indicateur '{self.label}' doit contenir une liste de 5 descripteurs.")
         for desc in self.descriptors:
             _assert_non_empty_string(desc, field_name="descripteur")
 
@@ -30,7 +32,7 @@ class Indicator:
     def from_dict(cls, data: dict) -> 'Indicator':
         label = data["indicateur"]
         points = data["points"]
-        descriptors = data.get("descripteurs", [])
+        descriptors = data["descripteurs"]
         return cls(label=label, points=points, descriptors=descriptors)
 
 class Criterion:
@@ -50,7 +52,7 @@ class Criterion:
     @classmethod
     def from_dict(cls, data: dict) -> 'Criterion':
         label = data["critère"]
-        indicators = [Indicator.from_dict(ind_data) for ind_data in data.get("indicateurs", [])]
+        indicators = [Indicator.from_dict(ind_data) for ind_data in data["indicateurs"]]
         return cls(label=label, indicators=indicators)
 
     def validate(self) -> None:
@@ -60,27 +62,12 @@ class Criterion:
         for indicator in self.indicators:
             indicator.validate()
 
-        # Même nombre de descripteurs pour chaque indicateur
-        nb_of_descriptors = len(self.indicators[0].descriptors)
-        for indicator in self.indicators[1:]:
-            if len(indicator.descriptors) != nb_of_descriptors:
-                raise ValueError(f"Tous les indicateurs du critère '{self.label}' doivent avoir le même nombre de descripteurs.")
-
 class Grid:
     def __init__(self, criteria: list[Criterion]):
         self.criteria = criteria
 
     def to_dict(self) -> list[dict]:
         return [criterion.to_dict() for criterion in self.criteria]
-
-    def is_analytic(self) -> bool:
-        return any(criterion.indicators and criterion.indicators[0].descriptors for criterion in self.criteria)
-
-    def is_holistic(self) -> bool:
-        return not self.is_analytic()
-
-    def nb_of_descriptors(self) -> int:
-        return len(self.criteria[0].indicators[0].descriptors)
 
     @classmethod
     def from_dict(cls, data: list[dict]) -> 'Grid':
@@ -97,24 +84,23 @@ class Grid:
         if sum_points != 100.0:
             raise ValueError(f"La somme totale des points des critères doit être égale à 100. Total trouvé: {sum_points}")
 
-        # Même nombre de descripteurs pour chaque critère
-        nb_of_descriptors = len(self.criteria[0].indicators[0].descriptors)
-        for criterion in self.criteria[1:]:
-            if len(criterion.indicators[0].descriptors) != nb_of_descriptors:
-                raise ValueError("Tous les critères doivent avoir le même nombre de descripteurs pour leurs indicateurs.")
-
 class Rubric:
-    def __init__(self, course: str, session: str, evaluation: str, grid: Grid):
+    def __init__(self, course: str, session: str, evaluation: str, grid: Grid,
+                 show_criteria_points: bool = True, show_levels_percentage: bool = True):
         self.course = course
         self.session = session
         self.evaluation = evaluation
         self.grid = grid
+        self.show_criteria_points = show_criteria_points
+        self.show_levels_percentage = show_levels_percentage
 
     def to_dict(self) -> dict:
         d = {
             "cours": self.course,
             "session": self.session,
             "évaluation": self.evaluation,
+            "afficher les points des critères": self.show_criteria_points,
+            "afficher les pourcentages des niveaux": self.show_levels_percentage,
             "grille": self.grid.to_dict(),
         }
         return d
@@ -124,8 +110,11 @@ class Rubric:
         course = data["cours"]
         session = data["session"]
         evaluation = data["évaluation"]
+        show_criteria_points = data["afficher les points des critères"]
+        show_levels_percentage = data["afficher les pourcentages des niveaux"]
         grid = Grid.from_dict(data["grille"])
-        return cls(course=course, session=session, evaluation=evaluation, grid=grid)
+        return cls(course=course, session=session, evaluation=evaluation, grid=grid,
+                   show_criteria_points=show_criteria_points, show_levels_percentage=show_levels_percentage)
 
     def validate(self) -> None:
         _assert_non_empty_string(self.course, field_name="cours")
@@ -134,12 +123,19 @@ class Rubric:
         self.grid.validate()
 
     @classmethod
-    def template(cls, analytic: bool = False) -> 'Rubric':
+    def template(cls) -> 'Rubric':
         """
         Retourne une grille d'évaluation modèle. Cette grille n'est pas valide
         au sens de la validation car elle n'a pas de nom de cours et
         d'évaluation.
         """
+        descriptors = [
+                        "Descripteur 1",
+                        "Descripteur 2",
+                        "Descripteur 3",
+                        "Descripteur 4",
+                        "Descripteur 5",
+                    ]
         criteria = [
             Criterion(
                 label="Critère 1",
@@ -147,10 +143,12 @@ class Rubric:
                     Indicator(
                         label="Indicateur 1",
                         points=20,
+                        descriptors=descriptors
                     ),
                     Indicator(
                         label="Indicateur 2",
                         points=20,
+                        descriptors=descriptors
                     ),
                 ]
             ),
@@ -160,34 +158,29 @@ class Rubric:
                     Indicator(
                         label="Indicateur 3",
                         points=20,
+                        descriptors=descriptors
                     ),
                     Indicator(
                         label="Indicateur 4",
                         points=20,
+                        descriptors=descriptors
                     ),
                     Indicator(
                         label="Indicateur 5",
                         points=20,
+                        descriptors=descriptors
                     ),
                 ]
             ),
         ]
         g = Grid(criteria=criteria)
-        if analytic:
-            for criterion in g.criteria:
-                for indicator in criterion.indicators:
-                    indicator.descriptors = [
-                        "Descripteur 1",
-                        "Descripteur 2",
-                        "Descripteur 3",
-                        "Descripteur 4",
-                        "Descripteur 5",
-                    ]
         r = cls(
             course="",
             session=_get_current_semester(),
             evaluation="",
-            grid=g
+            grid=g,
+            show_criteria_points=True,
+            show_levels_percentage=True,
         )
         return r
 
