@@ -1,11 +1,11 @@
-import copy
 import json
 from pathlib import Path
 
-from c3hm.data.student import read_omnivox_students_file
+from c3hm.data.rubric import Rubric
+from c3hm.data.student import Student, read_omnivox_students_file
 
 
-def generate_gradebook(rubric: Path, students_file: Path | None, teams: int | None, output_dir: Path) -> None:
+def generate_gradebook(rubric: Path, output_dir: Path, students_file: Path | None) -> None:
     """
     Génère les grilles de correction à partir du fichier de configuration.
     """
@@ -16,54 +16,31 @@ def generate_gradebook(rubric: Path, students_file: Path | None, teams: int | No
 
     with open(rubric, encoding="utf-8") as f:
         rubric_data = json.load(f)
+    r = Rubric.from_dict(rubric_data)
+    r.validate()
 
     if students_file:
-        generate_gradebook_from_students_file(rubric_data, students_file, output_dir)
-    elif teams:
-        generate_gradebook_from_teams(rubric_data, teams, output_dir)
+        generate_gradebook_from_students_file(r, students_file, output_dir)
     else:
-        raise ValueError("Vous devez fournir un fichier d'étudiants ou le nombre d'équipes.")
+        new_rubric = r.copy()
+        student = Student(omnivox_id="", name="")
+        new_rubric.student = student
+        output_path = output_dir / "grille de correction.json"
+        write_gradebook(new_rubric, output_path)
 
-def generate_gradebook_from_students_file(rubric: dict, students_file: Path, output_dir: Path) -> None:
+
+def generate_gradebook_from_students_file(rubric: Rubric, students_file: Path, output_dir: Path) -> None:
     students = read_omnivox_students_file(students_file)
     for student in students:
-        new_rubric: dict = {"étudiant": {"nom": f"{student.full_name()}",
-                              "matricule": f"{student.omnivox_id}"}}
-        new_rubric.update(copy.deepcopy(rubric))
-        update_criteria(new_rubric)
-        add_bonus_malus(new_rubric)
-        add_global_comment(new_rubric)
-        stem = f"{student.last_name} {student.first_name} {student.omnivox_id}.json"
+        student.validate()
+        new_rubric = rubric.copy()
+        new_rubric.student = student
+        stem = f"{student.name} {student.omnivox_id}.json"
         destination = output_dir / stem
-        with open(destination, "w", encoding="utf-8") as f:
-            json.dump(new_rubric, f, ensure_ascii=False, indent=4)
+        write_gradebook(new_rubric, destination)
 
-def add_bonus_malus(new_d):
-    new_d["bonus malus"] = {
-            "points": None,
-            "raison": None
-        }
+def write_gradebook(rubric: Rubric, output_path: Path) -> None:
+    rubric_dict = rubric.to_dict()
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(rubric_dict, f, ensure_ascii=False, indent=4)
 
-def generate_gradebook_from_teams(rubric: dict, teams: int, output_dir: Path) -> None:
-    new_rubric = {"étudiants": [{"nom": None}, {"nom": None}, {"nom": None}, {"nom": None}]}
-    new_rubric.update(copy.deepcopy(rubric))
-    update_criteria(new_rubric)
-    add_bonus_malus(new_rubric)
-    add_global_comment(new_rubric)
-    for team_number in range(1, teams + 1):
-        stem = f"Équipe {team_number}.json"
-        destination = output_dir / stem
-        with open(destination, "w", encoding="utf-8") as f:
-            json.dump(new_rubric, f, ensure_ascii=False, indent=4)
-
-def add_global_comment(d: dict) -> None:
-    d["commentaire"] = None
-
-def update_criteria(d: dict) -> None:
-    for node in d["critères"]:
-        if not isinstance(node, dict):
-            continue
-        if "section" in node:
-            continue
-        node["pourcentage"] = None
-        node["commentaire"] = None

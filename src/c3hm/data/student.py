@@ -2,16 +2,21 @@ import csv
 import re
 from pathlib import Path
 
-from pydantic import BaseModel, Field
 
+class Student:
+    def __init__(self, omnivox_id: str, name: str):
+        self.omnivox_id = omnivox_id
+        self.name = name
 
-class Student(BaseModel):
-    omnivox_id: str = Field(..., min_length=1)
-    first_name: str = Field(..., min_length=1)
-    last_name: str = Field(..., min_length=1)
+    def validate(self) -> None:
+        if not self.omnivox_id.strip():
+            raise ValueError("L'identifiant Omnivox ne peut pas être vide.")
 
-    def full_name(self) -> str:
-        return f"{self.first_name} {self.last_name}"
+        if not self.name.strip():
+            raise ValueError("Le nom de l'étudiant ne peut pas être vide.")
+
+    def copy(self) -> 'Student':
+        return Student(omnivox_id=self.omnivox_id, name=self.name)
 
 def read_omnivox_students_file(students_file: Path) -> list[Student]:
     """
@@ -29,8 +34,7 @@ def read_omnivox_students_file(students_file: Path) -> list[Student]:
             last_name = row["Nom de l'étudiant"]
             student = Student(
                 omnivox_id=strip_field(omnivox_id),
-                first_name=strip_field(first_name),
-                last_name=strip_field(last_name)
+                name=strip_field(first_name) + " " + strip_field(last_name),
             )
             students.append(student)
     return students
@@ -43,11 +47,10 @@ def find_student_by_name(name: str, student_list: list[Student]) -> Student:
     names = [x.strip().lower() for x in re.split(r"[\s-]+", name)]
     found = []
     for student in student_list:
-        first_names = [x.strip().lower() for x in re.split(r"[\s-]+", student.first_name)]
-        last_names = [x.strip().lower() for x in re.split(r"[\s-]+", student.last_name)]
+        names = [x.strip().lower() for x in re.split(r"[\s-]+", student.name)]
         match = True
         for n in names:
-            if n not in first_names and n not in last_names:
+            if n not in names:
                 match = False
                 break
         if match:

@@ -5,13 +5,25 @@ from c3hm.data.student import Student, find_student_by_name
 
 
 class Indicator:
-    def __init__(self, label: str, points: float, descriptors: list[str]):
+    def __init__(self, label: str, points: float, descriptors: list[str],
+                 graded_level: str | None = None):
         self.label = label
         self.points = points
         self.descriptors = descriptors
+        self.graded_level = graded_level
+
+    def copy(self) -> 'Indicator':
+        return Indicator(
+            label=self.label,
+            points=self.points,
+            descriptors=self.descriptors.copy(),
+            graded_level=self.graded_level
+        )
 
     def validate(self) -> None:
         _assert_non_empty_string(self.label, field_name="indicateur")
+        if self.graded_level is not None:
+            _assert_non_empty_string(self.graded_level, field_name="niveau noté")
         if not isinstance(self.points, int | float) or self.points < 0:
             raise ValueError(f"Le champ 'points' de l'indicateur '{self.label}' doit être un nombre positif.")
         if len(self.descriptors) != 5:
@@ -19,13 +31,14 @@ class Indicator:
         for desc in self.descriptors:
             _assert_non_empty_string(desc, field_name="descripteur")
 
-    def to_dict(self) -> dict:
+    def to_dict(self, include_graded_level: bool = False) -> dict:
         d = {
             "indicateur": self.label,
             "points": self.points,
+            "descripteurs": self.descriptors
         }
-        if self.descriptors:
-            d["descripteurs"] = self.descriptors
+        if include_graded_level:
+            d["niveau noté"] = self.graded_level if self.graded_level is not None else ""
         return d
 
     @classmethod
@@ -33,20 +46,29 @@ class Indicator:
         label = data["indicateur"]
         points = data["points"]
         descriptors = data["descripteurs"]
-        return cls(label=label, points=points, descriptors=descriptors)
+        graded_level = data.get("niveau noté")
+        if graded_level == "":
+            graded_level = None
+        return cls(label=label, points=points, descriptors=descriptors, graded_level=graded_level)
 
 class Criterion:
     def __init__(self, label: str, indicators: list[Indicator]):
         self.label = label
         self.indicators = indicators
 
+    def copy(self) -> 'Criterion':
+        return Criterion(
+            label=self.label,
+            indicators=[indicator.copy() for indicator in self.indicators]
+        )
+
     def points(self) -> float:
         return sum(indicator.points for indicator in self.indicators)
 
-    def to_dict(self) -> dict:
+    def to_dict(self, include_graded_level: bool = False) -> dict:
         return {
             "critère": self.label,
-            "indicateurs": [indicator.to_dict() for indicator in self.indicators],
+            "indicateurs": [indicator.to_dict(include_graded_level) for indicator in self.indicators],
         }
 
     @classmethod
@@ -66,8 +88,11 @@ class Grid:
     def __init__(self, criteria: list[Criterion]):
         self.criteria = criteria
 
-    def to_dict(self) -> list[dict]:
-        return [criterion.to_dict() for criterion in self.criteria]
+    def copy(self) -> 'Grid':
+        return Grid(criteria=[criterion.copy() for criterion in self.criteria])
+
+    def to_dict(self, include_graded_level: bool = False) -> list[dict]:
+        return [criterion.to_dict(include_graded_level) for criterion in self.criteria]
 
     @classmethod
     def from_dict(cls, data: list[dict]) -> 'Grid':
@@ -86,23 +111,48 @@ class Grid:
 
 class Rubric:
     def __init__(self, course: str, session: str, evaluation: str, grid: Grid,
-                 show_criteria_points: bool = True, show_levels_percentage: bool = True):
+                 show_criteria_points: bool = True, show_levels_percentage: bool = True,
+                 student: Student | None = None, grade: float | None = None, comment: str | None = None):
         self.course = course
         self.session = session
         self.evaluation = evaluation
         self.grid = grid
         self.show_criteria_points = show_criteria_points
         self.show_levels_percentage = show_levels_percentage
+        self.student = student
+        self.grade = grade
+        self.comment = comment
+
+    def copy(self) -> 'Rubric':
+        return Rubric(
+            course=self.course,
+            session=self.session,
+            evaluation=self.evaluation,
+            grid=self.grid.copy(),
+            show_criteria_points=self.show_criteria_points,
+            show_levels_percentage=self.show_levels_percentage,
+            student=self.student.copy() if self.student else None,
+            grade=self.grade,
+            comment=self.comment
+        )
 
     def to_dict(self) -> dict:
-        d = {
+        d = {}
+        if self.student:
+            d["étudiant"] = {
+                "nom": self.student.name,
+                "matricule": self.student.omnivox_id
+            }
+            d["note"] = self.grade
+            d["commentaire"] = self.comment if self.comment is not None else ""
+        d.update({
             "cours": self.course,
             "session": self.session,
             "évaluation": self.evaluation,
             "afficher les points des critères": self.show_criteria_points,
             "afficher les pourcentages des niveaux": self.show_levels_percentage,
-            "grille": self.grid.to_dict(),
-        }
+            "grille": self.grid.to_dict(include_graded_level=self.student is not None),
+        })
         return d
 
     @classmethod
@@ -113,8 +163,21 @@ class Rubric:
         show_criteria_points = data["afficher les points des critères"]
         show_levels_percentage = data["afficher les pourcentages des niveaux"]
         grid = Grid.from_dict(data["grille"])
+        if "étudiant" in data:
+            student_data = data["étudiant"]
+            student = Student(
+                name=student_data.get("nom", ""),
+                omnivox_id=student_data.get("matricule", "")
+            )
+        else:
+            student = None
+        grade = data.get("note")
+        comment = data.get("commentaire")
+        if comment == "":
+            comment = None
         return cls(course=course, session=session, evaluation=evaluation, grid=grid,
-                   show_criteria_points=show_criteria_points, show_levels_percentage=show_levels_percentage)
+                   show_criteria_points=show_criteria_points, show_levels_percentage=show_levels_percentage,
+                   student=student, grade=grade, comment=comment)
 
     def validate(self) -> None:
         _assert_non_empty_string(self.course, field_name="cours")
@@ -196,10 +259,6 @@ def _get_current_semester() -> str:
         return f"Été {year}"
     else:
         return f"Automne {year}"
-
-def is_single_student_rubric(rubric: dict) -> bool:
-    """Détermine si la grille d'évaluation est pour un étudiant individuel."""
-    return "étudiant" in rubric
 
 def validate_student(rubric: dict, student_list: list[Student] | None) -> None:
     if "étudiant" not in rubric:
