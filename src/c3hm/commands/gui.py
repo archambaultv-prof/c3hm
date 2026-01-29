@@ -18,33 +18,67 @@ DEFAULT_BORDER = "#B0B0B0"
 
 
 def launch_gui(gradebook_path: Path) -> None:
-    with open(gradebook_path, encoding="utf-8") as f:
-        data = json.load(f)
-    rubric = Rubric.from_dict(data)
-
-    app = _RubricGui(rubric=rubric, gradebook_path=gradebook_path)
+    if gradebook_path.is_file():
+        json_files = [gradebook_path]
+    else:
+        json_files = sorted(gradebook_path.glob("*.json"))
+        if not json_files:
+            raise FileNotFoundError(f"Aucun fichier .json trouvé dans le dossier {gradebook_path}")
+    app = _RubricGui(json_files=json_files)
     app.run()
 
 
 class _RubricGui:
-    def __init__(self, rubric: Rubric, gradebook_path: Path):
-        self.rubric = rubric
-        self.gradebook_path = gradebook_path
+    def __init__(self, json_files: list[Path]):
+        self.json_files = json_files
+        self.current_index = 0
         self.root = tk.Tk()
         self.root.title("c3hm — Grille de correction")
         self.status_var = tk.StringVar(value="")
-        self.override_var = tk.StringVar(value="" if rubric.grade is None else str(rubric.grade))
+        self.override_var = tk.StringVar(value="")
         self.grid_grade_var = tk.StringVar(value="—")
         self.final_grade_var = tk.StringVar(value="—")
+        self.position_var = tk.StringVar(value=f"1 / {len(self.json_files)}")
+        self.student_selector_var = tk.StringVar(value="")
         self._indicator_cells: list[list[tk.Button]] = []
+        self.rubric: Rubric = Rubric(course="", session="", evaluation="", grid=None)  # type: ignore
+        self.current_path: Path = Path("")
+        self.comment_text: tk.Text | None = None
+        self._load_file(0)
         self._build_ui()
-        self._refresh_grades()
 
     def run(self) -> None:
         self.root.mainloop()
 
+    def _load_file(self, index: int) -> None:
+        self.current_index = index
+        self.current_path = self.json_files[index]
+        with open(self.current_path, encoding="utf-8") as f:
+            data = json.load(f)
+        self.rubric = Rubric.from_dict(data)
+        self.override_var.set("" if self.rubric.grade is None else str(self.rubric.grade))
+        self.position_var.set(f"{index + 1} / {len(self.json_files)}")
+        self.student_selector_var.set(self.current_path.stem)
+
     def _build_ui(self) -> None:
         self.root.configure(padx=12, pady=12)
+
+        top_frame = ttk.Frame(self.root)
+        top_frame.pack(fill="x", pady=(0, 8))
+
+        ttk.Label(top_frame, text="Étudiant:").grid(row=0, column=0, sticky="w")
+        selector = ttk.Combobox(top_frame, textvariable=self.student_selector_var, state="readonly", width=40)
+        selector["values"] = [f.stem for f in self.json_files]
+        selector.grid(row=0, column=1, sticky="ew", padx=(6, 0))
+        selector.bind("<<ComboboxSelected>>", self._on_student_selected)
+        top_frame.columnconfigure(1, weight=1)
+
+        if len(self.json_files) > 1:
+            nav_frame = ttk.Frame(self.root)
+            nav_frame.pack(fill="x", pady=(0, 8))
+            ttk.Button(nav_frame, text="< Précédent", command=self._prev_student).pack(side="left")
+            ttk.Label(nav_frame, textvariable=self.position_var).pack(side="left", padx=(12, 0))
+            ttk.Button(nav_frame, text="Suivant >", command=self._next_student).pack(side="left", padx=(12, 0))
 
         header = ttk.Frame(self.root)
         header.pack(fill="x", pady=(0, 8))
@@ -99,10 +133,10 @@ class _RubricGui:
         scroll_frame = ttk.Frame(canvas)
         canvas_window = canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
 
-        def _configure_scroll_region(event: tk.Event) -> None:
+        def _configure_scroll_region(event: tk.Event) -> None:  # noqa: ARG001
             canvas.configure(scrollregion=canvas.bbox("all"))
 
-        def _resize_canvas(event: tk.Event) -> None:
+        def _resize_canvas(event: tk.Event) -> None:  # noqa: ARG001
             canvas.itemconfig(canvas_window, width=event.width)
 
         scroll_frame.bind("<Configure>", _configure_scroll_region)
@@ -121,11 +155,15 @@ class _RubricGui:
 
         actions = ttk.Frame(self.root)
         actions.pack(fill="x", pady=(8, 0))
-        save_button = ttk.Button(actions, text="Sauvegarder", command=self._save)
-        save_button.pack(side="right")
+        if len(self.json_files) > 1:
+            ttk.Button(actions, text="Sauvegarder & Suivant", command=self._save_and_next).pack(side="right")
+        else:
+            ttk.Button(actions, text="Sauvegarder", command=self._save_current).pack(side="right")
 
         status_label = ttk.Label(self.root, textvariable=self.status_var, foreground="#444444")
         status_label.pack(fill="x", pady=(6, 0))
+
+        self._refresh_grades()
 
     def _build_grid(self, parent: ttk.Frame) -> None:
         header_bg = "#F5F5F5"
@@ -197,6 +235,8 @@ class _RubricGui:
                 cell.configure(bg=DEFAULT_BG, relief="ridge", bd=1)
 
     def _refresh_grades(self) -> None:
+        if self.rubric is None:
+            return
         grid_grade = _safe_grid_grade(self.rubric)
         if grid_grade is None:
             self.grid_grade_var.set("Note (grille): —")
@@ -209,7 +249,9 @@ class _RubricGui:
         else:
             self.final_grade_var.set(f"Note finale: {final_grade:.0f} / 100")
 
-    def _on_override_change(self, event: tk.Event) -> None:
+    def _on_override_change(self, event: tk.Event | None = None) -> None:  # noqa: ARG002
+        if self.rubric is None:
+            return
         value = self.override_var.get().strip()
         if value == "":
             self.rubric.grade = None
@@ -228,19 +270,54 @@ class _RubricGui:
         self.status_var.set("")
         self._refresh_grades()
 
-    def _save(self) -> None:
+    def _on_student_selected(self, event: tk.Event) -> None:  # noqa: ARG002
+        selected_stem = self.student_selector_var.get()
+        for idx, path in enumerate(self.json_files):
+            if path.stem == selected_stem:
+                self._save_current()
+                self._load_file(idx)
+                self._rebuild_ui()
+                break
+
+    def _prev_student(self) -> None:
+        if self.current_index > 0:
+            self._save_current()
+            self._load_file(self.current_index - 1)
+            self._rebuild_ui()
+
+    def _next_student(self) -> None:
+        if self.current_index < len(self.json_files) - 1:
+            self._save_current()
+            self._load_file(self.current_index + 1)
+            self._rebuild_ui()
+
+    def _save_current(self) -> None:
+        if self.comment_text is None or self.rubric is None:
+            return
         comment = self.comment_text.get("1.0", "end").strip()
         self.rubric.comment = comment if comment else None
-        self._on_override_change(tk.Event())
+        self._on_override_change()
 
         rubric_dict = self.rubric.to_dict()
         try:
-            with open(self.gradebook_path, "w", encoding="utf-8") as f:
+            with open(self.current_path, "w", encoding="utf-8") as f:
                 json.dump(rubric_dict, f, ensure_ascii=False, indent=4)
         except OSError as exc:
             self.status_var.set(f"Erreur lors de la sauvegarde: {exc}")
-            return
+
+    def _save_and_next(self) -> None:
+        self._save_current()
         self.status_var.set("Sauvegarde réussie.")
+        if self.current_index < len(self.json_files) - 1:
+            self._next_student()
+        else:
+            self.status_var.set("Dernier étudiant. Sauvegarde réussie.")
+
+    def _rebuild_ui(self) -> None:
+        for widget in self.root.winfo_children():
+            widget.destroy()
+        self._indicator_cells = []
+        self._build_ui()
 
 
 def _level_to_index(level: str | None) -> int | None:

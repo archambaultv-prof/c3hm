@@ -2,8 +2,8 @@ import click
 
 from c3hm.cli.clean import clean_command
 from c3hm.cli.feedback import feedback_command
-from c3hm.cli.gui import gui_command
 from c3hm.cli.gradebook import gradebook_command
+from c3hm.cli.gui import gui_command
 from c3hm.cli.rubric import rubric_command
 from c3hm.cli.template import template_command
 from c3hm.cli.unpack import unpack_command
