@@ -11,7 +11,7 @@ class TypstWriter:
     def write_typst_file(self, output_path: Path) -> None:
         with open(output_path, "w", encoding="utf-8") as f:
             content = [self._preamble()]
-            content.append(f'#title("Grille d’évaluation") - {self.rubric.evaluation}')
+            content.append(f'#title("Grille d’évaluation - {self.rubric.evaluation}")')
             content.append(f"/ Cours: {self.rubric.course}")
             content.append(f"/ Session: {self.rubric.session}")
             content.append(self._warning_note())
