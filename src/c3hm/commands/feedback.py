@@ -1,4 +1,3 @@
-import copy
 import json
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
@@ -8,20 +7,9 @@ from openpyxl.worksheet.table import Table, TableStyleInfo
 from openpyxl.worksheet.worksheet import Worksheet
 
 from c3hm.commands.rubric import export_rubric
-from c3hm.data.rubric import process_single_student_rubric, validate_student
-from c3hm.data.student import Student, read_omnivox_students_file
+from c3hm.data.rubric import Rubric
+from c3hm.data.student import Student, find_student_by_name, read_omnivox_students_file
 
-
-class FeedBackStudent:
-    """
-    Classe représentant un étudiant pour la génération de rétroaction.
-    Contient les informations présentes dans le fichier de rétroaction.
-    """
-    def __init__(self, name: str, matricule: str, grade: float, comment: str):
-        self.name = name
-        self.matricule = matricule
-        self.grade = grade
-        self.comment = comment
 
 def generate_feedback(gradebook_path: Path, output_dir: Path, students_file: Path | None):
     """
@@ -31,8 +19,8 @@ def generate_feedback(gradebook_path: Path, output_dir: Path, students_file: Pat
 
     # Génère le fichier Excel pour charger les notes dans Omnivox
     students = read_omnivox_students_file(students_file) if students_file else None
-    students = process_json_files(gradebook_path, output_dir, students)
-    generate_xl_for_omnivox(students, output_dir)
+    rubrics = process_json_files(gradebook_path, output_dir, students)
+    generate_xl_for_omnivox(rubrics, output_dir)
     zip_pdfs(output_dir)
 
 
@@ -50,7 +38,7 @@ def process_json_files(
     gradebook_path: Path,
     output_dir: Path | str,
     student_list: list[Student] | None
-) -> list[FeedBackStudent]:
+) -> list[Rubric]:
     """
     Pour chaque fichier de correction dans le répertoire, génère un fichier PDF
     """
@@ -59,49 +47,30 @@ def process_json_files(
         output_dir.mkdir(parents=True, exist_ok=True)
 
     json_files = list(gradebook_path.glob("*.json"))
-    all_students: list[FeedBackStudent] = []
+    all_rubrics: list[Rubric] = []
     for json_file in json_files:
         try:
             with open(json_file, encoding="utf-8") as f:
                 data = json.load(f)
 
-            students: list[dict] = []
-            if "étudiant" in data:
-                validate_student(data, student_list)
-                students.append(data)
-            elif "étudiants" in data:
-                for s in data["étudiants"]:
-                    data2 = copy.deepcopy(data)
-                    data2["étudiant"] = copy.deepcopy(s)
-                    validate_student(data2, student_list)
-                    students.append(data2)
-            else:
-                raise ValueError("Le fichier JSON doit contenir une section 'étudiant' ou 'étudiants'.")
-
-            if not students:
-                print(f"Aucun étudiant trouvé dans le fichier '{json_file}', aucun fichier de rétroaction généré.")
-                continue
-
-            for student_data in students:
-                name = student_data["étudiant"]["nom"]
-                matricule = student_data["étudiant"]["matricule"]
-                destination = output_dir / f"{name} {matricule}.pdf"
-                data_student = process_single_student_rubric(student_data)
-                export_rubric(data_student, destination)
-                student = FeedBackStudent(
-                    name=name,
-                    matricule=matricule,
-                    grade=data_student["note"],
-                    comment=data_student["commentaire"])
-                all_students.append(student)
+            rubric = Rubric.from_dict(data)
+            if rubric.student is None:
+                raise ValueError(f"Aucun étudiant associé à la grille de correction dans le fichier '{json_file}'.")
+            if student_list is not None and rubric.student.omnivox_id is None:
+                valid_student = find_student_by_name(rubric.student.name, student_list)
+                rubric.student = valid_student
+            rubric.validate()
+            destination = output_dir / f"{rubric.student.name} {rubric.student.omnivox_id}.pdf"
+            export_rubric(rubric, destination)
+            all_rubrics.append(rubric)
         except Exception as e:
             raise RuntimeError(f"Erreur lors de la génération des fichiers de rétroaction pour le fichier '{json_file}'") from e
 
-    return all_students
+    return all_rubrics
 
 
 def generate_xl_for_omnivox(
-    students: list[FeedBackStudent],
+    students: list[Rubric],
     output_dir: Path | str
 ) -> None:
     """
@@ -120,7 +89,7 @@ def generate_xl_for_omnivox(
     # Sauvegarde le fichier Excel
     wb.save(omnivox_path)
 
-def populate_omnivox_sheet(students: list[FeedBackStudent], omnivox_worksheet: Worksheet) -> None:
+def populate_omnivox_sheet(rubrics: list[Rubric], omnivox_worksheet: Worksheet) -> None:
     omnivox_worksheet.title = "Notes pour Omnivox"
     omnivox_worksheet.sheet_view.showGridLines = False  # Disable gridlines
 
@@ -128,8 +97,10 @@ def populate_omnivox_sheet(students: list[FeedBackStudent], omnivox_worksheet: W
     omnivox_worksheet.append(["Code omnivox", "Note", "Commentaire", "Nom"])
 
     # Trouves tous les fichiers excel
-    for student in students:
-        omnivox_worksheet.append([student.matricule, student.grade, student.comment, student.name])
+    for rubric in rubrics:
+        if rubric.student is None:
+            raise ValueError("L'étudiant associé à la grille de correction est manquant.")
+        omnivox_worksheet.append([rubric.student.omnivox_id, rubric.final_grade(), rubric.comment, rubric.student.name])
 
     # Format
     _insert_table(omnivox_worksheet, "NotesOmnivox", "A1:D" + str(omnivox_worksheet.max_row))

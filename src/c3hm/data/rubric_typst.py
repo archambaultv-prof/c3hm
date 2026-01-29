@@ -1,7 +1,7 @@
 import textwrap
 from pathlib import Path
 
-from c3hm.data.rubric import Rubric
+from c3hm.data.rubric import Indicator, Rubric
 
 
 class TypstWriter:
@@ -11,12 +11,25 @@ class TypstWriter:
     def write_typst_file(self, output_path: Path) -> None:
         with open(output_path, "w", encoding="utf-8") as f:
             content = [self._preamble()]
-            content.append(f'#title("Grille d’évaluation - {self.rubric.evaluation}")')
-            content.append(f"/ Cours: {self.rubric.course}")
-            content.append(f"/ Session: {self.rubric.session}")
-            content.append(self._warning_note())
+            content.append(self._title())
+            content.append(self._course_info())
+            if self.rubric.student is not None and self.rubric.comment:
+                content.append('== Commentaires de l’enseignant')
+                content.append(self.rubric.comment)
             content.append(self._grid_table())
+            content.append(self._warning_note())
             f.write("\n".join(content))
+
+    def _title(self) -> str:
+        if self.rubric.student is not None:
+            return f"#title(\"Grille d’évaluation - {self.rubric.evaluation} - {self.rubric.student.name}\")"
+        return f"#title(\"Grille d’évaluation - {self.rubric.evaluation}\")"
+
+    def _course_info(self) -> str:
+        return textwrap.dedent(f"""
+            / Cours: {self.rubric.course}
+            / Session: {self.rubric.session}
+            """)
 
     def _preamble(self) -> str:
         return textwrap.dedent("""
@@ -63,7 +76,10 @@ class TypstWriter:
                 else if x == 5 { BAD_RED }
             },
             """)
-        s += 'table.header([Critère (100~pts)],'
+        if self.rubric.student is not None:
+            s += f'table.header([Note : {self.rubric.final_grade():.0f}~/~100],'
+        else:
+            s += 'table.header([Critère (100~pts)],'
         if self.rubric.show_levels_percentage:
             s += '[Avancé (100%)],[Acquis (75%)],[Ça y est presque! (50%)],[En apprentissage (25%)],[Non démontré (0%)],'
         else:
@@ -73,7 +89,7 @@ class TypstWriter:
 
     def _warning_note(self) -> str:
         return textwrap.dedent("""
-            La grille ci-dessous sert de guide pour soutenir le jugement
+            La grille ci-dessus sert de guide pour soutenir le jugement
             professionnel de l’enseignant et n’est pas exhaustive. La note
             finale peut être ajustée en présence d’une erreur significative ou
             d’un non-respect des attentes implicites de qualité (bonnes
@@ -84,24 +100,31 @@ class TypstWriter:
     def _table_rows(self) -> list[str]:
         rows = []
         for criterion in self.rubric.grid.criteria:
-            pts = f" ({criterion.points()}~pts)" if self.rubric.show_criteria_points else ""
+            pts = ""
+            if self.rubric.show_criteria_points:
+                if self.rubric.student is None:
+                    pts = f" ({criterion.points()}~pts)"
+                else:
+                    grade = criterion.grade()
+                    pts = f" ({grade:.0f}~/~{criterion.points()})"
             rows.append(f'[*{criterion.label}{pts}*], [], [], [], [], [],')
             for indicator in criterion.indicators:
-                # Détermination de la colonne à colorer selon `percentage`
+                # Détermination de la colonne à colorer selon `niveau noté`
                 highlight_idx = None
                 highlight_color = None
-                # percentage = item.get("pourcentage")
-                # if is_single_student_rubric(rubric) and percentage is not None:
-                #     if percentage == 1.0:
-                #         highlight_idx, highlight_color = 0, "PERFECT_GREEN"      # Avancé (100%)
-                #     elif percentage >= 0.75:
-                #         highlight_idx, highlight_color = 1, "VERY_GOOD_GREEN"    # Acquis (75%)
-                #     elif percentage >= 0.5:
-                #         highlight_idx, highlight_color = 2, "HALF_WAY_YELLOW"    # Ça y est presque! (50%)
-                #     elif percentage >= 0.25:
-                #         highlight_idx, highlight_color = 3, "MINIMAL_RED"        # En apprentissage (25%)
-                #     else:
-                #         highlight_idx, highlight_color = 4, "BAD_RED"            # Données insuffisantes (0%)
+                if indicator.graded_level is not None:
+                    grade = Indicator.level_to_percentage(indicator.graded_level)
+                    match grade:
+                        case 1:
+                            highlight_idx, highlight_color = 0, "PERFECT_GREEN"      # Avancé (100%)
+                        case 0.75:
+                            highlight_idx, highlight_color = 1, "VERY_GOOD_GREEN"    # Acquis (75%)
+                        case 0.5:
+                            highlight_idx, highlight_color = 2, "HALF_WAY_YELLOW"    # Ça y est presque! (50%)
+                        case 0.25:
+                            highlight_idx, highlight_color = 3, "MINIMAL_RED"        # En apprentissage (25%)
+                        case 0.0:
+                            highlight_idx, highlight_color = 4, "BAD_RED"            # Données insuffisantes (0%)
 
                 # Construction des cellules de descripteurs, avec coloration si nécessaire
                 descriptor_cells = []

@@ -1,7 +1,7 @@
 from datetime import date
 from typing import Any
 
-from c3hm.data.student import Student, find_student_by_name
+from c3hm.data.student import Student
 
 
 class Indicator:
@@ -51,10 +51,37 @@ class Indicator:
             graded_level = None
         return cls(label=label, points=points, descriptors=descriptors, graded_level=graded_level)
 
+    @staticmethod
+    def level_to_percentage(level: str) -> float:
+        if isinstance(level, str):
+            level = level.strip().lower().replace("é", "e").replace("è", "e").replace("ê", "e").replace("à", "a").replace("ç", "c")
+            if level in ("av", "avance"):
+                return 1.0
+            elif level in ("ac", "acquis"):
+                return 0.75
+            elif level in ("p", "presque", "ca y est presque"):
+                return 0.5
+            elif level in ("ap", "en apprentissage", "apprentissage"):
+                return 0.25
+            elif level in ("n", "non demontre"):
+                return  0.0
+            else:
+                raise ValueError(f"Niveau de performance inconnu: '{level}'")
+        else:
+            raise TypeError(f"Type de note inattendu: {type(level)}")
+
+    def grade(self) -> float:
+        if self.graded_level is None:
+            raise ValueError(f"Aucun niveau noté pour l'indicateur '{self.label}'.")
+        return self.points * self.level_to_percentage(self.graded_level)
+
 class Criterion:
     def __init__(self, label: str, indicators: list[Indicator]):
         self.label = label
         self.indicators = indicators
+
+    def grade(self) -> float:
+        return sum(indicator.grade() for indicator in self.indicators)
 
     def copy(self) -> 'Criterion':
         return Criterion(
@@ -87,6 +114,9 @@ class Criterion:
 class Grid:
     def __init__(self, criteria: list[Criterion]):
         self.criteria = criteria
+
+    def grade(self) -> float:
+        return sum(round(criterion.grade(), 0) for criterion in self.criteria)
 
     def copy(self) -> 'Grid':
         return Grid(criteria=[criterion.copy() for criterion in self.criteria])
@@ -122,6 +152,14 @@ class Rubric:
         self.student = student
         self.grade = grade
         self.comment = comment
+
+    def final_grade(self) -> float:
+        if self.grade is not None:
+            return self.grade
+        return self.grid.grade()
+
+    def grid_grade(self) -> float:
+        return self.grid.grade()
 
     def copy(self) -> 'Rubric':
         return Rubric(
@@ -184,6 +222,10 @@ class Rubric:
         _assert_non_empty_string(self.session, field_name="session")
         _assert_non_empty_string(self.evaluation, field_name="évaluation")
         self.grid.validate()
+        if self.student:
+            self.student.validate()
+        if self.grade is not None and (not isinstance(self.grade, int | float) or self.grade < 0 or self.grade > 100):
+            raise ValueError("La note doit être un nombre entre 0 et 100.")
 
     @classmethod
     def template(cls) -> 'Rubric':
@@ -260,119 +302,6 @@ def _get_current_semester() -> str:
     else:
         return f"Automne {year}"
 
-def validate_student(rubric: dict, student_list: list[Student] | None) -> None:
-    if "étudiant" not in rubric:
-        raise ValueError("La grille de l'étudiant doit contenir une section 'étudiant'.")
-    student = rubric["étudiant"]
-    if "nom" not in student or not isinstance(student["nom"], str) or student["nom"].strip() == "":
-        raise ValueError("Le champ 'nom' de l'étudiant doit être une chaîne de caractères non vide.")
-    if "matricule" not in student:
-        if not student_list:
-            raise ValueError("Le fichier d'étudiants doit être fourni pour faire la correspondance par nom.")
-        s1 = find_student_by_name(student["nom"], student_list)
-        rubric["étudiant"]["matricule"] = s1.omnivox_id
-        rubric["étudiant"]["nom"] = s1.full_name()
-
-def validate_rubric(rubric: dict) -> None:
-    """Validate that the rubric has the required structure."""
-
-    assert_total_points(rubric)
-    validate_descriptors(rubric)
-
-    if is_single_student_rubric(rubric):
-        _assert_non_empty_string(rubric["étudiant"], "nom")
-        _assert_non_empty_string(rubric["étudiant"], "matricule")
-        none_if_missing_or_empty(rubric, "commentaire")
-        for item in rubric.get("critères", []):
-            none_if_missing_or_empty(item, "commentaire")
-
-def none_if_missing_or_empty(d: dict, field_name: str) -> None:
-    if field_name not in d:
-        d[field_name] = None
-        return
-    value = d[field_name]
-    if isinstance(value, str):
-        if value.strip() == "":
-            d[field_name] = None
-    elif value is None:
-        return
-    else:
-        raise ValueError(f"Le champ '{field_name}' doit être une chaîne de caractères.")
-
 def _assert_non_empty_string(value: Any, field_name: str) -> None:
     if value is None or not isinstance(value, str) or value.strip() == "":
         raise ValueError(f"Le champ '{field_name}' doit être une chaîne de caractères non vide.")
-
-def assert_total_points(rubric: dict) -> None:
-    total_points = 0.0
-    for node in rubric.get("critères", []):
-        if "critère" in node:
-            if "points" not in node:
-                raise ValueError(f"Le critère '{node['critère']}' doit contenir un champ 'points'.")
-            points = node["points"]
-            if not isinstance(points, int | float) or points < 0:
-                raise ValueError(f"Le champ 'points' doit être un nombre positif. Valeur trouvée: {points}")
-            total_points += points
-    if round(total_points, 2) != 100:
-        raise ValueError(f"La somme totale des points des critères doit être égale à 100. Total trouvé: {total_points}")
-
-def validate_descriptors(rubric: dict) -> None:
-    for node in rubric.get("critères", []):
-        if "critère" in node and "descripteurs" in node:
-            descripteurs = node["descripteurs"]
-            if not isinstance(descripteurs, list) or len(descripteurs) != 5:
-                raise ValueError(f"Le critère '{node['critère']}' doit contenir une liste de 5 descripteurs.")
-            for desc in descripteurs:
-                if not isinstance(desc, str) or desc.strip() == "":
-                    raise ValueError(f"Chaque descripteur du critère '{node['critère']}' doit être une chaîne de caractères non vide.")
-
-def process_single_student_rubric(rubric: dict) -> dict:
-    """
-    Calcule différentes valeurs pour un étudiant à partir de la grille de correction.
-    """
-    grade = 0.0
-    for node in rubric["critères"]:
-        if "section" in node:
-            continue
-        if "pourcentage" not in node:
-            raise ValueError("Chaque critère doit contenir un pourcentage.")
-        node["pourcentage"] = parse_percent(node["pourcentage"])
-        node["note"] = round(node["pourcentage"] * node["points"], 1)
-        grade += node["note"]
-    bonus_malus = rubric.get("bonus malus", {})
-    if bonus_malus.get("points") is not None:
-        grade += bonus_malus["points"]
-    rubric["note"] = round(grade, 0)
-    if "commentaire" in rubric and rubric["commentaire"] is not None and rubric["commentaire"].strip():
-        rubric["commentaire"] = rubric["commentaire"].strip()
-    elif rubric["note"] >= 90:
-        rubric["commentaire"] = "Très bon travail!"
-    else:
-        rubric["commentaire"] = None
-    return rubric
-
-
-def parse_percent(note: str | float | int | None) -> float:
-    if note is None:
-        raise ValueError("La note ne peut pas être None")
-    if isinstance(note, float | int):
-        grade = float(note)
-    elif isinstance(note, str):
-        note = note.strip().lower().replace("é", "e").replace("è", "e").replace("ê", "e").replace("à", "a").replace("ç", "c")
-        if note in ("av", "avance"):
-            grade =  1.0
-        elif note in ("ac", "acquis"):
-            grade =  0.75
-        elif note in ("p", "presque", "ca y est presque"):
-            grade =  0.5
-        elif note in ("ap", "en apprentissage", "apprentissage"):
-            grade =  0.25
-        elif note in ("i", "insuffisant", "donnees insuffisantes"):
-            grade =  0.0
-        else:
-            grade =  float(note)
-    else:
-        raise TypeError(f"Type de note inattendu: {type(note)}")
-    if not (0.0 <= grade <= 1.0):
-        raise ValueError(f"La note doit être entre 0 et 1. Valeur reçue: {note}")
-    return grade
