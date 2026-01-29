@@ -10,7 +10,6 @@ requires-python = ">=3.10"
 dependencies = [
     "rarfile>=4.2",
     "click>=8.2.1",
-    "pydantic>=2.11.7",
     "openpyxl>=3.1.5",
 ]
 
