@@ -4,7 +4,7 @@ from collections.abc import Callable
 from pathlib import Path
 from tkinter import ttk
 
-from c3hm.data.rubric import Indicator, Rubric
+from c3hm.data.rubric import Criterion, Indicator, Rubric
 
 LEVELS = [
     ("av", "Avancé", "#C8FFC8"),
@@ -41,6 +41,8 @@ class _RubricGui:
         self.position_var = tk.StringVar(value=f"1 / {len(self.json_files)}")
         self.student_selector_var = tk.StringVar(value="")
         self._indicator_cells: list[list[tk.Button]] = []
+        self._criterion_override_vars: list[tuple[tk.StringVar, Criterion]] = []
+        self._criterion_label_vars: list[tuple[tk.StringVar, Criterion]] = []
         self.rubric: Rubric = Rubric(course="", session="", evaluation="", grid=None)  # type: ignore
         self.current_path: Path = Path("")
         self.comment_text: tk.Text | None = None
@@ -174,8 +176,25 @@ class _RubricGui:
 
         row_index = 1
         for criterion in self.rubric.grid.criteria:
-            criterion_label = f"{criterion.label}"
-            tk.Label(parent, text=criterion_label, bg="#DDDDDD", font=("Segoe UI", 10, "bold"), padx=8, pady=6).grid(row=row_index, column=0, columnspan=6, sticky="nsew")
+            indicators_grade = _safe_criterion_indicators_grade(criterion)
+            indicators_text = "—" if indicators_grade is None else f"{indicators_grade:.0f} / {criterion.points():.0f}"
+            criterion_label = f"{criterion.label}  —  Note (indicateurs) : {indicators_text}"
+            criterion_label_var = tk.StringVar(value=criterion_label)
+            self._criterion_label_vars.append((criterion_label_var, criterion))
+
+            header_frame = ttk.Frame(parent)
+            header_frame.grid(row=row_index, column=0, columnspan=6, sticky="nsew")
+            header_frame.columnconfigure(0, weight=1)
+
+            tk.Label(header_frame, textvariable=criterion_label_var, bg="#DDDDDD", font=("Segoe UI", 10, "bold"), padx=8, pady=6).grid(row=0, column=0, sticky="nsew")
+
+            override_var = tk.StringVar(value="" if criterion.grade_override is None else str(criterion.grade_override))
+            self._criterion_override_vars.append((override_var, criterion))
+            ttk.Label(header_frame, text="Ajustement:").grid(row=0, column=1, sticky="e", padx=(8, 4))
+            override_entry = ttk.Entry(header_frame, textvariable=override_var, width=8)
+            override_entry.grid(row=0, column=2, sticky="e", padx=(0, 8))
+            override_entry.bind("<KeyRelease>", self._make_criterion_override_handler(criterion, override_var))
+
             row_index += 1
 
             for indicator in criterion.indicators:
@@ -201,8 +220,8 @@ class _RubricGui:
                 self._apply_indicator_selection(indicator, row_cells)
                 row_index += 1
 
-        for col in range(6):
-            parent.columnconfigure(col, weight=1)
+            for col in range(6):
+                parent.columnconfigure(col, weight=1)
 
     def _make_level_handler(self, indicator: Indicator, level_index: int) -> Callable[[], None]:
         def handler() -> None:
@@ -210,6 +229,33 @@ class _RubricGui:
             self._update_indicator_row(indicator)
             self._refresh_grades()
         return handler
+
+    def _make_criterion_override_handler(self, criterion: Criterion, override_var: tk.StringVar) -> Callable[[tk.Event], None]:
+        def handler(event: tk.Event | None = None) -> None:  # noqa: ARG001
+            self._apply_criterion_override(criterion, override_var)
+
+        return handler
+
+    def _apply_criterion_override(self, criterion: Criterion, override_var: tk.StringVar) -> None:
+        value = override_var.get().strip()
+        if value == "":
+            criterion.grade_override = None
+            self.status_var.set("")
+            self._refresh_grades()
+            return
+        try:
+            parsed = float(value.replace(",", "."))
+        except ValueError:
+            self.status_var.set("Note invalide: entrez un nombre (ex: 12.5).")
+            return
+        if parsed < 0 or parsed > criterion.points():
+            self.status_var.set(
+                f"Note invalide: la note du critère doit être entre 0 et {criterion.points():.0f}."
+            )
+            return
+        criterion.grade_override = parsed
+        self.status_var.set("")
+        self._refresh_grades()
 
     def _update_indicator_row(self, indicator: Indicator) -> None:
         row_cells = self._find_row_cells(indicator)
@@ -242,6 +288,8 @@ class _RubricGui:
             self.grid_grade_var.set("Note (grille): —")
         else:
             self.grid_grade_var.set(f"Note (grille): {grid_grade:.0f} / 100")
+
+        self._refresh_criterion_labels()
 
         final_grade = self.rubric.grade if self.rubric.grade is not None else grid_grade
         if final_grade is None:
@@ -297,6 +345,8 @@ class _RubricGui:
         comment = self.comment_text.get("1.0", "end").strip()
         self.rubric.comment = comment if comment else None
         self._on_override_change()
+        for override_var, criterion in self._criterion_override_vars:
+            self._apply_criterion_override(criterion, override_var)
 
         rubric_dict = self.rubric.to_dict()
         try:
@@ -317,7 +367,15 @@ class _RubricGui:
         for widget in self.root.winfo_children():
             widget.destroy()
         self._indicator_cells = []
+        self._criterion_override_vars = []
+        self._criterion_label_vars = []
         self._build_ui()
+
+    def _refresh_criterion_labels(self) -> None:
+        for label_var, criterion in self._criterion_label_vars:
+            indicators_grade = _safe_criterion_indicators_grade(criterion)
+            indicators_text = "—" if indicators_grade is None else f"{indicators_grade:.0f} / {criterion.points():.0f}"
+            label_var.set(f"{criterion.label}  —  Note (indicateurs) : {indicators_text}")
 
 
 def _level_to_index(level: str | None) -> int | None:
@@ -343,5 +401,12 @@ def _level_to_index(level: str | None) -> int | None:
 def _safe_grid_grade(rubric: Rubric) -> float | None:
     try:
         return rubric.grid_grade()
+    except ValueError:
+        return None
+
+
+def _safe_criterion_indicators_grade(criterion: Criterion) -> float | None:
+    try:
+        return sum(indicator.grade() for indicator in criterion.indicators)
     except ValueError:
         return None
