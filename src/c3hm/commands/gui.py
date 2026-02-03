@@ -48,9 +48,14 @@ class _RubricGui:
         self.comment_text: tk.Text | None = None
         self._load_file(0)
         self._build_ui()
+        self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
     def run(self) -> None:
         self.root.mainloop()
+
+    def _on_close(self) -> None:
+        self._save_current()
+        self.root.destroy()
 
     def _load_file(self, index: int) -> None:
         self.current_index = index
