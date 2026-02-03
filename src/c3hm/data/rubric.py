@@ -59,7 +59,7 @@ class Indicator:
                 return 1.0
             elif level in ("ac", "acquis"):
                 return 0.75
-            elif level in ("p", "presque", "ca y est presque"):
+            elif level in ("p", "presque", "ca y est presque", "ca y est presque!"):
                 return 0.5
             elif level in ("ap", "en apprentissage", "apprentissage"):
                 return 0.25
