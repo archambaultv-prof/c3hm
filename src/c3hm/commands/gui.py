@@ -368,7 +368,7 @@ class _RubricGui:
 
     def _make_level_handler(self, indicator: Indicator, level_index: int) -> Callable[[], None]:
         def handler() -> None:
-            indicator.graded_level = LEVELS[level_index][0]
+            indicator.graded_level = LEVELS[level_index][1]
             self._update_indicator_row(indicator)
             self._refresh_grades()
         return handler
