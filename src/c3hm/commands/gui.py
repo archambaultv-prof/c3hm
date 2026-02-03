@@ -8,11 +8,11 @@ from tkinter import ttk
 from c3hm.data.rubric import Criterion, Indicator, Rubric
 
 LEVELS = [
-    ("av", "Avancé", "#C8FFC8"),
-    ("ac", "Acquis", "#F0FFB0"),
-    ("p", "Ça y est presque!", "#FFF8C2"),
-    ("ap", "En apprentissage", "#FFE4C8"),
-    ("n", "Non démontré", "#FFC8C8"),
+    ("Avancé", "#C8FFC8"),
+    ("Acquis", "#F0FFB0"),
+    ("Ça y est presque!", "#FFF8C2"),
+    ("En apprentissage", "#FFE4C8"),
+    ("Non démontré", "#FFC8C8"),
 ]
 DEFAULT_BG = "#E0E0E0"
 DEFAULT_BORDER = "#B0B0B0"
@@ -315,7 +315,7 @@ class _RubricGui:
         for col_index in range(1, 6):
             parent.columnconfigure(col_index, weight=1, minsize=120)  # Level columns
 
-        for col_index, (_, level_label, color) in enumerate(LEVELS, start=1):
+        for col_index, (level_label, color) in enumerate(LEVELS, start=1):
             tk.Label(parent, text=level_label, bg=color, font=("Segoe UI", 10, "bold"), padx=8, pady=6, wraplength=120).grid(row=0, column=col_index, sticky="nsew")
 
         row_index = 1
@@ -346,7 +346,7 @@ class _RubricGui:
             for indicator in criterion.indicators:
                 tk.Label(parent, text=indicator.label, bg="#FFFFFF", padx=8, pady=6, wraplength=220, justify="left", anchor="w").grid(row=row_index, column=0, sticky="nsew")
                 row_cells: list[tk.Button] = []
-                for level_index, (_, _, color) in enumerate(LEVELS):
+                for level_index, (_, color) in enumerate(LEVELS):
                     desc = indicator.descriptors[level_index]
                     btn = tk.Button(
                         parent,
@@ -368,7 +368,7 @@ class _RubricGui:
 
     def _make_level_handler(self, indicator: Indicator, level_index: int) -> Callable[[], None]:
         def handler() -> None:
-            indicator.graded_level = LEVELS[level_index][1]
+            indicator.graded_level = LEVELS[level_index][0]
             self._update_indicator_row(indicator)
             self._refresh_grades()
         return handler
@@ -419,7 +419,7 @@ class _RubricGui:
         selected_index = _level_to_index(indicator.graded_level)
         for idx, cell in enumerate(row_cells):
             if selected_index is not None and idx == selected_index:
-                cell.configure(bg=LEVELS[idx][2], relief="solid", bd=2, highlightbackground=DEFAULT_BORDER)
+                cell.configure(bg=LEVELS[idx][1], relief="solid", bd=2, highlightbackground=DEFAULT_BORDER)
             else:
                 cell.configure(bg=DEFAULT_BG, relief="ridge", bd=1)
 
