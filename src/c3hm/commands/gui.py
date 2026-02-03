@@ -86,7 +86,7 @@ class _RubricGui:
                 if rubric.student:
                     self.all_students.append((rubric.student.fullname(surname_first=True), json_file))
             except Exception:
-                pass
+                print(f"Erreur lors du chargement du fichier {json_file} pour la liste des étudiants.")
         # Sort by surname (already surname_first format)
         self.all_students.sort(key=lambda x: x[0].lower())
 
