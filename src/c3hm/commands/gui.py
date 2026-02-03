@@ -46,6 +46,9 @@ class _RubricGui:
         self.rubric: Rubric = Rubric(course="", session="", evaluation="", grid=None)  # type: ignore
         self.current_path: Path = Path("")
         self.comment_text: tk.Text | None = None
+        self.teammates_listbox: tk.Listbox | None = None
+        self.all_students: list[tuple[str, Path]] = []
+        self._load_all_students()
         self._load_file(0)
         self._build_ui()
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
@@ -57,13 +60,26 @@ class _RubricGui:
         self._save_current()
         self.root.destroy()
 
+    def _load_all_students(self) -> None:
+        """Charge tous les étudiants depuis les fichiers JSON pour construire la liste des coéquipiers possibles."""
+        self.all_students = []
+        for json_file in self.json_files:
+            try:
+                with open(json_file, encoding="utf-8") as f:
+                    data = json.load(f)
+                rubric = Rubric.from_dict(data)
+                if rubric.student:
+                    self.all_students.append((rubric.student.fullname(), json_file))
+            except Exception:
+                pass
+
     def _load_file(self, index: int) -> None:
         self.current_index = index
         self.current_path = self.json_files[index]
         with open(self.current_path, encoding="utf-8") as f:
             data = json.load(f)
         self.rubric = Rubric.from_dict(data)
-        self.override_var.set("" if self.rubric.grade is None else str(self.rubric.grade))
+        self.override_var.set("" if self.rubric.grade_override is None else str(self.rubric.grade_override))
         self.position_var.set(f"{index + 1} / {len(self.json_files)}")
         self.student_selector_var.set(self.current_path.stem)
 
@@ -110,13 +126,47 @@ class _RubricGui:
         )
         grade_label.grid(row=0, column=1, sticky="e", padx=(12, 0))
 
+        # Coéquipiers section
+        teammates_frame = ttk.Frame(self.root)
+        teammates_frame.pack(fill="x", pady=(0, 8))
+
+        ttk.Label(teammates_frame, text="Coéquipiers:").pack(side="left", padx=(0, 6))
+
+        teammates_list_frame = ttk.Frame(teammates_frame)
+        teammates_list_frame.pack(side="left", fill="x", expand=True)
+
+        self.teammates_listbox = tk.Listbox(teammates_list_frame, height=3, selectmode=tk.MULTIPLE)
+        self.teammates_listbox.pack(side="left", fill="x", expand=True)
+
+        teammates_scroll = ttk.Scrollbar(teammates_list_frame, orient="vertical", command=self.teammates_listbox.yview)
+        teammates_scroll.pack(side="right", fill="y")
+        self.teammates_listbox.configure(yscrollcommand=teammates_scroll.set)
+
+        # Populate listbox with all students except current
+        for fullname, _ in self.all_students:
+            if self.rubric.student is None or fullname != self.rubric.student.fullname():
+                self.teammates_listbox.insert(tk.END, fullname)
+
+        # Select current teammates
+        if self.rubric.student:
+            listbox_index = 0
+            for fullname, _ in self.all_students:
+                if fullname == self.rubric.student.fullname():
+                    continue
+                if fullname in self.rubric.student.teammates:
+                    self.teammates_listbox.selection_set(listbox_index)
+                listbox_index += 1
+
+        sync_button = ttk.Button(teammates_frame, text="Synchroniser avec coéquipiers", command=self._sync_with_teammates)
+        sync_button.pack(side="left", padx=(8, 0))
+
         grid_grade_label = ttk.Label(header, textvariable=self.grid_grade_var)
         grid_grade_label.grid(row=1, column=0, sticky="w", pady=(4, 0))
 
         override_frame = ttk.Frame(header)
         override_frame.grid(row=1, column=1, sticky="e", pady=(4, 0))
 
-        ttk.Label(override_frame, text="Note finale (override):").grid(row=0, column=0, sticky="e")
+        ttk.Label(override_frame, text="Note ajustée :").grid(row=0, column=0, sticky="e")
         override_entry = ttk.Entry(override_frame, textvariable=self.override_var, width=8)
         override_entry.grid(row=0, column=1, sticky="e", padx=(6, 0))
 
@@ -296,7 +346,7 @@ class _RubricGui:
 
         self._refresh_criterion_labels()
 
-        final_grade = self.rubric.grade if self.rubric.grade is not None else grid_grade
+        final_grade = self.rubric.grade_override if self.rubric.grade_override is not None else grid_grade
         if final_grade is None:
             self.final_grade_var.set("Note finale: — / 100")
         else:
@@ -307,7 +357,7 @@ class _RubricGui:
             return
         value = self.override_var.get().strip()
         if value == "":
-            self.rubric.grade = None
+            self.rubric.grade_override = None
             self.status_var.set("")
             self._refresh_grades()
             return
@@ -319,7 +369,7 @@ class _RubricGui:
         if parsed < 0 or parsed > 100:
             self.status_var.set("Note invalide: la note doit être entre 0 et 100.")
             return
-        self.rubric.grade = parsed
+        self.rubric.grade_override = parsed
         self.status_var.set("")
         self._refresh_grades()
 
@@ -353,12 +403,90 @@ class _RubricGui:
         for override_var, criterion in self._criterion_override_vars:
             self._apply_criterion_override(criterion, override_var)
 
+        # Update teammates from listbox selection with symmetric relationship
+        current_student_fullname = None
+        old_teammates = []
+        if self.rubric.student:
+            current_student_fullname = self.rubric.student.fullname()
+            old_teammates = self.rubric.student.teammates.copy()
+
+        if self.rubric.student and self.teammates_listbox:
+            selected_indices = self.teammates_listbox.curselection()
+            selected_teammates = []
+            for idx in selected_indices:
+                teammate_name = self.teammates_listbox.get(idx)
+                selected_teammates.append(teammate_name)
+            self.rubric.student.teammates = selected_teammates
+
+            # Update symmetrically: for each new teammate, add current student to their list
+            for teammate_name in selected_teammates:
+                self._add_teammate_symmetrically(teammate_name, current_student_fullname)
+
+            # Remove current student from teammates who are no longer selected
+            for old_teammate in old_teammates:
+                if old_teammate not in selected_teammates:
+                    self._remove_teammate_symmetrically(old_teammate, current_student_fullname)
+
         rubric_dict = self.rubric.to_dict()
         try:
             with open(self.current_path, "w", encoding="utf-8") as f:
                 json.dump(rubric_dict, f, ensure_ascii=False, indent=4)
         except OSError as exc:
             self.status_var.set(f"Erreur lors de la sauvegarde: {exc}")
+
+    def _add_teammate_symmetrically(self, teammate_name: str, current_student_fullname: str | None) -> None:
+        """Ajoute le student actuel à la liste des coéquipiers du coéquipier."""
+        if not current_student_fullname:
+            return
+
+        teammate_path = None
+        for fullname, path in self.all_students:
+            if fullname == teammate_name:
+                teammate_path = path
+                break
+
+        if not teammate_path or not teammate_path.exists():
+            return
+
+        try:
+            with open(teammate_path, encoding="utf-8") as f:
+                teammate_data = json.load(f)
+            teammate_rubric = Rubric.from_dict(teammate_data)
+
+            if teammate_rubric.student and current_student_fullname not in teammate_rubric.student.teammates:
+                teammate_rubric.student.teammates.append(current_student_fullname)
+
+                with open(teammate_path, "w", encoding="utf-8") as f:
+                    json.dump(teammate_rubric.to_dict(), f, ensure_ascii=False, indent=4)
+        except Exception:
+            pass
+
+    def _remove_teammate_symmetrically(self, teammate_name: str, current_student_fullname: str | None) -> None:
+        """Retire le student actuel de la liste des coéquipiers du coéquipier."""
+        if not current_student_fullname:
+            return
+
+        teammate_path = None
+        for fullname, path in self.all_students:
+            if fullname == teammate_name:
+                teammate_path = path
+                break
+
+        if not teammate_path or not teammate_path.exists():
+            return
+
+        try:
+            with open(teammate_path, encoding="utf-8") as f:
+                teammate_data = json.load(f)
+            teammate_rubric = Rubric.from_dict(teammate_data)
+
+            if teammate_rubric.student and current_student_fullname in teammate_rubric.student.teammates:
+                teammate_rubric.student.teammates.remove(current_student_fullname)
+
+                with open(teammate_path, "w", encoding="utf-8") as f:
+                    json.dump(teammate_rubric.to_dict(), f, ensure_ascii=False, indent=4)
+        except Exception:
+            pass
 
     def _save_and_next(self) -> None:
         self._save_current()
@@ -374,6 +502,7 @@ class _RubricGui:
         self._indicator_cells = []
         self._criterion_override_vars = []
         self._criterion_label_vars = []
+        self.teammates_listbox = None
         self._build_ui()
 
     def _refresh_criterion_labels(self) -> None:
@@ -381,6 +510,64 @@ class _RubricGui:
             indicators_grade = _safe_criterion_indicators_grade(criterion)
             indicators_text = "—" if indicators_grade is None else f"{indicators_grade:.0f} / {criterion.points():.0f}"
             label_var.set(f"{criterion.label}  —  Note (indicateurs) : {indicators_text}")
+
+    def _sync_with_teammates(self) -> None:
+        """Synchronise la grille actuelle avec tous les coéquipiers sélectionnés."""
+        if not self.rubric.student or not self.teammates_listbox:
+            return
+
+        # Save current first
+        self._save_current()
+
+        selected_indices = self.teammates_listbox.curselection()
+        if not selected_indices:
+            self.status_var.set("Aucun coéquipier sélectionné.")
+            return
+
+        synced_count = 0
+        for idx in selected_indices:
+            teammate_name = self.teammates_listbox.get(idx)
+
+            # Find the teammate's file
+            teammate_path = None
+            for fullname, path in self.all_students:
+                if fullname == teammate_name:
+                    teammate_path = path
+                    break
+
+            if not teammate_path or not teammate_path.exists():
+                continue
+
+            try:
+                # Load teammate's rubric
+                with open(teammate_path, encoding="utf-8") as f:
+                    teammate_data = json.load(f)
+                teammate_rubric = Rubric.from_dict(teammate_data)
+
+                # Copy all grading info
+                for i, criterion in enumerate(self.rubric.grid.criteria):
+                    if i < len(teammate_rubric.grid.criteria):
+                        teammate_criterion = teammate_rubric.grid.criteria[i]
+                        teammate_criterion.grade_override = criterion.grade_override
+
+                        for j, indicator in enumerate(criterion.indicators):
+                            if j < len(teammate_criterion.indicators):
+                                teammate_criterion.indicators[j].graded_level = indicator.graded_level
+
+                # Copy comment and grade override
+                teammate_rubric.comment = self.rubric.comment
+                teammate_rubric.grade_override = self.rubric.grade_override
+
+                # Save teammate's rubric
+                with open(teammate_path, "w", encoding="utf-8") as f:
+                    json.dump(teammate_rubric.to_dict(), f, ensure_ascii=False, indent=4)
+
+                synced_count += 1
+            except Exception as e:
+                self.status_var.set(f"Erreur lors de la synchronisation avec {teammate_name}: {e}")
+                return
+
+        self.status_var.set(f"Synchronisé avec {synced_count} coéquipier(s).")
 
 
 def _level_to_index(level: str | None) -> int | None:

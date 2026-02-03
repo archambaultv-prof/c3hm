@@ -101,7 +101,7 @@ class Criterion:
             "critère": self.label,
         }
         if include_graded_level:
-            d["note"] = self.grade_override
+            d["note ajustée"] = self.grade_override
         d["indicateurs"] = [indicator.to_dict(include_graded_level) for indicator in self.indicators]
         return d
 
@@ -157,7 +157,7 @@ class Grid:
 class Rubric:
     def __init__(self, course: str, session: str, evaluation: str, grid: Grid,
                  show_criteria_points: bool = True, show_levels_percentage: bool = True,
-                 student: Student | None = None, grade: float | None = None, comment: str | None = None):
+                 student: Student | None = None, grade_override: float | None = None, comment: str | None = None):
         self.course = course
         self.session = session
         self.evaluation = evaluation
@@ -165,12 +165,12 @@ class Rubric:
         self.show_criteria_points = show_criteria_points
         self.show_levels_percentage = show_levels_percentage
         self.student = student
-        self.grade = grade
+        self.grade_override = grade_override
         self.comment = comment
 
     def final_grade(self) -> float:
-        if self.grade is not None:
-            return self.grade
+        if self.grade_override is not None:
+            return self.grade_override
         return self.grid.grade()
 
     def grid_grade(self) -> float:
@@ -185,7 +185,7 @@ class Rubric:
             show_criteria_points=self.show_criteria_points,
             show_levels_percentage=self.show_levels_percentage,
             student=self.student.copy() if self.student else None,
-            grade=self.grade,
+            grade_override=self.grade_override,
             comment=self.comment
         )
 
@@ -195,9 +195,10 @@ class Rubric:
             d["étudiant"] = {
                 "prénom": self.student.firstname,
                 "nom": self.student.surname,
-                "matricule": self.student.omnivox_id
+                "matricule": self.student.omnivox_id,
+                "coéquipiers": self.student.teammates,
             }
-            d["note"] = self.grade
+            d["note ajustée"] = self.grade_override
             d["commentaire"] = self.comment if self.comment is not None else ""
         d.update({
             "cours": self.course,
@@ -221,20 +222,22 @@ class Rubric:
             student_data = data["étudiant"]
             firstname = student_data["prénom"]
             surname = student_data["nom"]
+            teammates = student_data.get("coéquipiers", [])
             student = Student(
                 firstname=firstname,
                 surname=surname,
-                omnivox_id=student_data.get("matricule", "")
+                omnivox_id=student_data.get("matricule", ""),
+                teammates=teammates if isinstance(teammates, list) else [],
             )
         else:
             student = None
-        grade = data.get("note")
+        grade = data.get("note ajustée")
         comment = data.get("commentaire")
         if comment == "":
             comment = None
         return cls(course=course, session=session, evaluation=evaluation, grid=grid,
                    show_criteria_points=show_criteria_points, show_levels_percentage=show_levels_percentage,
-                   student=student, grade=grade, comment=comment)
+                   student=student, grade_override=grade, comment=comment)
 
     def validate(self) -> None:
         _assert_non_empty_string(self.course, field_name="cours")
@@ -243,7 +246,7 @@ class Rubric:
         self.grid.validate()
         if self.student:
             self.student.validate()
-        if self.grade is not None and (not isinstance(self.grade, int | float) or self.grade < 0 or self.grade > 100):
+        if self.grade_override is not None and (not isinstance(self.grade_override, int | float) or self.grade_override < 0 or self.grade_override > 100):
             raise ValueError("La note doit être un nombre entre 0 et 100.")
 
     @classmethod

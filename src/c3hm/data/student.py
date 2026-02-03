@@ -4,10 +4,11 @@ from pathlib import Path
 
 
 class Student:
-    def __init__(self, omnivox_id: str, firstname: str, surname: str):
+    def __init__(self, omnivox_id: str, firstname: str, surname: str, teammates: list[str] | None = None):
         self.omnivox_id = omnivox_id
         self.firstname = firstname
         self.surname = surname
+        self.teammates = teammates or []
 
     def fullname(
         self,
@@ -32,7 +33,7 @@ class Student:
             raise ValueError("Le nom de famille de l'étudiant ne peut pas être vide.")
 
     def copy(self) -> 'Student':
-        return Student(omnivox_id=self.omnivox_id, firstname=self.firstname, surname=self.surname)
+        return Student(omnivox_id=self.omnivox_id, firstname=self.firstname, surname=self.surname, teammates=self.teammates.copy())
 
 def read_omnivox_students_file(students_file: Path) -> list[Student]:
     """
