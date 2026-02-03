@@ -8,18 +8,16 @@ from openpyxl.worksheet.worksheet import Worksheet
 
 from c3hm.commands.rubric import export_rubric
 from c3hm.data.rubric import Rubric
-from c3hm.data.student import Student, find_student_by_name, read_omnivox_students_file
 
 
-def generate_feedback(gradebook_path: Path, output_dir: Path, students_file: Path | None):
+def generate_feedback(gradebook_path: Path, output_dir: Path):
     """
     Génère un document Excel de rétroaction pour les étudiants à partir d’une fichier de correction
     et un résumé des notes en format Excel.
     """
 
     # Génère le fichier Excel pour charger les notes dans Omnivox
-    students = read_omnivox_students_file(students_file) if students_file else None
-    rubrics = process_json_files(gradebook_path, output_dir, students)
+    rubrics = process_json_files(gradebook_path, output_dir)
     generate_xl_for_omnivox(rubrics, output_dir)
     zip_pdfs(output_dir)
 
@@ -36,8 +34,7 @@ def zip_pdfs(dir: Path) -> None:
 
 def process_json_files(
     gradebook_path: Path,
-    output_dir: Path | str,
-    student_list: list[Student] | None
+    output_dir: Path | str
 ) -> list[Rubric]:
     """
     Pour chaque fichier de correction dans le répertoire, génère un fichier PDF
@@ -56,9 +53,6 @@ def process_json_files(
             rubric = Rubric.from_dict(data)
             if rubric.student is None:
                 raise ValueError(f"Aucun étudiant associé à la grille de correction dans le fichier '{json_file}'.")
-            if student_list is not None and rubric.student.omnivox_id is None:
-                valid_student = find_student_by_name(rubric.student.fullname(), student_list)
-                rubric.student = valid_student
             rubric.validate()
             destination = output_dir / f"{rubric.student.fullname(surname_first=True, include_omnivox=True, separator='_')}.pdf"
             export_rubric(rubric, destination)
@@ -70,7 +64,7 @@ def process_json_files(
 
 
 def generate_xl_for_omnivox(
-    students: list[Rubric],
+    rubrics: list[Rubric],
     output_dir: Path | str
 ) -> None:
     """
@@ -84,7 +78,7 @@ def generate_xl_for_omnivox(
     ws = wb.active
     if ws is None:
         ws = wb.create_sheet()
-    populate_omnivox_sheet(students, ws)
+    populate_omnivox_sheet(rubrics, ws)
 
     # Sauvegarde le fichier Excel
     wb.save(omnivox_path)
