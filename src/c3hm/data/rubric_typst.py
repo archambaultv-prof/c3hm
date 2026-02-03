@@ -22,7 +22,7 @@ class TypstWriter:
 
     def _title(self) -> str:
         if self.rubric.student is not None:
-            return f"#title(\"Grille d’évaluation - {self.rubric.evaluation} - {self.rubric.student.name}\")"
+            return f"#title(\"Grille d’évaluation - {self.rubric.evaluation} - {self.rubric.student.fullname()}\")"
         return f"#title(\"Grille d’évaluation - {self.rubric.evaluation}\")"
 
     def _course_info(self) -> str:

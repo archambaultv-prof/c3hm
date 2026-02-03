@@ -178,7 +178,8 @@ class Rubric:
         d = {}
         if self.student:
             d["étudiant"] = {
-                "nom": self.student.name,
+                "prénom": self.student.firstname,
+                "nom": self.student.surname,
                 "matricule": self.student.omnivox_id
             }
             d["note"] = self.grade
@@ -203,8 +204,11 @@ class Rubric:
         grid = Grid.from_dict(data["grille"])
         if "étudiant" in data:
             student_data = data["étudiant"]
+            firstname = student_data["prénom"]
+            surname = student_data["nom"]
             student = Student(
-                name=student_data.get("nom", ""),
+                firstname=firstname,
+                surname=surname,
                 omnivox_id=student_data.get("matricule", "")
             )
         else:

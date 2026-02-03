@@ -57,10 +57,10 @@ def process_json_files(
             if rubric.student is None:
                 raise ValueError(f"Aucun étudiant associé à la grille de correction dans le fichier '{json_file}'.")
             if student_list is not None and rubric.student.omnivox_id is None:
-                valid_student = find_student_by_name(rubric.student.name, student_list)
+                valid_student = find_student_by_name(rubric.student.fullname(), student_list)
                 rubric.student = valid_student
             rubric.validate()
-            destination = output_dir / f"{rubric.student.name} {rubric.student.omnivox_id}.pdf"
+            destination = output_dir / f"{rubric.student.fullname(surname_first=True, include_omnivox=True, separator='_')}.pdf"
             export_rubric(rubric, destination)
             all_rubrics.append(rubric)
         except Exception as e:
@@ -100,7 +100,7 @@ def populate_omnivox_sheet(rubrics: list[Rubric], omnivox_worksheet: Worksheet) 
     for rubric in rubrics:
         if rubric.student is None:
             raise ValueError("L'étudiant associé à la grille de correction est manquant.")
-        omnivox_worksheet.append([rubric.student.omnivox_id, rubric.final_grade(), rubric.comment, rubric.student.name])
+        omnivox_worksheet.append([rubric.student.omnivox_id, rubric.final_grade(), rubric.comment, rubric.student.fullname()])
 
     # Format
     _insert_table(omnivox_worksheet, "NotesOmnivox", "A1:D" + str(omnivox_worksheet.max_row))

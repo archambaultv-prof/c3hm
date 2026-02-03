@@ -23,7 +23,7 @@ def generate_gradebook(rubric: Path, output_dir: Path, students_file: Path | Non
         generate_gradebook_from_students_file(r, students_file, output_dir)
     else:
         new_rubric = r.copy()
-        student = Student(omnivox_id="", name="")
+        student = Student(omnivox_id="", firstname="", surname="")
         new_rubric.student = student
         output_path = output_dir / "grille de correction.json"
         write_gradebook(new_rubric, output_path)
@@ -35,7 +35,7 @@ def generate_gradebook_from_students_file(rubric: Rubric, students_file: Path, o
         student.validate()
         new_rubric = rubric.copy()
         new_rubric.student = student
-        stem = f"{student.name} {student.omnivox_id}.json"
+        stem = f"{student.fullname(surname_first=True, include_omnivox=True, separator='_')}.json"
         destination = output_dir / stem
         write_gradebook(new_rubric, destination)
 

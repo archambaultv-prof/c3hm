@@ -86,7 +86,7 @@ class _RubricGui:
         student_name = "—"
         student_id = "—"
         if self.rubric.student is not None:
-            student_name = self.rubric.student.name or "—"
+            student_name = self.rubric.student.fullname() or "—"
             student_id = self.rubric.student.omnivox_id or "—"
 
         student_label = ttk.Label(
