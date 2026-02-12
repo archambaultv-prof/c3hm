@@ -10,14 +10,6 @@ les profs de cégep qui veulent survivre à la tempête de copies.
 > `c3hm` est actuellement en développement actif. Certaines
 > fonctionnalités peuvent être instables ou sujettes à modification.
 
-## 🔭 Juché sur les épaules de géants
-
-Un grand merci à mes collègues du Collège de Maisonneuve, notamment Caroline
-Houle pour avoir partagé ses grilles d'évaluation et ses macros Excel. Merci
-également à Patrice Farand de l'École Polytechnique de Montréal pour m'avoir
-appris à faire une grille d'évaluation. Le succès de `c3hm` leur revient en
-bonne partie ; toutes les erreurs sont les miennes.
-
 ## 🧰 Fonctionnalités
 
 Pendant que tu regrettes ton choix de carrière face à la montagne de
@@ -25,6 +17,9 @@ copies à corriger, `c3hm` vient à ta rescousse. Il te permet de :
 
 - `c3hm template` : Le par cœur, ce n'est pas ton fort ? Pas de souci, `c3hm` peut
   générer un modèle de configuration pour toi.
+- `c3hm rubric` : Crée un `PDF` de la grille d'évaluation à partir du fichier
+  de configuration. Parfait pour l'afficher en classe, l'imprimer ou en faire
+  ton avatar.
 - `c3hm unpack` : Dézipper et nettoyer les remises des étudiants, comme un aspirateur numérique. Bye-bye
   `node_modules`, `.venv` et autres joyeusetés. Ton OneDrive sera tellement content !
 - `c3hm gradebook` : Générer des grilles d'évaluation. Tu n'auras qu'à remplir
@@ -38,17 +33,6 @@ copies à corriger, `c3hm` vient à ta rescousse. Il te permet de :
 - `c3hm clean` : Nettoyer les fichiers temporaires et les artefacts de
   construction après la correction. Encore une fois, ton OneDrive te dira merci !
 
-Pour l'instant, c'est tout, mais on a de grands projets pour l'avenir. Reste à l'écoute !
-
-#### 😮 Quoi en anglais ?
-
-Oui, les noms de commandes sont en anglais. Pourquoi ? Parce que c'est toujours
-comme ça en informatique. Des termes et options comme `init`,
-`--dry-run`, `--verbose`, `--help`, `--dir` et autres sont des classiques. On ne
-va pas réinventer la roue.
-
-Par contre, les messages d'erreur et les descriptions sont en français. Parce qu'on est au Québec, et qu'on aime bien
-notre langue.
 
 ## 🪄 Installation
 
