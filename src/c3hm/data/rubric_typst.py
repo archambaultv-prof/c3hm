@@ -1,8 +1,34 @@
 import textwrap
 from pathlib import Path
 
-from c3hm.data.rubric import Indicator, Rubric
+from c3hm.data.rubric import Rubric
 
+
+def get_colors(nb_levels: int) -> list[str]:
+    if nb_levels < 1:
+        raise ValueError("Le nombre de niveaux doit être au moins 1.")
+    if nb_levels > 5:
+        raise ValueError("Le nombre de niveaux ne peut pas dépasser 5.")
+
+    # Couleurs de base pour les 5 niveaux
+    base_colors = [
+        "#C8FFC8",
+        "#F0FFB0",
+        "#FFF8C2",
+        "#FFE4C8",
+        "#FFC8C8"
+    ]
+    match nb_levels:
+        case 1:
+            return [base_colors[0]]
+        case 2:
+            return [base_colors[0], base_colors[3]]
+        case 3:
+            return [base_colors[0], base_colors[1], base_colors[3]]
+        case 4:
+            return [base_colors[0], base_colors[1], base_colors[2], base_colors[3]]
+        case _:
+            return base_colors
 
 class TypstWriter:
     def __init__(self, rubric: Rubric):
@@ -32,7 +58,10 @@ class TypstWriter:
             """)
 
     def _preamble(self) -> str:
-        return textwrap.dedent("""
+        color_codes = ""
+        for i, color in enumerate(get_colors(len(self.rubric.grid.levels))):
+            color_codes += f'#let COLOR_{i} = rgb("{color}")\n'
+        return textwrap.dedent(f"""
             #set text(
                 lang: "fr",
                 hyphenate: true,
@@ -45,11 +74,7 @@ class TypstWriter:
             )
             #set par(justify: true)
 
-            #let PERFECT_GREEN   = rgb("#C8FFC8")
-            #let VERY_GOOD_GREEN = rgb("#F0FFB0")
-            #let HALF_WAY_YELLOW = rgb("#FFF8C2")
-            #let MINIMAL_RED     = rgb("#FFE4C8")
-            #let BAD_RED         = rgb("#FFC8C8")
+            {color_codes}
 
             #set table.cell(inset: (x: 0.5em, y: 0.75em)) // To go around the issue with hline and row-gutters
             #show table.cell.where(y: 0): set text(weight: "bold")
@@ -64,26 +89,29 @@ class TypstWriter:
         return "\n".join(s)
 
     def _grid_table_header(self) -> str:
-        s = textwrap.dedent("""
+        columns = ", ".join(["1fr"] * (len(self.rubric.grid.levels) + 1))
+        s = textwrap.dedent(f"""
             #table(
-            columns: (1fr, 1fr, 1fr, 1fr, 1fr, 1fr),
+            columns: ({columns}),
             stroke: none,
-            fill: (x, y) => if y == 0 {
-                if x == 1 { PERFECT_GREEN }
-                else if x == 2 { VERY_GOOD_GREEN }
-                else if x == 3 { HALF_WAY_YELLOW }
-                else if x == 4 { MINIMAL_RED }
-                else if x == 5 { BAD_RED }
-            },
+            fill: (x, y) => if y == 0 {{
+                if x == 1 {{ COLOR_0 }}
+                else if x == 2 {{ COLOR_1 }}
+                else if x == 3 {{ COLOR_2 }}
+                else if x == 4 {{ COLOR_3 }}
+                else if x == 5 {{ COLOR_4 }}
+            }},
             """)
         if self.rubric.student is not None:
             s += f'table.header([Note : {self.rubric.final_grade():.0f}~/~100],'
         else:
             s += 'table.header([Critère (100~pts)],'
-        if self.rubric.show_levels_percentage:
-            s += '[Avancé (100%)],[Acquis (75%)],[Ça y est presque! (50%)],[En apprentissage (25%)],[Non démontré (0%)],'
+        if self.rubric.grid.show_levels_percentage:
+            for level in self.rubric.grid.levels:
+                s += f'[{level.label} ({level.percentage * 100:.0f}%)],'
         else:
-            s += '[Avancé],[Acquis],[Ça y est presque!],[En apprentissage],[Non démontré],'
+            for level in self.rubric.grid.levels:
+                s += f'[{level.label}],'
         s += ' table.hline(stroke: 1pt)),'
         return s
 
@@ -101,30 +129,30 @@ class TypstWriter:
         rows = []
         for criterion in self.rubric.grid.criteria:
             pts = ""
-            if self.rubric.show_criteria_points:
+            if self.rubric.grid.show_criteria_points:
                 if self.rubric.student is None:
                     pts = f" ({criterion.points()}~pts)"
                 else:
-                    grade = criterion.grade()
+                    grade = criterion.grade(self.rubric.grid)
                     pts = f" ({grade:.0f}~/~{criterion.points()})"
-            rows.append(f'[*{criterion.label}{pts}*], [], [], [], [], [],')
+            rows.append(f'[*{criterion.label}{pts}*], {", ".join(["[]"] * (len(self.rubric.grid.levels)))},')
             for indicator in criterion.indicators:
                 # Détermination de la colonne à colorer selon `niveau noté`
                 highlight_idx = None
                 highlight_color = None
                 if indicator.graded_level is not None:
-                    grade = Indicator.level_to_percentage(indicator.graded_level)
-                    match grade:
+                    rank = self.rubric.grid.level_to_rank(indicator.graded_level)
+                    match rank:
+                        case 0:
+                            highlight_idx, highlight_color = 0, "COLOR_0"
                         case 1:
-                            highlight_idx, highlight_color = 0, "PERFECT_GREEN"      # Avancé (100%)
-                        case 0.75:
-                            highlight_idx, highlight_color = 1, "VERY_GOOD_GREEN"    # Acquis (75%)
-                        case 0.5:
-                            highlight_idx, highlight_color = 2, "HALF_WAY_YELLOW"    # Ça y est presque! (50%)
-                        case 0.25:
-                            highlight_idx, highlight_color = 3, "MINIMAL_RED"        # En apprentissage (25%)
-                        case 0.0:
-                            highlight_idx, highlight_color = 4, "BAD_RED"            # Données insuffisantes (0%)
+                            highlight_idx, highlight_color = 1, "COLOR_1"
+                        case 2:
+                            highlight_idx, highlight_color = 2, "COLOR_2"
+                        case 3:
+                            highlight_idx, highlight_color = 3, "COLOR_3"
+                        case 4:
+                            highlight_idx, highlight_color = 4, "COLOR_4"
 
                 # Construction des cellules de descripteurs, avec coloration si nécessaire
                 descriptor_cells = []
