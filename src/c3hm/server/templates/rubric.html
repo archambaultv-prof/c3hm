@@ -31,6 +31,12 @@
         </div>
     </div>
 
+    <!-- Commentaires de l'enseignant -->
+    <div class="rubric-comment">
+        <label for="comment-text" class="comment-label">Commentaires de l'enseignant</label>
+        <textarea id="comment-text" class="comment-text" rows="5" placeholder="Ajouter un commentaire..."></textarea>
+    </div>
+
     <!-- Barre d'actions (Sauvegarder) -->
     <div class="rubric-actions">
         <button id="prev-btn-bottom" class="btn btn-nav btn-nav-prev" disabled>
@@ -55,6 +61,7 @@
     const filename = "{{ filename }}";
     let currentRubric = null;
     let modifications = {}; // Tracer les modifications: {crit_idx: {ind_idx: level_label}}
+    let commentModified = false;
 
     // Charger la rubric au chargement de la page
     document.addEventListener("DOMContentLoaded", () => {
@@ -115,6 +122,13 @@
         if (!currentRubric) return;
 
         document.getElementById("student-name").textContent = currentRubric.student_name;
+        const commentField = document.getElementById("comment-text");
+        commentField.value = currentRubric.comment || "";
+        commentField.oninput = () => {
+            commentModified = true;
+            document.getElementById("save-status").textContent = "⚠️ Modifications non sauvegardées";
+            document.getElementById("save-status").className = "save-status unsaved";
+        };
 
         const levels = currentRubric.levels;
         const criteria = currentRubric.criteria;
@@ -194,7 +208,8 @@
 
     async function saveRubric(options = {}) {
         const { silentNoChanges = false } = options;
-        if (Object.keys(modifications).length === 0) {
+        const commentValue = document.getElementById("comment-text").value;
+        if (Object.keys(modifications).length === 0 && !commentModified) {
             if (!silentNoChanges) {
                 document.getElementById("save-status").textContent = "✓ Aucune modification à sauvegarder";
             }
@@ -211,7 +226,8 @@
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
-                    updates: modifications
+                    updates: modifications,
+                    comment: commentValue
                 })
             });
 
@@ -221,6 +237,7 @@
             }
 
             modifications = {}; // Réinitialiser les modifications
+            commentModified = false;
             document.getElementById("save-status").textContent = "✓ Rubric sauvegardée avec succès";
             document.getElementById("save-status").className = "save-status saved";
 

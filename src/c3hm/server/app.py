@@ -171,6 +171,10 @@ def register_routes(app: Flask):
                         if ind_idx < len(criteria[crit_idx].get("indicateurs", [])):
                             criteria[crit_idx]["indicateurs"][ind_idx]["niveau noté"] = level_label
 
+            # Mettre à jour le commentaire
+            if "comment" in data:
+                rubric_data["commentaire"] = data.get("comment", "")
+
             # Sauvegarder le fichier
             with open(json_file, "w", encoding="utf-8") as f:
                 json.dump(rubric_data, f, ensure_ascii=False, indent=2)
@@ -283,5 +287,6 @@ def rubric_to_dict(rubric: Rubric, filename: str) -> dict:
         "filename": filename,
         "student_name": student_name,
         "levels": levels,
-        "criteria": criteria
+        "criteria": criteria,
+        "comment": rubric.comment if rubric.comment is not None else ""
     }

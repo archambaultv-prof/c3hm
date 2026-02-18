@@ -545,6 +545,36 @@ td {
     min-width: 80px;
 }
 
+/* Comment section */
+.rubric-comment {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+}
+
+.comment-label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+}
+
+.comment-text {
+    width: 100%;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    font-size: 0.95rem;
+    resize: vertical;
+    min-height: 120px;
+}
+
+.comment-text:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
 /* Actions */
 .rubric-actions {
     display: grid;
