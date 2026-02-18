@@ -12,14 +12,42 @@
         </div>
     </div>
 
-    <!-- Navigation entre étudiants -->
-    <div class="rubric-nav">
+    <!-- Barre d'actions (Sauvegarder) en haut -->
+    <div class="rubric-actions rubric-actions-top">
         <button id="prev-btn" class="btn btn-nav btn-nav-prev" disabled>
             ← Précédent
         </button>
-        <button id="next-btn" class="btn btn-nav btn-nav-next" disabled>
-            Suivant →
-        </button>
+        <div class="save-group">
+            <button id="save-btn-top" class="btn btn-primary btn-large" onclick="saveRubric()">
+                💾 Sauvegarder les modifications
+            </button>
+            <span id="save-status-top" class="save-status"></span>
+        </div>
+        <div class="action-right">
+            <button id="copy-to-teammates-top" class="btn btn-secondary" onclick="copyToTeammates()" disabled>
+                Copier la grille et le commentaire aux coéquipiers
+            </button>
+            <button id="next-btn" class="btn btn-nav btn-nav-next" disabled>
+                Suivant →
+            </button>
+        </div>
+    </div>
+
+    <!-- Coéquipiers -->
+    <div class="rubric-team">
+        <div class="team-header">
+            <div>
+                <div class="team-title">Coéquipiers</div>
+                <div class="team-subtitle">Ajouter ou retirer des coéquipiers</div>
+            </div>
+            <div class="team-add">
+                <select id="teammate-add-select" class="team-add-select"></select>
+                <button id="add-teammate-btn" class="btn btn-primary btn-small" onclick="addTeammate()">
+                    Ajouter
+                </button>
+            </div>
+        </div>
+        <ul id="teammates-list" class="team-list"></ul>
     </div>
 
     <!-- Container principal avec grille -->
@@ -37,8 +65,8 @@
         <textarea id="comment-text" class="comment-text" rows="5" placeholder="Ajouter un commentaire..."></textarea>
     </div>
 
-    <!-- Barre d'actions (Sauvegarder) -->
-    <div class="rubric-actions">
+    <!-- Barre d'actions (Sauvegarder) en bas -->
+    <div class="rubric-actions rubric-actions-bottom">
         <button id="prev-btn-bottom" class="btn btn-nav btn-nav-prev" disabled>
             ← Précédent
         </button>
@@ -48,9 +76,14 @@
             </button>
             <span id="save-status" class="save-status"></span>
         </div>
-        <button id="next-btn-bottom" class="btn btn-nav btn-nav-next" disabled>
-            Suivant →
-        </button>
+        <div class="action-right">
+            <button id="copy-to-teammates-bottom" class="btn btn-secondary" onclick="copyToTeammates()" disabled>
+                Copier la grille et le commentaire aux coéquipiers
+            </button>
+            <button id="next-btn-bottom" class="btn btn-nav btn-nav-next" disabled>
+                Suivant →
+            </button>
+        </div>
     </div>
 </div>
 
@@ -62,6 +95,9 @@
     let currentRubric = null;
     let modifications = {}; // Tracer les modifications: {crit_idx: {ind_idx: level_label}}
     let commentModified = false;
+    let teammatesModified = false;
+    let allStudents = [];
+    let teammates = [];
 
     // Charger la rubric au chargement de la page
     document.addEventListener("DOMContentLoaded", () => {
@@ -78,6 +114,7 @@
 
             currentRubric = await response.json();
             renderRubric();
+            await loadTeammates();
         } catch (error) {
             document.getElementById("rubric-content").innerHTML = `<p class="error">Erreur: ${error.message}</p>`;
         }
@@ -118,6 +155,19 @@
         }
     }
 
+    function setSaveStatus(message, className) {
+        const statusTop = document.getElementById("save-status-top");
+        const statusBottom = document.getElementById("save-status");
+        if (statusTop) {
+            statusTop.textContent = message;
+            statusTop.className = className;
+        }
+        if (statusBottom) {
+            statusBottom.textContent = message;
+            statusBottom.className = className;
+        }
+    }
+
     function renderRubric() {
         if (!currentRubric) return;
 
@@ -126,8 +176,7 @@
         commentField.value = currentRubric.comment || "";
         commentField.oninput = () => {
             commentModified = true;
-            document.getElementById("save-status").textContent = "⚠️ Modifications non sauvegardées";
-            document.getElementById("save-status").className = "save-status unsaved";
+            setSaveStatus("⚠️ Modifications non sauvegardées", "save-status unsaved");
         };
 
         const levels = currentRubric.levels;
@@ -188,6 +237,20 @@
         document.getElementById("rubric-content").innerHTML = html;
     }
 
+    async function loadTeammates() {
+        const response = await fetch("/api/students");
+        if (!response.ok) {
+            return;
+        }
+        allStudents = await response.json();
+        teammates = (currentRubric.teammates || []).map((tm) => ({
+            first_name: tm.first_name,
+            last_name: tm.last_name,
+            omnivox_id: tm.omnivox_id
+        }));
+        renderTeammates();
+    }
+
     function selectLevel(critIdx, indIdx, levelIdx, levelLabel) {
         if (!modifications[critIdx]) {
             modifications[critIdx] = {};
@@ -202,23 +265,24 @@
         renderRubric();
 
         // Afficher une indication visuelle que des modifications ont été faites
-        document.getElementById("save-status").textContent = "⚠️ Modifications non sauvegardées";
-        document.getElementById("save-status").className = "save-status unsaved";
+        setSaveStatus("⚠️ Modifications non sauvegardées", "save-status unsaved");
     }
 
     async function saveRubric(options = {}) {
         const { silentNoChanges = false } = options;
         const commentValue = document.getElementById("comment-text").value;
-        if (Object.keys(modifications).length === 0 && !commentModified) {
+        const teammates = getSelectedTeammates();
+        if (Object.keys(modifications).length === 0 && !commentModified && !teammatesModified) {
             if (!silentNoChanges) {
-                document.getElementById("save-status").textContent = "✓ Aucune modification à sauvegarder";
+                setSaveStatus("✓ Aucune modification à sauvegarder", "save-status");
             }
             return true;
         }
 
         try {
             document.getElementById("save-btn").disabled = true;
-            document.getElementById("save-status").textContent = "Sauvegarde en cours...";
+            document.getElementById("save-btn-top").disabled = true;
+            setSaveStatus("Sauvegarde en cours...", "save-status");
 
             const response = await fetch(`/api/rubric/${filename}/save`, {
                 method: "POST",
@@ -227,7 +291,8 @@
                 },
                 body: JSON.stringify({
                     updates: modifications,
-                    comment: commentValue
+                    comment: commentValue,
+                    teammates: teammates
                 })
             });
 
@@ -238,21 +303,20 @@
 
             modifications = {}; // Réinitialiser les modifications
             commentModified = false;
-            document.getElementById("save-status").textContent = "✓ Rubric sauvegardée avec succès";
-            document.getElementById("save-status").className = "save-status saved";
+            teammatesModified = false;
+            setSaveStatus("✓ Rubric sauvegardée avec succès", "save-status saved");
 
             setTimeout(() => {
-                document.getElementById("save-status").textContent = "";
-                document.getElementById("save-status").className = "save-status";
+                setSaveStatus("", "save-status");
             }, 3000);
 
             return true;
         } catch (error) {
-            document.getElementById("save-status").textContent = `✗ Erreur: ${error.message}`;
-            document.getElementById("save-status").className = "save-status error";
+            setSaveStatus(`✗ Erreur: ${error.message}`, "save-status error");
             return false;
         } finally {
             document.getElementById("save-btn").disabled = false;
+            document.getElementById("save-btn-top").disabled = false;
         }
     }
 
@@ -261,6 +325,161 @@
         if (ok) {
             window.location.href = targetUrl;
         }
+    }
+
+    function getSelectedTeammates() {
+        return teammates.map((tm) => ({
+            first_name: tm.first_name,
+            last_name: tm.last_name,
+            omnivox_id: tm.omnivox_id
+        }));
+    }
+
+    function renderTeammates() {
+        const list = document.getElementById("teammates-list");
+        const addSelect = document.getElementById("teammate-add-select");
+        list.innerHTML = "";
+        addSelect.innerHTML = "";
+
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "Choisir un étudiant...";
+        placeholder.disabled = true;
+        placeholder.selected = true;
+        addSelect.appendChild(placeholder);
+
+        if (teammates.length === 0) {
+            const empty = document.createElement("li");
+            empty.className = "team-empty";
+            empty.textContent = "Aucun coéquipier";
+            list.appendChild(empty);
+        } else {
+            for (const tm of teammates) {
+                const item = document.createElement("li");
+                item.className = "team-item";
+                item.innerHTML = `
+                    <span class="team-name">${tm.last_name}, ${tm.first_name} (${tm.omnivox_id})</span>
+                    <button class="team-remove" onclick="removeTeammate('${tm.omnivox_id}')">Supprimer</button>
+                `;
+                list.appendChild(item);
+            }
+        }
+
+        const currentId = currentRubric.student.omnivox_id;
+        const teammateIds = new Set(teammates.map((tm) => tm.omnivox_id));
+        const available = allStudents.filter(
+            (student) => student.omnivox_id !== currentId && !teammateIds.has(student.omnivox_id)
+        );
+
+        for (const student of available) {
+            const option = document.createElement("option");
+            option.value = student.omnivox_id;
+            option.textContent = `${student.last_name}, ${student.first_name} (${student.omnivox_id})`;
+            option.dataset.firstName = student.first_name;
+            option.dataset.lastName = student.last_name;
+            option.dataset.omnivoxId = student.omnivox_id;
+            addSelect.appendChild(option);
+        }
+
+        const addBtn = document.getElementById("add-teammate-btn");
+        addBtn.disabled = available.length === 0;
+        addSelect.onchange = () => {
+            addBtn.disabled = addSelect.value === "";
+        };
+        if (available.length > 0) {
+            addBtn.disabled = true;
+        }
+        setCopyButtonsDisabled(teammates.length === 0);
+    }
+
+    function markTeammatesModified() {
+        teammatesModified = true;
+        setSaveStatus("⚠️ Modifications non sauvegardées", "save-status unsaved");
+        setCopyButtonsDisabled(teammates.length === 0);
+    }
+
+    function addTeammate() {
+        const select = document.getElementById("teammate-add-select");
+        const opt = select.selectedOptions[0];
+        if (!opt || opt.value === "") {
+            return;
+        }
+        teammates.push({
+            first_name: opt.dataset.firstName,
+            last_name: opt.dataset.lastName,
+            omnivox_id: opt.dataset.omnivoxId
+        });
+        renderTeammates();
+        markTeammatesModified();
+    }
+
+    function removeTeammate(omnivoxId) {
+        teammates = teammates.filter((tm) => tm.omnivox_id !== omnivoxId);
+        renderTeammates();
+        markTeammatesModified();
+    }
+
+    async function copyToTeammates() {
+        const teammates = getSelectedTeammates();
+        if (teammates.length === 0) {
+            return;
+        }
+
+        const saved = await saveRubric({ silentNoChanges: true });
+        if (!saved) {
+            return;
+        }
+
+        try {
+            const copyButtons = getCopyButtons();
+            const originalTexts = copyButtons.map((btn) => btn.textContent);
+            setCopyButtonsDisabled(true);
+            copyButtons.forEach((btn) => {
+                btn.textContent = "Copie en cours...";
+            });
+            setSaveStatus("Copie en cours...", "save-status");
+            const response = await fetch(`/api/rubric/${filename}/copy-to-teammates`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    teammates: teammates
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || "Erreur lors de la copie");
+            }
+
+            setSaveStatus("✓ Copie effectuée pour les coéquipiers", "save-status saved");
+            copyButtons.forEach((btn) => {
+                btn.textContent = "✓ Copie effectuée";
+            });
+            setTimeout(() => {
+                copyButtons.forEach((btn, idx) => {
+                    btn.textContent = originalTexts[idx];
+                });
+                setCopyButtonsDisabled(teammates.length === 0);
+            }, 2000);
+        } catch (error) {
+            setSaveStatus(`✗ Erreur: ${error.message}`, "save-status error");
+            setCopyButtonsDisabled(false);
+        }
+    }
+
+    function getCopyButtons() {
+        return [
+            document.getElementById("copy-to-teammates-top"),
+            document.getElementById("copy-to-teammates-bottom")
+        ].filter(Boolean);
+    }
+
+    function setCopyButtonsDisabled(disabled) {
+        getCopyButtons().forEach((btn) => {
+            btn.disabled = disabled;
+        });
     }
 </script>
 {% endblock %}

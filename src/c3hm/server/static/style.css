@@ -359,6 +359,101 @@ td {
     gap: 1rem;
 }
 
+.rubric-team {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.team-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.team-title {
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.team-subtitle {
+    color: var(--text-light);
+    font-size: 0.875rem;
+}
+
+.team-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    background-color: #fff;
+}
+
+.team-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.team-item:last-child {
+    border-bottom: none;
+}
+
+.team-name {
+    font-size: 0.95rem;
+}
+
+.team-empty {
+    padding: 0.75rem 1rem;
+    color: var(--text-light);
+}
+
+.team-remove {
+    background-color: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.375rem;
+    font-size: 0.8125rem;
+    cursor: pointer;
+}
+
+.team-remove:hover {
+    background-color: #fecaca;
+}
+
+.team-add {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.team-add-select {
+    min-width: 260px;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.95rem;
+}
+
+.team-add-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
 .rubric-container {
     background-color: var(--card-bg);
     border: 1px solid var(--border-color);
@@ -586,6 +681,14 @@ td {
     border-radius: 0.5rem;
     padding: 1.5rem;
     box-shadow: var(--shadow);
+}
+
+.action-right {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    justify-self: end;
+    flex-wrap: wrap;
 }
 
 .save-group {

@@ -175,11 +175,98 @@ def register_routes(app: Flask):
             if "comment" in data:
                 rubric_data["commentaire"] = data.get("comment", "")
 
+            # Mettre à jour les coéquipiers
+            if "teammates" in data:
+                old_teammates = rubric_data.get("coéquipiers", [])
+                teammates = data.get("teammates", [])
+                normalized_teammates = _normalize_teammates(teammates)
+                rubric_data["coéquipiers"] = normalized_teammates
+
+                current_student = rubric_data.get("étudiant", {})
+                _sync_teammates(
+                    rubrics_dir=rubrics_dir,
+                    current_student=current_student,
+                    new_teammates=normalized_teammates,
+                    old_teammates=old_teammates,
+                )
+
             # Sauvegarder le fichier
             with open(json_file, "w", encoding="utf-8") as f:
                 json.dump(rubric_data, f, ensure_ascii=False, indent=2)
 
             return jsonify({"success": True, "message": "Rubric sauvegardée avec succès"})
+
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/rubric/<filename>/copy-to-teammates", methods=["POST"])
+    def api_copy_to_teammates(filename):
+        """Copie la grille, le commentaire et la note ajustée aux coéquipiers sélectionnés."""
+        rubrics_dir = app.config["RUBRICS_DIR"]
+        json_file = rubrics_dir / filename
+
+        if not json_file.exists():
+            return jsonify({"error": "Fichier non trouvé"}), 404
+
+        try:
+            payload = request.get_json()
+            teammates = payload.get("teammates", [])
+            normalized_teammates = _normalize_teammates(teammates)
+
+            with open(json_file, encoding="utf-8") as f:
+                source_data = json.load(f)
+
+            current_student = source_data.get("étudiant", {})
+            current_id = (current_student.get("matricule") or "").strip()
+            old_teammates = source_data.get("coéquipiers", [])
+            source_data["coéquipiers"] = normalized_teammates
+
+            # Assurer la cohérence mutuelle des coéquipiers
+            _sync_teammates(
+                rubrics_dir=rubrics_dir,
+                current_student=current_student,
+                new_teammates=normalized_teammates,
+                old_teammates=old_teammates,
+            )
+
+            student_index = _build_student_index(rubrics_dir)
+            updated = []
+            skipped = []
+
+            for teammate in normalized_teammates:
+                omnivox_id = (teammate.get("matricule") or "").strip()
+                if not omnivox_id or omnivox_id not in student_index:
+                    skipped.append(omnivox_id or "")
+                    continue
+
+                teammate_file = student_index[omnivox_id]
+                try:
+                    with open(teammate_file, encoding="utf-8") as tf:
+                        teammate_data = json.load(tf)
+
+                    _copy_grid_comment_and_grade(source_data, teammate_data)
+
+                    if current_id:
+                        teammate_data["coéquipiers"] = [
+                            member
+                            for member in [
+                                {
+                                    "prénom": current_student.get("prénom", ""),
+                                    "nom": current_student.get("nom", ""),
+                                    "matricule": current_id,
+                                }
+                            ] + normalized_teammates
+                            if (member.get("matricule") or "").strip() != omnivox_id
+                        ]
+
+                    with open(teammate_file, "w", encoding="utf-8") as tf:
+                        json.dump(teammate_data, tf, ensure_ascii=False, indent=2)
+
+                    updated.append(omnivox_id)
+                except Exception:
+                    skipped.append(omnivox_id)
+
+            return jsonify({"success": True, "updated": updated, "skipped": skipped})
 
         except Exception as e:
             return jsonify({"error": str(e)}), 500
@@ -222,6 +309,7 @@ def scan_rubrics(rubrics_dir: Path) -> list[dict]:
                 "student_name": f"{rubric.student.firstname} {rubric.student.surname}",
                 "first_name": rubric.student.firstname,
                 "last_name": rubric.student.surname,
+                "omnivox_id": rubric.student.omnivox_id,
                 "graded": graded
             })
 
@@ -286,7 +374,141 @@ def rubric_to_dict(rubric: Rubric, filename: str) -> dict:
     return {
         "filename": filename,
         "student_name": student_name,
+        "student": {
+            "first_name": rubric.student.firstname,
+            "last_name": rubric.student.surname,
+            "omnivox_id": rubric.student.omnivox_id
+        },
         "levels": levels,
         "criteria": criteria,
+        "teammates": [
+            {
+                "first_name": tm.firstname,
+                "last_name": tm.surname,
+                "omnivox_id": tm.omnivox_id
+            }
+            for tm in rubric.teammates
+        ],
         "comment": rubric.comment if rubric.comment is not None else ""
     }
+
+
+def _build_student_index(rubrics_dir: Path) -> dict[str, Path]:
+    index: dict[str, Path] = {}
+    for json_file in rubrics_dir.glob("*.json"):
+        try:
+            with open(json_file, encoding="utf-8") as f:
+                data = json.load(f)
+            rubric = Rubric.from_dict(data)
+            if rubric.student is None:
+                continue
+            if rubric.student.omnivox_id:
+                index[rubric.student.omnivox_id] = json_file
+        except Exception:
+            continue
+    return index
+
+
+def _copy_grid_comment_and_grade(source_data: dict, target_data: dict) -> None:
+    source_grid = source_data.get("grille", {})
+    target_grid = target_data.get("grille", {})
+    source_criteria = source_grid.get("critères", [])
+    target_criteria = target_grid.get("critères", [])
+
+    for crit_idx, source_crit in enumerate(source_criteria):
+        if crit_idx >= len(target_criteria):
+            break
+        source_indicators = source_crit.get("indicateurs", [])
+        target_indicators = target_criteria[crit_idx].get("indicateurs", [])
+        for ind_idx, source_ind in enumerate(source_indicators):
+            if ind_idx >= len(target_indicators):
+                break
+            target_indicators[ind_idx]["niveau noté"] = source_ind.get("niveau noté", "")
+
+    if "commentaire" in source_data:
+        target_data["commentaire"] = source_data.get("commentaire", "")
+
+    if "note ajustée" in source_data:
+        target_data["note ajustée"] = source_data.get("note ajustée")
+
+
+def _normalize_teammates(teammates: list[dict]) -> list[dict]:
+    normalized = []
+    for tm in teammates:
+        normalized.append({
+            "prénom": tm.get("first_name", ""),
+            "nom": tm.get("last_name", ""),
+            "matricule": tm.get("omnivox_id", "")
+        })
+    return normalized
+
+
+def _sync_teammates(
+    rubrics_dir: Path,
+    current_student: dict,
+    new_teammates: list[dict],
+    old_teammates: list[dict],
+) -> None:
+    current_id = (current_student.get("matricule") or "").strip()
+    if not current_id:
+        return
+
+    student_index = _build_student_index(rubrics_dir)
+
+    def teammate_id(entry: dict) -> str:
+        return (entry.get("matricule") or "").strip()
+
+    new_ids = {teammate_id(tm) for tm in new_teammates if teammate_id(tm)}
+    old_ids = {teammate_id(tm) for tm in old_teammates if teammate_id(tm)}
+    team_ids = new_ids | {current_id}
+
+    team_members = [
+        {
+            "prénom": current_student.get("prénom", ""),
+            "nom": current_student.get("nom", ""),
+            "matricule": current_id,
+        }
+    ] + new_teammates
+
+    # Mettre à jour tous les coéquipiers sélectionnés pour qu'ils aient la même liste.
+    for teammate in new_teammates:
+        tm_id = teammate_id(teammate)
+        if not tm_id or tm_id not in student_index:
+            continue
+
+        teammate_file = student_index[tm_id]
+        try:
+            with open(teammate_file, encoding="utf-8") as tf:
+                teammate_data = json.load(tf)
+
+            teammate_data["coéquipiers"] = [
+                member for member in team_members if teammate_id(member) != tm_id
+            ]
+
+            with open(teammate_file, "w", encoding="utf-8") as tf:
+                json.dump(teammate_data, tf, ensure_ascii=False, indent=2)
+        except Exception:
+            continue
+
+    # Nettoyer les anciens coéquipiers retirés pour eviter les liens non mutuels.
+    removed_ids = old_ids - new_ids
+    if removed_ids:
+        for tm_id in removed_ids:
+            if not tm_id or tm_id not in student_index:
+                continue
+
+            teammate_file = student_index[tm_id]
+            try:
+                with open(teammate_file, encoding="utf-8") as tf:
+                    teammate_data = json.load(tf)
+
+                existing = teammate_data.get("coéquipiers", [])
+                filtered = [
+                    tm for tm in existing if teammate_id(tm) not in team_ids
+                ]
+                teammate_data["coéquipiers"] = filtered
+
+                with open(teammate_file, "w", encoding="utf-8") as tf:
+                    json.dump(teammate_data, tf, ensure_ascii=False, indent=2)
+            except Exception:
+                continue
