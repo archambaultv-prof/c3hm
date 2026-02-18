@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block title %}Corriger — c3hm{% endblock %}
+
+{% block content %}
+<div class="rubric-section">
+    <!-- En-tête avec nom d'étudiant et progression -->
+    <div class="rubric-header">
+        <div>
+            <h2 id="student-name">Chargement...</h2>
+            <p id="progress-text" class="progress-text">Chargement...</p>
+        </div>
+    </div>
+
+    <!-- Navigation entre étudiants -->
+    <div class="rubric-nav">
+        <button id="prev-btn" class="btn btn-nav btn-nav-prev" disabled>
+            ← Précédent
+        </button>
+        <button id="next-btn" class="btn btn-nav btn-nav-next" disabled>
+            Suivant →
+        </button>
+    </div>
+
+    <!-- Container principal avec grille -->
+    <div class="rubric-container">
+        <div class="rubric-grid-wrapper">
+            <div id="rubric-content" class="rubric-content">
+                <p class="loading">Chargement de la rubric...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barre d'actions (Sauvegarder) -->
+    <div class="rubric-actions">
+        <button id="prev-btn-bottom" class="btn btn-nav btn-nav-prev" disabled>
+            ← Précédent
+        </button>
+        <div class="save-group">
+            <button id="save-btn" class="btn btn-primary btn-large" onclick="saveRubric()">
+                💾 Sauvegarder les modifications
+            </button>
+            <span id="save-status" class="save-status"></span>
+        </div>
+        <button id="next-btn-bottom" class="btn btn-nav btn-nav-next" disabled>
+            Suivant →
+        </button>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const filename = "{{ filename }}";
+    let currentRubric = null;
+    let modifications = {}; // Tracer les modifications: {crit_idx: {ind_idx: level_label}}
+
+    // Charger la rubric au chargement de la page
+    document.addEventListener("DOMContentLoaded", () => {
+        loadRubric();
+        loadNavigation();
+    });
+
+    async function loadRubric() {
+        try {
+            const response = await fetch(`/api/rubric/${filename}`);
+            if (!response.ok) {
+                throw new Error("Erreur lors du chargement de la rubric");
+            }
+
+            currentRubric = await response.json();
+            renderRubric();
+        } catch (error) {
+            document.getElementById("rubric-content").innerHTML = `<p class="error">Erreur: ${error.message}</p>`;
+        }
+    }
+
+    async function loadNavigation() {
+        try {
+            const response = await fetch(`/api/rubric/navigation/${filename}`);
+            if (!response.ok) return;
+
+            const nav = await response.json();
+            document.getElementById("prev-btn").disabled = nav.previous === null;
+            document.getElementById("next-btn").disabled = nav.next === null;
+            document.getElementById("prev-btn-bottom").disabled = nav.previous === null;
+            document.getElementById("next-btn-bottom").disabled = nav.next === null;
+
+            const goPrevious = async () => {
+                if (nav.previous) {
+                    await saveAndNavigate(`/rubric/${nav.previous}`);
+                }
+            };
+
+            const goNext = async () => {
+                if (nav.next) {
+                    await saveAndNavigate(`/rubric/${nav.next}`);
+                }
+            };
+
+            document.getElementById("prev-btn").onclick = goPrevious;
+            document.getElementById("next-btn").onclick = goNext;
+            document.getElementById("prev-btn-bottom").onclick = goPrevious;
+            document.getElementById("next-btn-bottom").onclick = goNext;
+
+            // Mise à jour du texte de progression
+            document.getElementById("progress-text").textContent = `Étudiant ${nav.current_index + 1} / ${nav.total}`;
+        } catch (error) {
+            console.error("Erreur de navigation:", error);
+        }
+    }
+
+    function renderRubric() {
+        if (!currentRubric) return;
+
+        document.getElementById("student-name").textContent = currentRubric.student_name;
+
+        const levels = currentRubric.levels;
+        const criteria = currentRubric.criteria;
+
+        let html = '<table class="rubric-table">';
+        html += '<thead><tr><th class="indicator-col">Critère / Indicateur</th>';
+
+        // En-têtes de niveaux
+        for (let levelIdx = 0; levelIdx < levels.length; levelIdx++) {
+            const level = levels[levelIdx];
+            html += `<th class="level-header" style="background-color: ${level.color};">${level.label}<br><small>${Math.round(level.percentage * 100)}%</small></th>`;
+        }
+        html += '</tr></thead>';
+
+        html += '<tbody>';
+
+        // Afficher chaque critère et ses indicateurs
+        for (let critIdx = 0; critIdx < criteria.length; critIdx++) {
+            const criterion = criteria[critIdx];
+
+            // Ligne du critère
+            html += `<tr class="criterion-row">`;
+            html += `<td class="criterion-label"><strong>${criterion.label}</strong></td>`;
+            for (let levelIdx = 0; levelIdx < levels.length; levelIdx++) {
+                html += `<td class="level-cell"></td>`;
+            }
+            html += `</tr>`;
+
+            // Lignes des indicateurs
+            for (let indIdx = 0; indIdx < criterion.indicators.length; indIdx++) {
+                const indicator = criterion.indicators[indIdx];
+                html += `<tr class="indicator-row">`;
+                html += `<td class="indicator-label">
+                    <span class="indicator-name">${indicator.label}</span>
+                    <span class="indicator-points">${indicator.points} pts</span>
+                </td>`;
+
+                // Cellules de niveau
+                for (let levelIdx = 0; levelIdx < levels.length; levelIdx++) {
+                    const isSelected = indicator.graded_level_idx === levelIdx;
+                    const cellClass = isSelected ? "level-cell selected" : "level-cell";
+                    const descriptor = indicator.descriptors[levelIdx] || "";
+                    html += `<td class="${cellClass}" data-crit="${critIdx}" data-ind="${indIdx}" data-level="${levelIdx}" onclick="selectLevel(${critIdx}, ${indIdx}, ${levelIdx}, '${levels[levelIdx].label}')">`;
+                    html += `<div class="cell-content">`;
+                    if (isSelected) {
+                        html += '<span class="check-mark">✓</span>';
+                    }
+                    html += `<div class="descriptor-text">${descriptor}</div>`;
+                    html += `</div>`;
+                    html += '</td>';
+                }
+                html += `</tr>`;
+            }
+        }
+
+        html += '</tbody></table>';
+        document.getElementById("rubric-content").innerHTML = html;
+    }
+
+    function selectLevel(critIdx, indIdx, levelIdx, levelLabel) {
+        if (!modifications[critIdx]) {
+            modifications[critIdx] = {};
+        }
+        modifications[critIdx][indIdx] = levelLabel;
+
+        // Mettre à jour dans currentRubric pour effectuer le rendu
+        currentRubric.criteria[critIdx].indicators[indIdx].graded_level = levelLabel;
+        currentRubric.criteria[critIdx].indicators[indIdx].graded_level_idx = levelIdx;
+
+        // Re-rendre la grille
+        renderRubric();
+
+        // Afficher une indication visuelle que des modifications ont été faites
+        document.getElementById("save-status").textContent = "⚠️ Modifications non sauvegardées";
+        document.getElementById("save-status").className = "save-status unsaved";
+    }
+
+    async function saveRubric(options = {}) {
+        const { silentNoChanges = false } = options;
+        if (Object.keys(modifications).length === 0) {
+            if (!silentNoChanges) {
+                document.getElementById("save-status").textContent = "✓ Aucune modification à sauvegarder";
+            }
+            return true;
+        }
+
+        try {
+            document.getElementById("save-btn").disabled = true;
+            document.getElementById("save-status").textContent = "Sauvegarde en cours...";
+
+            const response = await fetch(`/api/rubric/${filename}/save`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    updates: modifications
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || "Erreur lors de la sauvegarde");
+            }
+
+            modifications = {}; // Réinitialiser les modifications
+            document.getElementById("save-status").textContent = "✓ Rubric sauvegardée avec succès";
+            document.getElementById("save-status").className = "save-status saved";
+
+            setTimeout(() => {
+                document.getElementById("save-status").textContent = "";
+                document.getElementById("save-status").className = "save-status";
+            }, 3000);
+
+            return true;
+        } catch (error) {
+            document.getElementById("save-status").textContent = `✗ Erreur: ${error.message}`;
+            document.getElementById("save-status").className = "save-status error";
+            return false;
+        } finally {
+            document.getElementById("save-btn").disabled = false;
+        }
+    }
+
+    async function saveAndNavigate(targetUrl) {
+        const ok = await saveRubric({ silentNoChanges: true });
+        if (ok) {
+            window.location.href = targetUrl;
+        }
+    }
+</script>
+{% endblock %}

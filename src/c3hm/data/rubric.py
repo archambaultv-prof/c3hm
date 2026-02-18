@@ -241,6 +241,16 @@ class Grid:
                         f"Niveau noté inconnu '{indicator.graded_level}' pour l'indicateur '{indicator.label}'."
                     )
 
+    def is_graded(self) -> bool:
+        """
+        Vérifie si tous les indicateurs de la grille ont été notés.
+        """
+        for criterion in self.criteria:
+            for indicator in criterion.indicators:
+                if indicator.graded_level is None or indicator.graded_level.strip() == "":
+                    return False
+        return True
+
 class Rubric:
     def __init__(self, course: str, session: str, evaluation: str, grid: Grid,
                  student: Student | None = None, teammates: list[Student] | None = None,
