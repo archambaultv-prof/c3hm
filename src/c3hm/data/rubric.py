@@ -91,7 +91,7 @@ class Indicator:
             "descripteurs": self.descriptors
         }
         if include_graded_level:
-            d["niveau noté"] = self.graded_level if self.graded_level is not None else ""
+            d["niveau noté"] = self.graded_level if self.graded_level else None
         return d
 
     @classmethod
