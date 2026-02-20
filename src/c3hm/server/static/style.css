@@ -731,6 +731,28 @@ td {
     color: var(--text-light);
 }
 
+/* Sync checkbox */
+.sync-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    user-select: none;
+    font-size: 0.95rem;
+    white-space: nowrap;
+}
+
+.sync-checkbox {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--primary-color);
+}
+
+.sync-checkbox:hover {
+    opacity: 0.8;
+}
+
 /* Footer */
 footer {
     background-color: var(--card-bg);

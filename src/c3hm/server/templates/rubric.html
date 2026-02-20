@@ -24,9 +24,10 @@
             <span id="save-status-top" class="save-status"></span>
         </div>
         <div class="action-right">
-            <button id="copy-to-teammates-top" class="btn btn-secondary" onclick="copyToTeammates()" disabled>
-                Copier la grille et le commentaire aux coéquipiers
-            </button>
+            <label class="sync-checkbox-label">
+                <input type="checkbox" id="sync-to-teammates-top" class="sync-checkbox">
+                Synchroniser avec les coéquipiers
+            </label>
             <button id="next-btn" class="btn btn-nav btn-nav-next" disabled>
                 Suivant →
             </button>
@@ -77,9 +78,10 @@
             <span id="save-status" class="save-status"></span>
         </div>
         <div class="action-right">
-            <button id="copy-to-teammates-bottom" class="btn btn-secondary" onclick="copyToTeammates()" disabled>
-                Copier la grille et le commentaire aux coéquipiers
-            </button>
+            <label class="sync-checkbox-label">
+                <input type="checkbox" id="sync-to-teammates" class="sync-checkbox">
+                Synchroniser avec les coéquipiers
+            </label>
             <button id="next-btn-bottom" class="btn btn-nav btn-nav-next" disabled>
                 Suivant →
             </button>
@@ -98,11 +100,24 @@
     let teammatesModified = false;
     let allStudents = [];
     let teammates = [];
+    let syncToTeammates = false; // Nouveau: flag pour synchroniser aux coéquipiers
 
     // Charger la rubric au chargement de la page
     document.addEventListener("DOMContentLoaded", () => {
         loadRubric();
         loadNavigation();
+        
+        // Setup pour la case à cocher de synchronisation
+        const syncCheckboxes = document.querySelectorAll(".sync-checkbox");
+        syncCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener("change", (e) => {
+                syncToTeammates = e.target.checked;
+                // Synchroniser l'état entre les deux checkboxes
+                syncCheckboxes.forEach(cb => {
+                    cb.checked = syncToTeammates;
+                });
+            });
+        });
     });
 
     async function loadRubric() {
@@ -276,6 +291,10 @@
             if (!silentNoChanges) {
                 setSaveStatus("✓ Aucune modification à sauvegarder", "save-status");
             }
+            // Même si rien à sauvegarder, synchroniser si demandé
+            if (syncToTeammates && teammates.length > 0) {
+                return await syncToSelectedTeammates();
+            }
             return true;
         }
 
@@ -304,6 +323,12 @@
             modifications = {}; // Réinitialiser les modifications
             commentModified = false;
             teammatesModified = false;
+            
+            // Synchroniser aux coéquipiers si demandé
+            if (syncToTeammates && teammates.length > 0) {
+                return await syncToSelectedTeammates();
+            }
+            
             setSaveStatus("✓ Rubric sauvegardée avec succès", "save-status saved");
 
             setTimeout(() => {
@@ -389,13 +414,21 @@
         if (available.length > 0) {
             addBtn.disabled = true;
         }
-        setCopyButtonsDisabled(teammates.length === 0);
+
+        // Disable/enable sync checkboxes based on whether there are teammates
+        const syncCheckboxes = document.querySelectorAll(".sync-checkbox");
+        syncCheckboxes.forEach(checkbox => {
+            checkbox.disabled = teammates.length === 0;
+            if (teammates.length === 0) {
+                checkbox.checked = false;
+                syncToTeammates = false;
+            }
+        });
     }
 
     function markTeammatesModified() {
         teammatesModified = true;
         setSaveStatus("⚠️ Modifications non sauvegardées", "save-status unsaved");
-        setCopyButtonsDisabled(teammates.length === 0);
     }
 
     function addTeammate() {
@@ -419,25 +452,14 @@
         markTeammatesModified();
     }
 
-    async function copyToTeammates() {
+    async function syncToSelectedTeammates() {
         const teammates = getSelectedTeammates();
         if (teammates.length === 0) {
-            return;
-        }
-
-        const saved = await saveRubric({ silentNoChanges: true });
-        if (!saved) {
-            return;
+            return true;
         }
 
         try {
-            const copyButtons = getCopyButtons();
-            const originalTexts = copyButtons.map((btn) => btn.textContent);
-            setCopyButtonsDisabled(true);
-            copyButtons.forEach((btn) => {
-                btn.textContent = "Copie en cours...";
-            });
-            setSaveStatus("Copie en cours...", "save-status");
+            setSaveStatus("Synchronisation en cours...", "save-status");
             const response = await fetch(`/api/rubric/${filename}/copy-to-teammates`, {
                 method: "POST",
                 headers: {
@@ -450,36 +472,18 @@
 
             if (!response.ok) {
                 const error = await response.json();
-                throw new Error(error.error || "Erreur lors de la copie");
+                throw new Error(error.error || "Erreur lors de la synchronisation");
             }
 
-            setSaveStatus("✓ Copie effectuée pour les coéquipiers", "save-status saved");
-            copyButtons.forEach((btn) => {
-                btn.textContent = "✓ Copie effectuée";
-            });
+            setSaveStatus("✓ Rubric sauvegardée et synchronisée avec les coéquipiers", "save-status saved");
             setTimeout(() => {
-                copyButtons.forEach((btn, idx) => {
-                    btn.textContent = originalTexts[idx];
-                });
-                setCopyButtonsDisabled(teammates.length === 0);
-            }, 2000);
+                setSaveStatus("", "save-status");
+            }, 3000);
+            return true;
         } catch (error) {
             setSaveStatus(`✗ Erreur: ${error.message}`, "save-status error");
-            setCopyButtonsDisabled(false);
+            return false;
         }
-    }
-
-    function getCopyButtons() {
-        return [
-            document.getElementById("copy-to-teammates-top"),
-            document.getElementById("copy-to-teammates-bottom")
-        ].filter(Boolean);
-    }
-
-    function setCopyButtonsDisabled(disabled) {
-        getCopyButtons().forEach((btn) => {
-            btn.disabled = disabled;
-        });
     }
 </script>
 {% endblock %}
