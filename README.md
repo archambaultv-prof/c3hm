@@ -32,7 +32,8 @@ copies à corriger, `c3hm` vient à ta rescousse. Il te permet de :
   tableur Excel avec les notes prêtes à être importées dans Omnivox.
 - `c3hm clean` : Nettoyer les fichiers temporaires et les artefacts de
   construction après la correction. Encore une fois, ton OneDrive te dira merci !
-
+- `c3hm server` : Lancer un serveur web local pour une interface de correction plus conviviale. Parce que
+  corriger via des fichiers JSON c'est trop pour les humains.
 
 ## 🪄 Installation
 
