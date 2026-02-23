@@ -143,7 +143,7 @@ class Criterion:
     def from_dict(cls, data: dict) -> 'Criterion':
         label = data["critère"]
         indicators = [Indicator.from_dict(ind_data) for ind_data in data["indicateurs"]]
-        grade_override = data.get("note")
+        grade_override = data.get("note ajustée")
         return cls(label=label, indicators=indicators, grade_override=grade_override)
 
     def validate(self) -> None:
