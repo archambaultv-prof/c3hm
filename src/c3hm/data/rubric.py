@@ -412,32 +412,48 @@ def _assert_non_empty_string(value: Any, field_name: str) -> None:
     if value is None or not isinstance(value, str) or value.strip() == "":
         raise ValueError(f"Le champ '{field_name}' doit être une chaîne de caractères non vide.")
 
+def validate_rubrics(rubrics: list[Rubric]) -> None:
+    """
+    Valide une liste de grilles de correction. Cette validation inclut la validation
+    de chaque grille individuellement, ainsi que la validation des coéquipiers.
+    """
+    for rubric in rubrics:
+        rubric.validate()
+    validate_teammates(rubrics)
+
 def validate_teammates(rubrics: list[Rubric]) -> None:
     """
-    Valide que les coéquipiers d'une liste de grilles sont cohérents entre eux.
-    Par exemple, si une grille A liste un étudiant B comme coéquipier, alors la grille de B doit lister A comme coéquipier.
-    De plus, les équipes doivent être complètes: si A liste B et C comme coéquipiers, alors B doit lister A et C, et C doit lister A et B.
+    Valide que les coéquipiers d'une liste de grilles forment des cliques
+    (équipes complètes). Une équipe est une clique si tous les membres ont les
+    mêmes coéquipiers (pas de membre qui aurait un coéquipier en dehors du
+    groupe)
     """
     student_to_teammates: dict[str, set[str]] = {}
     for rubric in rubrics:
         if rubric.student is None:
-            continue
+            raise ValueError("Toutes les grilles doivent être associées à un étudiant pour valider les coéquipiers.")
         student_id = rubric.student.omnivox_id
         teammates_ids = set(tm.omnivox_id for tm in rubric.teammates)
         student_to_teammates[student_id] = teammates_ids
 
-    for student_id, teammates_ids in student_to_teammates.items():
-        for teammate_id in teammates_ids:
-            if teammate_id not in student_to_teammates:
-                raise ValueError(f"Étudiant avec ID '{teammate_id}' référencé comme coéquipier de '{student_id}' mais aucune grille trouvée pour cet étudiant.")
-            if student_id not in student_to_teammates[teammate_id]:
-                raise ValueError(f"Incohérence: l'étudiant '{student_id}' liste '{teammate_id}' comme coéquipier, mais '{teammate_id}' ne liste pas '{student_id}'.")
+    # Vérifier les relations bidirectionnelles et construire les groupes
+    visited = set()
+    for student_id in student_to_teammates:
+        if student_id in visited:
+            continue
 
-            # Vérifier que tous les coéquipiers de student_id sont aussi coéquipiers de teammate_id
-            expected_teammates = teammates_ids - {teammate_id}  # Les autres coéquipiers du student actuel
-            actual_teammates = student_to_teammates[teammate_id] - {student_id}  # Les autres coéquipiers du teammate
+        # Trouver tous les étudiants du groupe selon cet étudiant
+        group = set(student_to_teammates[student_id])
+        group.add(student_id)
+        visited.update(group)
+
+        # Vérifier que tous les étudiants du groupe ont exactement les mêmes coéquipiers (le groupe moins eux-mêmes)
+        for member_id in group:
+            expected_teammates = group - {member_id}
+            actual_teammates = student_to_teammates.get(member_id, set())
             if expected_teammates != actual_teammates:
-                missing_in_teammate = expected_teammates - actual_teammates
-                if missing_in_teammate:
-                    missing_str = ", ".join(sorted(missing_in_teammate))
-                    raise ValueError(f"Incohérence d'équipe: '{student_id}' et '{teammate_id}' sont coéquipiers, mais '{teammate_id}' ne liste pas les coéquipiers suivants de '{student_id}': {missing_str}")
+                raise ValueError(
+                    f"Incohérence dans les coéquipiers pour l'étudiant {member_id}. "
+                    f"Coéquipiers attendus: {expected_teammates}, coéquipiers trouvés: {actual_teammates}"
+                )
+
