@@ -98,6 +98,12 @@
     let modifications = {}; // Tracer les modifications: {crit_idx: {ind_idx: level_label}}
     let commentModified = false;
     let teammatesModified = false;
+    let criterionOverrides = {};
+    let criterionOverridesModified = false;
+    let rubricGradeOverride = null;
+    let rubricGradeOverrideModified = false;
+    let invalidCriterionOverrides = new Set();
+    let rubricOverrideInvalid = false;
     let allStudents = [];
     let teammates = [];
     let syncToTeammates = false; // Nouveau: flag pour synchroniser aux coéquipiers
@@ -130,11 +136,86 @@
             }
 
             currentRubric = await response.json();
+            initializeGradeOverrides();
             renderRubric();
             await loadTeammates();
         } catch (error) {
             document.getElementById("rubric-content").innerHTML = `<p class="error">Erreur: ${error.message}</p>`;
         }
+    }
+
+    function initializeGradeOverrides() {
+        criterionOverrides = {};
+        rubricGradeOverride = currentRubric.grade_override ?? null;
+        criterionOverridesModified = false;
+        rubricGradeOverrideModified = false;
+        invalidCriterionOverrides = new Set();
+        rubricOverrideInvalid = false;
+        if (!currentRubric || !currentRubric.criteria) {
+            return;
+        }
+        currentRubric.criteria.forEach((criterion, idx) => {
+            if (criterion.grade_override !== null && criterion.grade_override !== undefined && criterion.grade_override !== "") {
+                criterionOverrides[idx] = criterion.grade_override;
+            }
+        });
+    }
+
+    function normalizeOverrideValue(value) {
+        const trimmed = String(value ?? "").trim();
+        if (trimmed === "") {
+            return null;
+        }
+        const parsed = Number(trimmed);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    function validateOverrideValue(rawValue, min, max) {
+        const trimmed = String(rawValue ?? "").trim();
+        if (trimmed === "") {
+            return { valid: true, value: null };
+        }
+        const parsed = Number(trimmed);
+        if (!Number.isFinite(parsed)) {
+            return { valid: false, value: null };
+        }
+        if (parsed < min || parsed > max) {
+            return { valid: false, value: parsed };
+        }
+        return { valid: true, value: parsed };
+    }
+
+    function formatOverrideValue(value) {
+        if (value === null || value === undefined || value === "") {
+            return "—";
+        }
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed)) {
+            return "—";
+        }
+        return Number.isInteger(parsed) ? parsed.toString() : parsed.toFixed(1);
+    }
+
+    function formatComputedValue(value) {
+        if (value === null || value === undefined) {
+            return "—";
+        }
+        return Math.round(value).toString();
+    }
+
+    function overrideDiffers(overrideValue, computedValue) {
+        if (overrideValue === null || overrideValue === undefined || overrideValue === "") {
+            return false;
+        }
+        if (computedValue === null || computedValue === undefined) {
+            return false;
+        }
+        const overrideNumber = Number(overrideValue);
+        const computedNumber = Number(computedValue);
+        if (!Number.isFinite(overrideNumber) || !Number.isFinite(computedNumber)) {
+            return false;
+        }
+        return Math.abs(overrideNumber - computedNumber) >= 0.01;
     }
 
     async function loadNavigation() {
@@ -219,7 +300,30 @@
         const criteria = currentRubric.criteria;
 
         let html = '<table class="rubric-table">';
-        html += '<thead><tr><th class="indicator-col">Critère / Indicateur</th>';
+        html += '<thead><tr>';
+        html += '<th class="indicator-col indicator-header" id="rubric-grade-header">';
+        html += '<div class="indicator-header-wrap">';
+        html += '<div class="indicator-header-title">Note totale</div>';
+        html += '<div class="indicator-header-grade">';
+        html += '<span id="rubric-grade-value" class="grade-value">—</span>';
+        html += '<span class="grade-max">/ 100</span>';
+        html += '</div>';
+        html += '<div class="indicator-header-override">';
+        html += '<label for="rubric-grade-override" class="grade-override-label">Ajuster</label>';
+        html += '<input'
+            + ' id="rubric-grade-override"'
+            + ' class="grade-override-input"'
+            + ' type="number"'
+            + ' min="0"'
+            + ' max="100"'
+            + ' step="0.1"'
+            + ' placeholder="—"'
+            + ' oninput="setRubricGradeOverride(this.value)"'
+            + '>';
+        html += '</div>';
+        html += '<div id="rubric-grade-error" class="grade-error-text"></div>';
+        html += '</div>';
+        html += '</th>';
 
         // En-têtes de niveaux
         for (let levelIdx = 0; levelIdx < levels.length; levelIdx++) {
@@ -234,9 +338,37 @@
         for (let critIdx = 0; critIdx < criteria.length; critIdx++) {
             const criterion = criteria[critIdx];
 
+            const criterionPoints = criterion.indicators.reduce((total, indicator) => total + indicator.points, 0);
+            const criterionOverrideValue = criterionOverrides.hasOwnProperty(critIdx)
+                ? criterionOverrides[critIdx]
+                : (criterion.grade_override ?? "");
+
             // Ligne du critère
             html += `<tr class="criterion-row">`;
-            html += `<td class="criterion-label"><strong>${criterion.label}</strong></td>`;
+            html += `<td class="criterion-label" id="criterion-cell-${critIdx}">`;
+            html += `<div class="criterion-label-main"><strong>${criterion.label}</strong></div>`;
+            html += `
+                <div class="criterion-grade-wrap">
+                    <span class="criterion-grade-label">Note calculée</span>
+                    <span class="criterion-grade-value" id="criterion-grade-${critIdx}">—</span>
+                    <span class="criterion-grade-max">/ ${criterionPoints}</span>
+                </div>
+                <div class="criterion-override-row">
+                    <label for="criterion-grade-override-${critIdx}" class="grade-override-label">Ajuster</label>
+                    <input
+                        class="criterion-grade-override"
+                        id="criterion-grade-override-${critIdx}"
+                        type="number"
+                        min="0"
+                        max="${criterionPoints}"
+                        step="0.1"
+                        placeholder="Ajuster"
+                        value="${criterionOverrideValue ?? ""}"
+                        oninput="setCriterionOverride(${critIdx}, this.value)"
+                    >
+                </div>
+                <div class="criterion-grade-error" id="criterion-grade-error-${critIdx}"></div>
+            `;
             for (let levelIdx = 0; levelIdx < levels.length; levelIdx++) {
                 html += `<td class="level-cell"></td>`;
             }
@@ -271,6 +403,176 @@
 
         html += '</tbody></table>';
         document.getElementById("rubric-content").innerHTML = html;
+        const rubricOverrideInput = document.getElementById("rubric-grade-override");
+        if (rubricOverrideInput) {
+            rubricOverrideInput.value = rubricGradeOverride ?? "";
+        }
+        updateGradeDisplays();
+    }
+
+    function setCriterionOverride(critIdx, value) {
+        const criterion = currentRubric?.criteria?.[critIdx];
+        if (!criterion) {
+            return;
+        }
+        const criterionPoints = criterion.indicators.reduce((total, indicator) => total + indicator.points, 0);
+        const { valid, value: parsedValue } = validateOverrideValue(value, 0, criterionPoints);
+        const input = document.getElementById(`criterion-grade-override-${critIdx}`);
+        const error = document.getElementById(`criterion-grade-error-${critIdx}`);
+
+        if (!valid) {
+            invalidCriterionOverrides.add(critIdx);
+            if (input) {
+                input.classList.add("invalid");
+            }
+            if (error) {
+                error.textContent = `Valeur entre 0 et ${criterionPoints}`;
+            }
+            setSaveStatus("✗ Valeur de note invalide", "save-status error");
+            return;
+        }
+
+        invalidCriterionOverrides.delete(critIdx);
+        if (input) {
+            input.classList.remove("invalid");
+        }
+        if (error) {
+            error.textContent = "";
+        }
+
+        criterionOverrides[critIdx] = parsedValue;
+        criterion.grade_override = parsedValue;
+        criterionOverridesModified = true;
+        setSaveStatus("⚠️ Modifications non sauvegardées", "save-status unsaved");
+        updateGradeDisplays();
+    }
+
+    function setRubricGradeOverride(value) {
+        const { valid, value: parsedValue } = validateOverrideValue(value, 0, 100);
+        const input = document.getElementById("rubric-grade-override");
+        const error = document.getElementById("rubric-grade-error");
+
+        if (!valid) {
+            rubricOverrideInvalid = true;
+            if (input) {
+                input.classList.add("invalid");
+            }
+            if (error) {
+                error.textContent = "Valeur entre 0 et 100";
+            }
+            setSaveStatus("✗ Valeur de note invalide", "save-status error");
+            return;
+        }
+
+        rubricOverrideInvalid = false;
+        if (input) {
+            input.classList.remove("invalid");
+        }
+        if (error) {
+            error.textContent = "";
+        }
+
+        rubricGradeOverride = parsedValue;
+        if (currentRubric) {
+            currentRubric.grade_override = rubricGradeOverride;
+        }
+        rubricGradeOverrideModified = true;
+        setSaveStatus("⚠️ Modifications non sauvegardées", "save-status unsaved");
+        updateGradeDisplays();
+    }
+
+    function getCriterionOverride(criterion, critIdx) {
+        if (criterionOverrides.hasOwnProperty(critIdx)) {
+            return criterionOverrides[critIdx];
+        }
+        return criterion.grade_override ?? null;
+    }
+
+    function computeCriterionGrade(criterion, critIdx) {
+        const overrideValue = getCriterionOverride(criterion, critIdx);
+        const overridden = overrideValue !== null && overrideValue !== undefined && overrideValue !== "";
+        let total = 0;
+        for (const indicator of criterion.indicators) {
+            if (indicator.graded_level_idx === null || indicator.graded_level_idx === undefined) {
+                return { computedValue: null, effectiveValue: null, overridden };
+            }
+            const level = currentRubric.levels[indicator.graded_level_idx];
+            if (!level) {
+                return { computedValue: null, effectiveValue: null, overridden };
+            }
+            total += indicator.points * level.percentage;
+        }
+        const effectiveValue = overridden ? overrideValue : total;
+        return { computedValue: total, effectiveValue: effectiveValue, overridden };
+    }
+
+    function computeRubricGrade() {
+        const overrideValue = rubricGradeOverride ?? currentRubric.grade_override ?? null;
+        const rubricOverrideSet = overrideValue !== null && overrideValue !== undefined && overrideValue !== "";
+        
+        // Always compute the purely computed value (no overrides)
+        let computedTotal = 0;
+        for (let critIdx = 0; critIdx < currentRubric.criteria.length; critIdx++) {
+            const criterion = currentRubric.criteria[critIdx];
+            const { computedValue } = computeCriterionGrade(criterion, critIdx);
+            if (computedValue === null || computedValue === undefined) {
+                return { computedValue: null, effectiveValue: null, overridden: false };
+            }
+            computedTotal += Math.round(computedValue);
+        }
+        
+        // If rubric override is set, it takes precedence over all criterion overrides
+        if (rubricOverrideSet) {
+            return { computedValue: computedTotal, effectiveValue: overrideValue, overridden: true };
+        }
+        
+        // No rubric override - compute effective value from criteria with their own overrides
+        let effectiveTotal = 0;
+        for (let critIdx = 0; critIdx < currentRubric.criteria.length; critIdx++) {
+            const criterion = currentRubric.criteria[critIdx];
+            const { effectiveValue } = computeCriterionGrade(criterion, critIdx);
+            if (effectiveValue === null || effectiveValue === undefined) {
+                return { computedValue: computedTotal, effectiveValue: null, overridden: false };
+            }
+            effectiveTotal += Math.round(effectiveValue);
+        }
+        
+        return { computedValue: computedTotal, effectiveValue: effectiveTotal, overridden: false };
+    }
+
+    function updateGradeDisplays() {
+        if (!currentRubric) {
+            return;
+        }
+
+        currentRubric.criteria.forEach((criterion, critIdx) => {
+            const display = document.getElementById(`criterion-grade-${critIdx}`);
+            if (!display) {
+                return;
+            }
+            const { computedValue } = computeCriterionGrade(criterion, critIdx);
+            const overrideValue = getCriterionOverride(criterion, critIdx);
+            const overridden = overrideDiffers(overrideValue, computedValue);
+            display.textContent = formatComputedValue(computedValue);
+            display.classList.toggle("grade-overridden", overridden);
+            const cell = document.getElementById(`criterion-cell-${critIdx}`);
+            if (cell) {
+                cell.classList.toggle("override-active", overridden);
+            }
+        });
+
+        const rubricDisplay = document.getElementById("rubric-grade-value");
+        if (rubricDisplay) {
+            const { computedValue } = computeRubricGrade();
+            const overrideValue = rubricGradeOverride ?? currentRubric.grade_override ?? null;
+            const overridden = overrideDiffers(overrideValue, computedValue);
+            rubricDisplay.textContent = formatComputedValue(computedValue);
+            rubricDisplay.classList.toggle("grade-overridden", overridden);
+            const headerCell = document.getElementById("rubric-grade-header");
+            if (headerCell) {
+                headerCell.classList.toggle("override-active", overridden);
+            }
+        }
     }
 
     async function loadTeammates() {
@@ -306,9 +608,19 @@
 
     async function saveRubric(options = {}) {
         const { silentNoChanges = false } = options;
+        if (rubricOverrideInvalid || invalidCriterionOverrides.size > 0) {
+            setSaveStatus("✗ Corriger les notes ajustées invalides", "save-status error");
+            return false;
+        }
         const commentValue = document.getElementById("comment-text").value;
         const teammates = getSelectedTeammates();
-        if (Object.keys(modifications).length === 0 && !commentModified && !teammatesModified) {
+        if (
+            Object.keys(modifications).length === 0
+            && !commentModified
+            && !teammatesModified
+            && !criterionOverridesModified
+            && !rubricGradeOverrideModified
+        ) {
             if (!silentNoChanges) {
                 setSaveStatusNoChanges();
             }
@@ -332,7 +644,9 @@
                 body: JSON.stringify({
                     updates: modifications,
                     comment: commentValue,
-                    teammates: teammates
+                    teammates: teammates,
+                    criteria_overrides: criterionOverridesModified ? criterionOverrides : undefined,
+                    rubric_grade_override: rubricGradeOverrideModified ? rubricGradeOverride : undefined
                 })
             });
 
@@ -344,6 +658,8 @@
             modifications = {}; // Réinitialiser les modifications
             commentModified = false;
             teammatesModified = false;
+            criterionOverridesModified = false;
+            rubricGradeOverrideModified = false;
             
             // Synchroniser aux coéquipiers si demandé
             if (syncToTeammates && teammates.length > 0) {

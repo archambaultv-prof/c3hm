@@ -171,9 +171,25 @@ def register_routes(app: Flask):
                         if ind_idx < len(criteria[crit_idx].get("indicateurs", [])):
                             criteria[crit_idx]["indicateurs"][ind_idx]["niveau noté"] = level_label
 
+            # Mettre à jour les notes ajustées des critères
+            criteria_overrides = _get_criteria_overrides(data)
+            if isinstance(criteria_overrides, dict):
+                for crit_idx_str, override_value in criteria_overrides.items():
+                    try:
+                        crit_idx = int(crit_idx_str)
+                    except (TypeError, ValueError):
+                        continue
+                    if crit_idx < len(criteria):
+                        _set_criterion_grade_override(criteria[crit_idx], override_value)
+
             # Mettre à jour le commentaire
             if "comment" in data:
                 rubric_data["commentaire"] = data.get("comment", "")
+
+            # Mettre à jour la note ajustée de la rubric
+            rubric_override = _get_rubric_grade_override(data)
+            if rubric_override is not _UNSET:
+                _set_rubric_grade_override(rubric_data, rubric_override)
 
             # Mettre à jour les coéquipiers
             if "teammates" in data:
@@ -368,6 +384,7 @@ def rubric_to_dict(rubric: Rubric, filename: str) -> dict:
 
         criteria.append({
             "label": criterion.label,
+            "grade_override": criterion.grade_override,
             "indicators": indicators
         })
 
@@ -380,6 +397,7 @@ def rubric_to_dict(rubric: Rubric, filename: str) -> dict:
             "omnivox_id": rubric.student.omnivox_id
         },
         "levels": levels,
+        "grade_override": rubric.grade_override,
         "criteria": criteria,
         "teammates": [
             {
@@ -418,6 +436,7 @@ def _copy_grid_comment_and_grade(source_data: dict, target_data: dict) -> None:
     for crit_idx, source_crit in enumerate(source_criteria):
         if crit_idx >= len(target_criteria):
             break
+        _set_criterion_grade_override(target_criteria[crit_idx], _get_criterion_grade_override(source_crit))
         source_indicators = source_crit.get("indicateurs", [])
         target_indicators = target_criteria[crit_idx].get("indicateurs", [])
         for ind_idx, source_ind in enumerate(source_indicators):
@@ -430,6 +449,57 @@ def _copy_grid_comment_and_grade(source_data: dict, target_data: dict) -> None:
 
     if "note ajustée" in source_data:
         target_data["note ajustée"] = source_data.get("note ajustée")
+
+
+class _UnsetType:
+    pass
+
+
+_UNSET = _UnsetType()
+
+
+def _get_criteria_overrides(payload: dict) -> dict | None:
+    for key in (
+        "criterion_overrides",
+        "criteria_overrides",
+        "criterion_grade_overrides",
+        "criteria_grade_overrides",
+    ):
+        value = payload.get(key)
+        if value is not None:
+            return value
+    return None
+
+
+def _get_rubric_grade_override(payload: dict) -> float | str | None | _UnsetType:
+    for key in ("rubric_grade_override", "grade_override", "note_ajustee", "note ajustée"):
+        if key in payload:
+            return payload.get(key)
+    return _UNSET
+
+
+def _get_criterion_grade_override(criterion_data: dict) -> float | str | None:
+    if "note" in criterion_data:
+        return criterion_data.get("note")
+    if "note ajustée" in criterion_data:
+        return criterion_data.get("note ajustée")
+    return None
+
+
+def _set_criterion_grade_override(criterion_data: dict, override_value: float | str | None) -> None:
+    if override_value is None or override_value == "":
+        criterion_data.pop("note", None)
+        criterion_data.pop("note ajustée", None)
+        return
+    criterion_data["note"] = override_value
+    criterion_data["note ajustée"] = override_value
+
+
+def _set_rubric_grade_override(rubric_data: dict, override_value: float | str | None) -> None:
+    if override_value is None or override_value == "":
+        rubric_data.pop("note ajustée", None)
+        return
+    rubric_data["note ajustée"] = override_value
 
 
 def _normalize_teammates(teammates: list[dict]) -> list[dict]:
