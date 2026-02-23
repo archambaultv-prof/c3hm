@@ -3,7 +3,7 @@ import subprocess
 from pathlib import Path
 
 from c3hm.data.rubric import Rubric
-from c3hm.data.rubric_typst import TypstWriter
+from c3hm.data_typst import TypstWriter
 
 
 def export_rubric_from_json(input_path: Path, output_path: Path) -> None:

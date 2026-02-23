@@ -6,7 +6,7 @@ from threading import Timer
 from flask import Flask, jsonify, render_template, request
 
 from c3hm.data.rubric import Rubric
-from c3hm.data.rubric_typst import get_colors
+from c3hm.data_typst import get_colors
 
 
 def run_server(rubrics_dir: Path, port: int):

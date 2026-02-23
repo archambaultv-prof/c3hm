@@ -528,16 +528,20 @@
         
         // No rubric override - compute effective value from criteria with their own overrides
         let effectiveTotal = 0;
+        let hasCriterionOverrides = false;
         for (let critIdx = 0; critIdx < currentRubric.criteria.length; critIdx++) {
             const criterion = currentRubric.criteria[critIdx];
-            const { effectiveValue } = computeCriterionGrade(criterion, critIdx);
+            const { effectiveValue, overridden } = computeCriterionGrade(criterion, critIdx);
             if (effectiveValue === null || effectiveValue === undefined) {
                 return { computedValue: computedTotal, effectiveValue: null, overridden: false };
             }
             effectiveTotal += Math.round(effectiveValue);
+            if (overridden) {
+                hasCriterionOverrides = true;
+            }
         }
         
-        return { computedValue: computedTotal, effectiveValue: effectiveTotal, overridden: false };
+        return { computedValue: computedTotal, effectiveValue: effectiveTotal, overridden: hasCriterionOverrides };
     }
 
     function updateGradeDisplays() {
@@ -550,9 +554,7 @@
             if (!display) {
                 return;
             }
-            const { computedValue } = computeCriterionGrade(criterion, critIdx);
-            const overrideValue = getCriterionOverride(criterion, critIdx);
-            const overridden = overrideDiffers(overrideValue, computedValue);
+            const { computedValue, overridden } = computeCriterionGrade(criterion, critIdx);
             display.textContent = formatComputedValue(computedValue);
             display.classList.toggle("grade-overridden", overridden);
             const cell = document.getElementById(`criterion-cell-${critIdx}`);
@@ -563,10 +565,8 @@
 
         const rubricDisplay = document.getElementById("rubric-grade-value");
         if (rubricDisplay) {
-            const { computedValue } = computeRubricGrade();
-            const overrideValue = rubricGradeOverride ?? currentRubric.grade_override ?? null;
-            const overridden = overrideDiffers(overrideValue, computedValue);
-            rubricDisplay.textContent = formatComputedValue(computedValue);
+            const { computedValue, effectiveValue, overridden } = computeRubricGrade();
+            rubricDisplay.textContent = formatComputedValue(effectiveValue);
             rubricDisplay.classList.toggle("grade-overridden", overridden);
             const headerCell = document.getElementById("rubric-grade-header");
             if (headerCell) {
