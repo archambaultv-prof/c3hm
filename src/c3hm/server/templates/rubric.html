@@ -101,11 +101,13 @@
     let allStudents = [];
     let teammates = [];
     let syncToTeammates = false; // Nouveau: flag pour synchroniser aux coéquipiers
+    let saveStatusTimeout = null;
 
     // Charger la rubric au chargement de la page
     document.addEventListener("DOMContentLoaded", () => {
         loadRubric();
         loadNavigation();
+        setSaveStatusNoChanges();
         
         // Setup pour la case à cocher de synchronisation
         const syncCheckboxes = document.querySelectorAll(".sync-checkbox");
@@ -170,7 +172,15 @@
         }
     }
 
+    function clearSaveStatusTimeout() {
+        if (saveStatusTimeout) {
+            clearTimeout(saveStatusTimeout);
+            saveStatusTimeout = null;
+        }
+    }
+
     function setSaveStatus(message, className) {
+        clearSaveStatusTimeout();
         const statusTop = document.getElementById("save-status-top");
         const statusBottom = document.getElementById("save-status");
         if (statusTop) {
@@ -181,6 +191,17 @@
             statusBottom.textContent = message;
             statusBottom.className = className;
         }
+    }
+
+    function setSaveStatusNoChanges() {
+        setSaveStatus("✓ Aucune modification à sauvegarder", "save-status");
+    }
+
+    function scheduleNoChangesStatus() {
+        clearSaveStatusTimeout();
+        saveStatusTimeout = setTimeout(() => {
+            setSaveStatusNoChanges();
+        }, 3000);
     }
 
     function renderRubric() {
@@ -289,7 +310,7 @@
         const teammates = getSelectedTeammates();
         if (Object.keys(modifications).length === 0 && !commentModified && !teammatesModified) {
             if (!silentNoChanges) {
-                setSaveStatus("✓ Aucune modification à sauvegarder", "save-status");
+                setSaveStatusNoChanges();
             }
             // Même si rien à sauvegarder, synchroniser si demandé
             if (syncToTeammates && teammates.length > 0) {
@@ -330,10 +351,7 @@
             }
             
             setSaveStatus("✓ Rubric sauvegardée avec succès", "save-status saved");
-
-            setTimeout(() => {
-                setSaveStatus("", "save-status");
-            }, 3000);
+            scheduleNoChangesStatus();
 
             return true;
         } catch (error) {
@@ -476,9 +494,7 @@
             }
 
             setSaveStatus("✓ Rubric sauvegardée et synchronisée avec les coéquipiers", "save-status saved");
-            setTimeout(() => {
-                setSaveStatus("", "save-status");
-            }, 3000);
+            scheduleNoChangesStatus();
             return true;
         } catch (error) {
             setSaveStatus(`✗ Erreur: ${error.message}`, "save-status error");
