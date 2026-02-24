@@ -10,7 +10,6 @@ Ce module contient uniquement:
 """
 
 
-
 class UnsetType:
     """Sentinel type pour indiquer une valeur non définie."""
 
