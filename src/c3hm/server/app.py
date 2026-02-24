@@ -5,8 +5,8 @@ from threading import Timer
 
 from flask import Flask, jsonify, render_template, request
 
+from c3hm.data.level import get_colors
 from c3hm.data.rubric import Rubric
-from c3hm.data_typst import get_colors
 
 
 def run_server(rubrics_dir: Path, port: int):
@@ -42,11 +42,7 @@ def create_app(rubrics_dir: Path) -> Flask:
     # Déterminer le chemin vers les templates et static
     server_dir = Path(__file__).parent
 
-    app = Flask(
-        __name__,
-        template_folder=str(server_dir / "templates"),
-        static_folder=str(server_dir / "static")
-    )
+    app = Flask(__name__, template_folder=str(server_dir / "templates"), static_folder=str(server_dir / "static"))
 
     # Stocker le chemin des rubrics dans la config de l'app
     app.config["RUBRICS_DIR"] = rubrics_dir
@@ -74,7 +70,7 @@ def register_routes(app: Flask):
             rubrics_dir=str(rubrics_dir),
             total_count=len(students_data),
             graded_count=sum(1 for s in students_data if s["graded"]),
-            ungraded_count=sum(1 for s in students_data if not s["graded"])
+            ungraded_count=sum(1 for s in students_data if not s["graded"]),
         )
 
     @app.route("/api/students")
@@ -94,10 +90,7 @@ def register_routes(app: Flask):
         if filename not in filenames:
             return "Fichier non trouvé", 404
 
-        return render_template(
-            "rubric.html",
-            filename=filename
-        )
+        return render_template("rubric.html", filename=filename)
 
     @app.route("/api/rubric/<filename>")
     def api_rubric(filename):
@@ -134,12 +127,9 @@ def register_routes(app: Flask):
             prev_filename = filenames[idx - 1] if idx > 0 else None
             next_filename = filenames[idx + 1] if idx < len(filenames) - 1 else None
 
-            return jsonify({
-                "previous": prev_filename,
-                "next": next_filename,
-                "current_index": idx,
-                "total": len(filenames)
-            })
+            return jsonify(
+                {"previous": prev_filename, "next": next_filename, "current_index": idx, "total": len(filenames)}
+            )
         except ValueError:
             return jsonify({"error": "Fichier non trouvé"}), 404
 
@@ -271,7 +261,8 @@ def register_routes(app: Flask):
                                     "nom": current_student.get("nom", ""),
                                     "matricule": current_id,
                                 }
-                            ] + normalized_teammates
+                            ]
+                            + normalized_teammates
                             if (member.get("matricule") or "").strip() != omnivox_id
                         ]
 
@@ -320,14 +311,16 @@ def scan_rubrics(rubrics_dir: Path) -> list[dict]:
             # Déterminer si la rubric est corrigée (utiliser la méthode is_graded de Grid)
             graded = rubric.grid.is_graded()
 
-            students.append({
-                "filename": json_file.name,
-                "student_name": f"{rubric.student.firstname} {rubric.student.surname}",
-                "first_name": rubric.student.firstname,
-                "last_name": rubric.student.surname,
-                "omnivox_id": rubric.student.omnivox_id,
-                "graded": graded
-            })
+            students.append(
+                {
+                    "filename": json_file.name,
+                    "student_name": f"{rubric.student.firstname} {rubric.student.surname}",
+                    "first_name": rubric.student.firstname,
+                    "last_name": rubric.student.surname,
+                    "omnivox_id": rubric.student.omnivox_id,
+                    "graded": graded,
+                }
+            )
 
         except Exception as e:
             # En cas d'erreur, on ignore ce fichier mais on continue
@@ -354,11 +347,7 @@ def rubric_to_dict(rubric: Rubric, filename: str) -> dict:
 
     level_colors = get_colors(len(rubric.grid.levels))
     levels = [
-        {
-            "label": level.label,
-            "percentage": level.percentage,
-            "color": level_colors[idx]
-        }
+        {"label": level.label, "percentage": level.percentage, "color": level_colors[idx]}
         for idx, level in enumerate(rubric.grid.levels)
     ]
 
@@ -374,19 +363,19 @@ def rubric_to_dict(rubric: Rubric, filename: str) -> dict:
                         graded_level_idx = level_idx
                         break
 
-            indicators.append({
-                "label": indicator.label,
-                "points": indicator.points,
-                "descriptors": indicator.descriptors,
-                "graded_level": indicator.graded_level,
-                "graded_level_idx": graded_level_idx
-            })
+            indicators.append(
+                {
+                    "label": indicator.label,
+                    "points": indicator.points,
+                    "descriptors": indicator.descriptors,
+                    "graded_level": indicator.graded_level,
+                    "graded_level_idx": graded_level_idx,
+                }
+            )
 
-        criteria.append({
-            "label": criterion.label,
-            "grade_override": criterion.grade_override,
-            "indicators": indicators
-        })
+        criteria.append(
+            {"label": criterion.label, "grade_override": criterion.grade_override, "indicators": indicators}
+        )
 
     return {
         "filename": filename,
@@ -394,20 +383,16 @@ def rubric_to_dict(rubric: Rubric, filename: str) -> dict:
         "student": {
             "first_name": rubric.student.firstname,
             "last_name": rubric.student.surname,
-            "omnivox_id": rubric.student.omnivox_id
+            "omnivox_id": rubric.student.omnivox_id,
         },
         "levels": levels,
         "grade_override": rubric.grade_override,
         "criteria": criteria,
         "teammates": [
-            {
-                "first_name": tm.firstname,
-                "last_name": tm.surname,
-                "omnivox_id": tm.omnivox_id
-            }
+            {"first_name": tm.firstname, "last_name": tm.surname, "omnivox_id": tm.omnivox_id}
             for tm in rubric.teammates
         ],
-        "comment": rubric.comment if rubric.comment is not None else ""
+        "comment": rubric.comment if rubric.comment is not None else "",
     }
 
 
@@ -505,11 +490,9 @@ def _set_rubric_grade_override(rubric_data: dict, override_value: float | str | 
 def _normalize_teammates(teammates: list[dict]) -> list[dict]:
     normalized = []
     for tm in teammates:
-        normalized.append({
-            "prénom": tm.get("first_name", ""),
-            "nom": tm.get("last_name", ""),
-            "matricule": tm.get("omnivox_id", "")
-        })
+        normalized.append(
+            {"prénom": tm.get("first_name", ""), "nom": tm.get("last_name", ""), "matricule": tm.get("omnivox_id", "")}
+        )
     return normalized
 
 
@@ -551,9 +534,7 @@ def _sync_teammates(
             with open(teammate_file, encoding="utf-8") as tf:
                 teammate_data = json.load(tf)
 
-            teammate_data["coéquipiers"] = [
-                member for member in team_members if teammate_id(member) != tm_id
-            ]
+            teammate_data["coéquipiers"] = [member for member in team_members if teammate_id(member) != tm_id]
 
             with open(teammate_file, "w", encoding="utf-8") as tf:
                 json.dump(teammate_data, tf, ensure_ascii=False, indent=2)
@@ -573,9 +554,7 @@ def _sync_teammates(
                     teammate_data = json.load(tf)
 
                 existing = teammate_data.get("coéquipiers", [])
-                filtered = [
-                    tm for tm in existing if teammate_id(tm) not in team_ids
-                ]
+                filtered = [tm for tm in existing if teammate_id(tm) not in team_ids]
                 teammate_data["coéquipiers"] = filtered
 
                 with open(teammate_file, "w", encoding="utf-8") as tf:

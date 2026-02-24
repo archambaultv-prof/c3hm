@@ -5,25 +5,18 @@ import click
 from c3hm.commands.template import export_template
 
 
-@click.command(
-    name="template",
-    help=(
-        "Génère une de grille d'évaluation sous format json."
-    )
-)
+@click.command(name="template", help=("Génère une de grille d'évaluation sous format json."))
 @click.option(
-    '--output', '-o', 'output_path',
+    "--output",
+    "-o",
+    "output_path",
     type=click.Path(path_type=Path),
     default=None,
-    help="Chemin vers la grille d'évaluation à générer"
+    help="Chemin vers la grille d'évaluation à générer",
 )
 @click.option(
-    '--force', '-f', 'force',
-    is_flag=True,
-    default=False,
-    help="Force l'écrasement du fichier de sortie s'il existe"
+    "--force", "-f", "force", is_flag=True, default=False, help="Force l'écrasement du fichier de sortie s'il existe"
 )
-
 def template_command(output_path: Path, force: bool) -> None:
     """
     Génère une grille d'évaluation.

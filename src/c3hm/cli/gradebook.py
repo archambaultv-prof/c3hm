@@ -6,28 +6,25 @@ from c3hm.commands.gradebook import generate_gradebook
 
 
 @click.command(
-    name="gradebook",
-    help=(
-        "Génère les grilles de correction à partir d'un modèle et d'une liste d'étudiants."
-    )
+    name="gradebook", help=("Génère les grilles de correction à partir d'un modèle et d'une liste d'étudiants.")
 )
 @click.argument(
-    "rubric_path",
-    type=click.Path(file_okay=True, dir_okay=False, exists=True, path_type=Path),
-    required=True
+    "rubric_path", type=click.Path(file_okay=True, dir_okay=False, exists=True, path_type=Path), required=True
 )
 @click.option(
-    "-s", "--students",
+    "-s",
+    "--students",
     type=click.Path(file_okay=True, dir_okay=False, exists=True, path_type=Path),
     help="Fichier contenant la liste des étudiants",
-    default=None
+    default=None,
 )
 @click.option(
-    "--output", "-o",
+    "--output",
+    "-o",
     "output_dir",
     type=click.Path(file_okay=False, dir_okay=True, path_type=Path),
     help="Répertoire de sortie pour les fichiers générés",
-    default=None
+    default=None,
 )
 def gradebook_command(rubric_path: Path, students: Path | None, output_dir: Path | None):
     """

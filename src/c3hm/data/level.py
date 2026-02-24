@@ -13,13 +13,7 @@ def get_colors(nb_levels: int) -> list[str]:
         raise ValueError("Le nombre de niveaux ne peut pas dépasser 5.")
 
     # Couleurs de base pour les 5 niveaux
-    base_colors = [
-        "#C8FFC8",
-        "#F0FFB0",
-        "#FFF8C2",
-        "#FFE4C8",
-        "#FFC8C8"
-    ]
+    base_colors = ["#C8FFC8", "#F0FFB0", "#FFF8C2", "#FFE4C8", "#FFC8C8"]
     match nb_levels:
         case 1:
             return [base_colors[0]]
@@ -51,17 +45,27 @@ class Level:
         return self._remove_accents(unicodedata.normalize("NFD", text)).casefold().strip()
 
     def _remove_accents(self, text: str) -> str:
-        return ''.join(c for c in text if unicodedata.category(c) != 'Mn')
+        return "".join(c for c in text if unicodedata.category(c) != "Mn")
 
-    def copy(self) -> 'Level':
-        return Level(label=self.label, percentage=self.percentage, short_label=self.short_label.copy() if self.short_label else None)
+    def copy(self) -> "Level":
+        return Level(
+            label=self.label,
+            percentage=self.percentage,
+            short_label=self.short_label.copy() if self.short_label else None,
+        )
 
     def validate(self) -> None:
         assert_non_empty_string(self.label, field_name="niveau")
         if not isinstance(self.percentage, int | float) or self.percentage < 0 or self.percentage > 1:
             raise ValueError(f"Le champ 'pourcentage' du niveau '{self.label}' doit être un nombre entre 0 et 1.")
-        if self.short_label is not None and (not isinstance(self.short_label, list) or not all(isinstance(s, str) and s.strip() != "" for s in self.short_label)):
-            raise ValueError(f"Le champ 'abréviations' du niveau '{self.label}' doit être une liste de chaînes de caractères non vides.")
+        if self.short_label is not None and (
+            not isinstance(self.short_label, list)
+            or not all(isinstance(s, str) and s.strip() != "" for s in self.short_label)
+        ):
+            raise ValueError(
+                f"Le champ 'abréviations' du niveau '{self.label}' doit être une liste de chaînes de caractères "
+                "non vides."
+            )
 
     def to_dict(self) -> dict:
         d = {
@@ -73,7 +77,7 @@ class Level:
         return d
 
     @classmethod
-    def from_dict(cls, data: dict) -> 'Level':
+    def from_dict(cls, data: dict) -> "Level":
         label = data["niveau"]
         percentage = data["pourcentage"]
         short_label = data.get("abréviations")

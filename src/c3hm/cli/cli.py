@@ -16,6 +16,7 @@ def cli():
     """
     pass
 
+
 # Ajout des commandes à la CLI
 cli.add_command(unpack_command)
 cli.add_command(template_command)
@@ -24,6 +25,7 @@ cli.add_command(gradebook_command)
 cli.add_command(feedback_command)
 cli.add_command(clean_command)
 cli.add_command(server_command)
+
 
 def main():
     """

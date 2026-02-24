@@ -6,20 +6,17 @@ from c3hm.data.utils import assert_non_empty_string
 class HasLevelToPercentage(Protocol):
     def level_to_percentage(self, level) -> float: ...
 
+
 class Indicator:
-    def __init__(self, label: str, points: float, descriptors: list[str],
-                 graded_level: str | None = None):
+    def __init__(self, label: str, points: float, descriptors: list[str], graded_level: str | None = None):
         self.label = label
         self.points = points
         self.descriptors = descriptors
         self.graded_level = graded_level
 
-    def copy(self) -> 'Indicator':
+    def copy(self) -> "Indicator":
         return Indicator(
-            label=self.label,
-            points=self.points,
-            descriptors=self.descriptors.copy(),
-            graded_level=self.graded_level
+            label=self.label, points=self.points, descriptors=self.descriptors.copy(), graded_level=self.graded_level
         )
 
     def validate(self) -> None:
@@ -32,17 +29,13 @@ class Indicator:
             assert_non_empty_string(desc, field_name="descripteur")
 
     def to_dict(self, include_graded_level: bool = False) -> dict:
-        d = {
-            "indicateur": self.label,
-            "points": self.points,
-            "descripteurs": self.descriptors
-        }
+        d = {"indicateur": self.label, "points": self.points, "descripteurs": self.descriptors}
         if include_graded_level:
             d["niveau noté"] = self.graded_level if self.graded_level else None
         return d
 
     @classmethod
-    def from_dict(cls, data: dict) -> 'Indicator':
+    def from_dict(cls, data: dict) -> "Indicator":
         label = data["indicateur"]
         points = data["points"]
         descriptors = data["descripteurs"]

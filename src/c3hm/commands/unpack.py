@@ -18,6 +18,7 @@ PATHS_TO_DELETE = [
     "__MACOSX",
 ]
 
+
 class UnpackOmnivox(BaseModel):
     verbose: bool = False
     folder: Path
@@ -128,9 +129,8 @@ class UnpackOmnivox(BaseModel):
         seven_zip = shutil.which("7z")
         if not seven_zip:
             raise FileNotFoundError(
-                "7z.exe not found in PATH. "
-                "Make sure 7-Zip is installed for .rar and .7z extraction."
-                )
+                "7z.exe not found in PATH. Make sure 7-Zip is installed for .rar and .7z extraction."
+            )
 
         # Ensure output directory exists
         os.makedirs(output_dir, exist_ok=True)
@@ -141,7 +141,6 @@ class UnpackOmnivox(BaseModel):
 
         if result.returncode != 0:
             raise RuntimeError(f"Extraction failed:\n{result.stderr}")
-
 
     def _shorten_omnivox_archive_name(self, name: str) -> str:
         """

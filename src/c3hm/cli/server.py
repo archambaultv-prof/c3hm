@@ -5,29 +5,11 @@ import click
 from c3hm.server import run_server
 
 
-@click.command(
-    name="server",
-    help="Lance un serveur web local pour faciliter la correction des travaux."
-)
-
+@click.command(name="server", help="Lance un serveur web local pour faciliter la correction des travaux.")
 @click.argument(
-    "rubrics_dir",
-    type=click.Path(
-        exists=True,
-        file_okay=False,
-        dir_okay=True,
-        path_type=Path
-    ),
-    required=True
+    "rubrics_dir", type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path), required=True
 )
-
-@click.option(
-    "--port", "-p",
-    type=int,
-    default=5000,
-    help="Port sur lequel lancer le serveur (défaut: 5000)"
-)
-
+@click.option("--port", "-p", type=int, default=5000, help="Port sur lequel lancer le serveur (défaut: 5000)")
 def server_command(rubrics_dir: Path, port: int):
     """
     Lance un serveur web local pour la correction interactive des rubrics.

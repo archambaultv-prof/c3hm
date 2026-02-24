@@ -16,31 +16,17 @@ from c3hm.commands.unpack import PATHS_TO_DELETE, UnpackOmnivox
         "- supprime les dossiers inutiles comme __MACOSX, node_modules, etc.;\n"
         "- raccourcit les noms de fichiers/dossier trop longs générés par Omnivox;\n"
         "- aplatit la structure des dossiers si nécessaire."
-    )
-)
-@click.argument(
-    "path",
-    type=click.Path(
-        file_okay=True,
-        dir_okay=True,
-        path_type=Path
     ),
-    required=True
 )
+@click.argument("path", type=click.Path(file_okay=True, dir_okay=True, path_type=Path), required=True)
 @click.option(
-    "--git", "-g",
+    "--git",
+    "-g",
     is_flag=True,
     default=False,
-    help="Supprimer les dossiers .git et .gitignore en plus des autres fichiers indésirables."
+    help="Supprimer les dossiers .git et .gitignore en plus des autres fichiers indésirables.",
 )
-
-@click.option(
-    "--verbose", "-v",
-    is_flag=True,
-    default=False,
-    help="Affiche la progression"
-)
-
+@click.option("--verbose", "-v", is_flag=True, default=False, help="Affiche la progression")
 def unpack_command(
     path: Path,
     git: bool,
@@ -52,8 +38,4 @@ def unpack_command(
     to_delete = PATHS_TO_DELETE
     if git:
         to_delete.extend([".git", ".gitignore"])
-    UnpackOmnivox(
-        folder=path,
-        paths_to_delete=to_delete,
-        verbose=verbose
-    ).unpack()
+    UnpackOmnivox(folder=path, paths_to_delete=to_delete, verbose=verbose).unpack()

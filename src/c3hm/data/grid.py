@@ -3,8 +3,13 @@ from c3hm.data.level import DEFAULT_LEVELS, Level
 
 
 class Grid:
-    def __init__(self, criteria: list[Criterion], levels: list[Level] | None = None,
-                 show_criteria_points: bool = True, show_levels_percentage: bool = True,):
+    def __init__(
+        self,
+        criteria: list[Criterion],
+        levels: list[Level] | None = None,
+        show_criteria_points: bool = True,
+        show_levels_percentage: bool = True,
+    ):
         self.criteria = criteria
         self.levels = levels if levels is not None else DEFAULT_LEVELS
         self.show_criteria_points = show_criteria_points
@@ -13,30 +18,36 @@ class Grid:
     def grade(self) -> float:
         return sum(round(criterion.grade(self), 0) for criterion in self.criteria)
 
-    def copy(self) -> 'Grid':
+    def copy(self) -> "Grid":
         new_levels = [level.copy() for level in self.levels] if self.levels is not None else None
-        return Grid(criteria=[criterion.copy() for criterion in self.criteria], levels=new_levels,
-                    show_criteria_points=self.show_criteria_points,
-                    show_levels_percentage=self.show_levels_percentage,)
+        return Grid(
+            criteria=[criterion.copy() for criterion in self.criteria],
+            levels=new_levels,
+            show_criteria_points=self.show_criteria_points,
+            show_levels_percentage=self.show_levels_percentage,
+        )
 
     def to_dict(self, include_graded_level: bool = False) -> dict:
         d = {
             "afficher les points des critères": self.show_criteria_points,
             "afficher les pourcentages des niveaux": self.show_levels_percentage,
             "niveaux": [level.to_dict() for level in self.levels],
-            "critères": [criterion.to_dict(include_graded_level) for criterion in self.criteria]
+            "critères": [criterion.to_dict(include_graded_level) for criterion in self.criteria],
         }
         return d
 
     @classmethod
-    def from_dict(cls, data: dict) -> 'Grid':
+    def from_dict(cls, data: dict) -> "Grid":
         criteria = [Criterion.from_dict(crit_data) for crit_data in data["critères"]]
         levels = [Level.from_dict(level_data) for level_data in data["niveaux"]]
         show_criteria_points = data.get("afficher les points des critères", True)
         show_levels_percentage = data.get("afficher les pourcentages des niveaux", True)
-        return cls(criteria=criteria, levels=levels,
-                   show_criteria_points=show_criteria_points,
-                   show_levels_percentage=show_levels_percentage)
+        return cls(
+            criteria=criteria,
+            levels=levels,
+            show_criteria_points=show_criteria_points,
+            show_levels_percentage=show_levels_percentage,
+        )
 
     def level_to_percentage(self, level: str) -> float:
         if isinstance(level, str):
@@ -66,7 +77,9 @@ class Grid:
             criterion.validate()
             sum_points += criterion.points()
         if sum_points != 100.0:
-            raise ValueError(f"La somme totale des points des critères doit être égale à 100. Total trouvé: {sum_points}")
+            raise ValueError(
+                f"La somme totale des points des critères doit être égale à 100. Total trouvé: {sum_points}"
+            )
         if not self.levels or not isinstance(self.levels, list):
             raise ValueError("La grille doit contenir une liste de niveaux non vide.")
         for level in self.levels:
@@ -76,9 +89,12 @@ class Grid:
             for indicator in criterion.indicators:
                 if indicator.descriptors is None or len(indicator.descriptors) != nb_levels:
                     raise ValueError(
-                        f"L'indicateur '{indicator.label}' du critère '{criterion.label}' doit contenir une liste de descripteurs de longueur égale au nombre de niveaux ({nb_levels})."
+                        f"L'indicateur '{indicator.label}' du critère '{criterion.label}' doit contenir une liste de "
+                        f"descripteurs de longueur égale au nombre de niveaux ({nb_levels})."
                     )
-                if indicator.graded_level is not None and not any(level.match_label(indicator.graded_level) for level in self.levels):
+                if indicator.graded_level is not None and not any(
+                    level.match_label(indicator.graded_level) for level in self.levels
+                ):
                     raise ValueError(
                         f"Niveau noté inconnu '{indicator.graded_level}' pour l'indicateur '{indicator.label}'."
                     )

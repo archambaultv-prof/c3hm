@@ -9,9 +9,17 @@ from c3hm.data.utils import assert_non_empty_string
 
 
 class Rubric:
-    def __init__(self, course: str, session: str, evaluation: str, grid: Grid,
-                 student: Student | None = None, teammates: list[Student] | None = None,
-                 grade_override: float | None = None, comment: str | None = None):
+    def __init__(
+        self,
+        course: str,
+        session: str,
+        evaluation: str,
+        grid: Grid,
+        student: Student | None = None,
+        teammates: list[Student] | None = None,
+        grade_override: float | None = None,
+        comment: str | None = None,
+    ):
         self.course = course
         self.session = session
         self.evaluation = evaluation
@@ -29,7 +37,7 @@ class Rubric:
     def grid_grade(self) -> float:
         return self.grid.grade()
 
-    def copy(self) -> 'Rubric':
+    def copy(self) -> "Rubric":
         teammates = [tm.copy() for tm in self.teammates] if self.teammates else None
         return Rubric(
             course=self.course,
@@ -39,7 +47,7 @@ class Rubric:
             student=self.student.copy() if self.student else None,
             teammates=teammates if teammates is not None else None,
             grade_override=self.grade_override,
-            comment=self.comment
+            comment=self.comment,
         )
 
     def to_dict(self) -> dict:
@@ -53,16 +61,18 @@ class Rubric:
             d["coéquipiers"] = [tm.to_dict() for tm in self.teammates]
             d["note ajustée"] = self.grade_override
             d["commentaire"] = self.comment if self.comment is not None else ""
-        d.update({
-            "cours": self.course,
-            "session": self.session,
-            "évaluation": self.evaluation,
-            "grille": self.grid.to_dict(include_graded_level=self.student is not None),
-        })
+        d.update(
+            {
+                "cours": self.course,
+                "session": self.session,
+                "évaluation": self.evaluation,
+                "grille": self.grid.to_dict(include_graded_level=self.student is not None),
+            }
+        )
         return d
 
     @classmethod
-    def from_dict(cls, data: dict) -> 'Rubric':
+    def from_dict(cls, data: dict) -> "Rubric":
         course = data["cours"]
         session = data["session"]
         evaluation = data["évaluation"]
@@ -77,9 +87,16 @@ class Rubric:
         comment = data.get("commentaire")
         if comment == "":
             comment = None
-        return cls(course=course, session=session, evaluation=evaluation, grid=grid,
-                   student=student, teammates=teammates,
-                   grade_override=grade, comment=comment)
+        return cls(
+            course=course,
+            session=session,
+            evaluation=evaluation,
+            grid=grid,
+            student=student,
+            teammates=teammates,
+            grade_override=grade,
+            comment=comment,
+        )
 
     def validate(self) -> None:
         assert_non_empty_string(self.course, field_name="cours")
@@ -88,62 +105,43 @@ class Rubric:
         self.grid.validate()
         if self.student:
             self.student.validate()
-        if self.grade_override is not None and (not isinstance(self.grade_override, int | float) or self.grade_override < 0 or self.grade_override > 100):
+        if self.grade_override is not None and (
+            not isinstance(self.grade_override, int | float) or self.grade_override < 0 or self.grade_override > 100
+        ):
             raise ValueError("La note doit être un nombre entre 0 et 100.")
 
     @classmethod
-    def template(cls) -> 'Rubric':
+    def template(cls) -> "Rubric":
         """
         Retourne une grille d'évaluation modèle. Cette grille n'est pas valide
         au sens de la validation car elle n'a pas de nom de cours et
         d'évaluation.
         """
         descriptors = [
-                        "Descripteur 1",
-                        "Descripteur 2",
-                        "Descripteur 3",
-                        "Descripteur 4",
-                        "Descripteur 5",
-                    ]
+            "Descripteur 1",
+            "Descripteur 2",
+            "Descripteur 3",
+            "Descripteur 4",
+            "Descripteur 5",
+        ]
         criteria = [
             Criterion(
                 label="Critère 1",
                 indicators=[
-                    Indicator(
-                        label="Indicateur 1",
-                        points=20,
-                        descriptors=descriptors
-                    ),
-                    Indicator(
-                        label="Indicateur 2",
-                        points=20,
-                        descriptors=descriptors
-                    ),
-                ]
+                    Indicator(label="Indicateur 1", points=20, descriptors=descriptors),
+                    Indicator(label="Indicateur 2", points=20, descriptors=descriptors),
+                ],
             ),
             Criterion(
                 label="Critère 2",
                 indicators=[
-                    Indicator(
-                        label="Indicateur 3",
-                        points=20,
-                        descriptors=descriptors
-                    ),
-                    Indicator(
-                        label="Indicateur 4",
-                        points=20,
-                        descriptors=descriptors
-                    ),
-                    Indicator(
-                        label="Indicateur 5",
-                        points=20,
-                        descriptors=descriptors
-                    ),
-                ]
+                    Indicator(label="Indicateur 3", points=20, descriptors=descriptors),
+                    Indicator(label="Indicateur 4", points=20, descriptors=descriptors),
+                    Indicator(label="Indicateur 5", points=20, descriptors=descriptors),
+                ],
             ),
         ]
-        g = Grid(criteria=criteria, levels=DEFAULT_LEVELS,
-                 show_criteria_points=True, show_levels_percentage=True)
+        g = Grid(criteria=criteria, levels=DEFAULT_LEVELS, show_criteria_points=True, show_levels_percentage=True)
         r = cls(
             course="",
             session=_get_current_semester(),
@@ -151,6 +149,7 @@ class Rubric:
             grid=g,
         )
         return r
+
 
 def _get_current_semester() -> str:
     """
@@ -165,6 +164,7 @@ def _get_current_semester() -> str:
     else:
         return f"Automne {year}"
 
+
 def validate_rubrics(rubrics: list[Rubric]) -> None:
     """
     Valide une liste de grilles de correction. Cette validation inclut la validation
@@ -173,6 +173,7 @@ def validate_rubrics(rubrics: list[Rubric]) -> None:
     for rubric in rubrics:
         rubric.validate()
     validate_teammates(rubrics)
+
 
 def validate_teammates(rubrics: list[Rubric]) -> None:
     """
@@ -209,4 +210,3 @@ def validate_teammates(rubrics: list[Rubric]) -> None:
                     f"Incohérence dans les coéquipiers pour l'étudiant {member_id}. "
                     f"Coéquipiers attendus: {expected_teammates}, coéquipiers trouvés: {actual_teammates}"
                 )
-

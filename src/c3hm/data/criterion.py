@@ -15,7 +15,7 @@ class Criterion:
             return self.grade_override
         return sum(indicator.grade(grid) for indicator in self.indicators)
 
-    def copy(self) -> 'Criterion':
+    def copy(self) -> "Criterion":
         return Criterion(
             label=self.label,
             indicators=[indicator.copy() for indicator in self.indicators],
@@ -35,7 +35,7 @@ class Criterion:
         return d
 
     @classmethod
-    def from_dict(cls, data: dict) -> 'Criterion':
+    def from_dict(cls, data: dict) -> "Criterion":
         label = data["critère"]
         indicators = [Indicator.from_dict(ind_data) for ind_data in data["indicateurs"]]
         grade_override = data.get("note ajustée")
@@ -51,6 +51,4 @@ class Criterion:
             if not isinstance(self.grade_override, int | float):
                 raise ValueError(f"La note du critère '{self.label}' doit être un nombre.")
             if self.grade_override < 0 or self.grade_override > self.points():
-                raise ValueError(
-                    f"La note du critère '{self.label}' doit être entre 0 et {self.points()} points."
-                )
+                raise ValueError(f"La note du critère '{self.label}' doit être entre 0 et {self.points()} points.")
