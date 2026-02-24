@@ -1,0 +1,117 @@
+{# Preamble: Setup Typst configuration #}
+#set text(
+    lang: "fr",
+    hyphenate: true,
+)
+#set page(
+    paper: "us-letter",
+    flipped: true,
+    numbering: "1 / 1",
+    margin: (x: 0.5in, y: 0.5in)
+)
+#set par(justify: true)
+
+{% for color in colors -%}
+#let COLOR_{{ loop.index0 }} = rgb("{{ color }}")
+{% endfor %}
+#set table.cell(inset: (x: 0.5em, y: 0.75em))
+#show table.cell.where(y: 0): set text(weight: "bold")
+#show table.cell: set text(size: 10pt)
+#show table.cell: set par(justify: false)
+
+{# Title #}
+{% if student %}
+#title("Grille d'évaluation - {{ rubric.evaluation }} - {{ student.fullname() }}")
+{% else %}
+#title("Grille d'évaluation - {{ rubric.evaluation }}")
+{% endif %}
+
+{# Course Info #}
+/ Cours: {{ rubric.course }}
+/ Session: {{ rubric.session }}
+
+{% if student and rubric.comment %}
+== Commentaires de l'enseignant
+{{ rubric.comment }}
+
+{% endif %}
+{# Grid Table #}
+#table(
+  columns: ({{ columns_definition }}),
+  stroke: none,
+  fill: (x, y) => if y == 0 {
+    if x == 1 { COLOR_0 }
+    else if x == 2 { COLOR_1 }
+    else if x == 3 { COLOR_2 }
+    else if x == 4 { COLOR_3 }
+    else if x == 5 { COLOR_4 }
+  },
+  {% if student -%}
+  table.header([Note : {{ "%.0f" % rubric.final_grade() }}/100],
+  {%- else -%}
+  table.header([Critère (100 pts)],
+  {%- endif %}
+  {% if grid.show_levels_percentage -%}
+  {% for level in grid.levels -%}
+  [{{ level.label }} ({{ "%.0f" % (level.percentage * 100) }}%)],
+  {% endfor -%}
+  {%- else -%}
+  {% for level in grid.levels -%}
+  [{{ level.label }}],
+  {% endfor -%}
+  {%- endif %}
+  table.hline(stroke: 1pt)),
+  {% for criterion in grid.criteria -%}
+  {% if grid.show_criteria_points -%}
+    {% if student is none -%}
+    [*{{ criterion.label }} ({{ criterion.points() }} pts)*], {% for _ in grid.levels %}[]{% if not loop.last %}, {% endif %}{% endfor %},
+    {%- else -%}
+    {% set grade = "%.0f" % criterion.grade(grid) -%}
+    {% set total = criterion.points() -%}
+    [*{{ criterion.label }} ({{ grade }}/{{ total }})*], {% for _ in grid.levels %}[]{% if not loop.last %}, {% endif %}{% endfor %},
+    {%- endif %}
+  {%- else -%}
+  [*{{ criterion.label }}*], {% for _ in grid.levels %}[]{% if not loop.last %}, {% endif %}{% endfor %},
+  {%- endif %}
+  {% for indicator in criterion.indicators -%}
+  {% set highlight_idx = none -%}
+  {% set highlight_color = none -%}
+  {% if indicator.graded_level is not none -%}
+    {% set rank = grid.level_to_rank(indicator.graded_level) -%}
+    {% if rank == 0 -%}
+    {% set highlight_idx = 0 -%}
+    {% set highlight_color = "COLOR_0" -%}
+    {% elif rank == 1 -%}
+    {% set highlight_idx = 1 -%}
+    {% set highlight_color = "COLOR_1" -%}
+    {% elif rank == 2 -%}
+    {% set highlight_idx = 2 -%}
+    {% set highlight_color = "COLOR_2" -%}
+    {% elif rank == 3 -%}
+    {% set highlight_idx = 3 -%}
+    {% set highlight_color = "COLOR_3" -%}
+    {% elif rank == 4 -%}
+    {% set highlight_idx = 4 -%}
+    {% set highlight_color = "COLOR_4" -%}
+    {% endif -%}
+  {% endif -%}
+  [{{ indicator.label }}], {% for desc in indicator.descriptors -%}
+  {% set i = loop.index0 -%}
+  {% if highlight_idx is not none and i == highlight_idx -%}
+  box(fill: {{ highlight_color }})[{{ desc }}]
+  {%- else -%}
+  [{{ desc }}]
+  {%- endif %}
+  {%- if not loop.last %}, {% endif %}
+  {%- endfor %},
+  {% endfor -%}
+  {% endfor %}
+)
+
+{# Warning Note #}
+La grille ci-dessus sert de guide pour soutenir le jugement
+professionnel de l'enseignant et n'est pas exhaustive. La note
+finale peut être ajustée en présence d'une erreur significative ou
+d'un non-respect des attentes implicites de qualité (bonnes
+pratiques, conventions, lisibilité, sécurité, etc.). Une erreur
+significative peut entraîner la révision du poids d'un critère.

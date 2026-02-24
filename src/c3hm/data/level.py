@@ -3,6 +3,36 @@ import unicodedata
 from c3hm.data.utils import assert_non_empty_string
 
 
+def get_colors(nb_levels: int) -> list[str]:
+    """
+    Génère une palette de couleurs pour les niveaux de rubrique.
+    """
+    if nb_levels < 1:
+        raise ValueError("Le nombre de niveaux doit être au moins 1.")
+    if nb_levels > 5:
+        raise ValueError("Le nombre de niveaux ne peut pas dépasser 5.")
+
+    # Couleurs de base pour les 5 niveaux
+    base_colors = [
+        "#C8FFC8",
+        "#F0FFB0",
+        "#FFF8C2",
+        "#FFE4C8",
+        "#FFC8C8"
+    ]
+    match nb_levels:
+        case 1:
+            return [base_colors[0]]
+        case 2:
+            return [base_colors[0], base_colors[3]]
+        case 3:
+            return [base_colors[0], base_colors[1], base_colors[3]]
+        case 4:
+            return [base_colors[0], base_colors[1], base_colors[2], base_colors[3]]
+        case _:
+            return base_colors
+
+
 class Level:
     def __init__(self, label: str, percentage: float, short_label: list[str] | None = None):
         self.label = label
