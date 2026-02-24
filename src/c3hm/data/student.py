@@ -2,6 +2,8 @@ import csv
 import re
 from pathlib import Path
 
+from c3hm.data import JSON_KEY_FIRSTNAME, JSON_KEY_LASTNAME, JSON_KEY_OMNIVOX_ID
+
 
 class Student:
     def __init__(self, omnivox_id: str, firstname: str, surname: str):
@@ -18,7 +20,7 @@ class Student:
         parts = [self.surname, self.firstname] if surname_first else [self.firstname, self.surname]
         name = separator.join(part.strip() for part in parts)
         if include_omnivox:
-                return f"{name}{separator}{self.omnivox_id.strip()}"
+            return f"{name}{separator}{self.omnivox_id.strip()}"
         return name
 
     def validate(self) -> None:
@@ -31,28 +33,30 @@ class Student:
         if not self.surname.strip():
             raise ValueError("Le nom de famille de l'étudiant ne peut pas être vide.")
 
-    def copy(self) -> 'Student':
+    def copy(self) -> "Student":
         return Student(omnivox_id=self.omnivox_id, firstname=self.firstname, surname=self.surname)
 
     def to_dict(self) -> dict:
         return {
-            "matricule": self.omnivox_id,
-            "prénom": self.firstname,
-            "nom": self.surname
+            JSON_KEY_OMNIVOX_ID: self.omnivox_id,
+            JSON_KEY_FIRSTNAME: self.firstname,
+            JSON_KEY_LASTNAME: self.surname,
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> 'Student':
-        omnivox_id = data.get("matricule", "")
-        firstname = data.get("prénom", "")
-        surname = data.get("nom", "")
+    def from_dict(cls, data: dict) -> "Student":
+        omnivox_id = data.get(JSON_KEY_OMNIVOX_ID, "")
+        firstname = data.get(JSON_KEY_FIRSTNAME, "")
+        surname = data.get(JSON_KEY_LASTNAME, "")
         return cls(omnivox_id=omnivox_id, firstname=firstname, surname=surname)
+
 
 def read_omnivox_students_file(students_file: Path) -> list[Student]:
     """
     Lit le fichier d'élèves exporté d'Omnivox.
     """
     students = []
+
     def strip_field(field: str) -> str:
         return field[2:-1]
 
@@ -69,6 +73,7 @@ def read_omnivox_students_file(students_file: Path) -> list[Student]:
             )
             students.append(student)
     return students
+
 
 def find_student_by_name(name: str, student_list: list[Student]) -> Student:
     """

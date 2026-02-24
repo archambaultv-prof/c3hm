@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}c3hm{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>
+                <span class="logo">c3hm</span>
+                <span class="tagline">Corriger à 3 heures du matin</span>
+            </h1>
+            <nav>
+                <a href="{{ url_for('students.index') }}" class="nav-link active">Accueil</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

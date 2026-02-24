@@ -39,8 +39,8 @@ def generate_gradebook_from_students_file(rubric: Rubric, students_file: Path, o
         destination = output_dir / stem
         write_gradebook(new_rubric, destination)
 
+
 def write_gradebook(rubric: Rubric, output_path: Path) -> None:
     rubric_dict = rubric.to_dict()
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(rubric_dict, f, ensure_ascii=False, indent=4)
-

@@ -7,35 +7,19 @@ from c3hm.commands.feedback import generate_feedback
 
 @click.command(
     name="feedback",
-    help=(
-        "Génère un document PDF de rétroaction pour les étudiants "
-        "à partir des fichiers de correction."
-    )
+    help=("Génère un document PDF de rétroaction pour les étudiants à partir des fichiers de correction."),
 )
-
 @click.argument(
-    "gradebook_dir",
-    type=click.Path(
-        exists=True,
-        file_okay=False,
-        dir_okay=True,
-        path_type=Path
-    ),
-    required=True
+    "gradebook_dir", type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path), required=True
 )
-
 @click.option(
-    "--output", "-o",
+    "--output",
+    "-o",
     "output_dir",
-    type=click.Path(
-        file_okay=False,
-        dir_okay=True,
-        path_type=Path
-    ),
+    type=click.Path(file_okay=False, dir_okay=True, path_type=Path),
     default=None,
-    help="Répertoire de sortie pour les fichiers générés"
+    help="Répertoire de sortie pour les fichiers générés",
 )
-
 def feedback_command(gradebook_dir: Path, output_dir: Path):
     """
     Génère un document rétroaction pour les étudiants à partir d’une fichier de correction.
@@ -50,4 +34,3 @@ def feedback_command(gradebook_dir: Path, output_dir: Path):
         gradebook_path=gradebook_dir,
         output_dir=output_dir,
     )
-

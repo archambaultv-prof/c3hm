@@ -7,7 +7,7 @@ from openpyxl.worksheet.table import Table, TableStyleInfo
 from openpyxl.worksheet.worksheet import Worksheet
 
 from c3hm.commands.rubric import export_rubric
-from c3hm.data.rubric import Rubric
+from c3hm.data.rubric import Rubric, validate_rubrics
 
 
 def generate_feedback(gradebook_path: Path, output_dir: Path):
@@ -32,10 +32,8 @@ def zip_pdfs(dir: Path) -> None:
         for pdf_file in pdf_files:
             zipf.write(pdf_file, pdf_file.name)
 
-def process_json_files(
-    gradebook_path: Path,
-    output_dir: Path | str
-) -> list[Rubric]:
+
+def process_json_files(gradebook_path: Path, output_dir: Path | str) -> list[Rubric]:
     """
     Pour chaque fichier de correction dans le répertoire, génère un fichier PDF
     """
@@ -49,24 +47,32 @@ def process_json_files(
         try:
             with open(json_file, encoding="utf-8") as f:
                 data = json.load(f)
-
             rubric = Rubric.from_dict(data)
-            if rubric.student is None:
-                raise ValueError(f"Aucun étudiant associé à la grille de correction dans le fichier '{json_file}'.")
-            rubric.validate()
-            destination = output_dir / f"{rubric.student.fullname(surname_first=True, include_omnivox=True, separator='_')}.pdf"
-            export_rubric(rubric, destination)
             all_rubrics.append(rubric)
         except Exception as e:
-            raise RuntimeError(f"Erreur lors de la génération des fichiers de rétroaction pour le fichier '{json_file}'") from e
+            raise RuntimeError(
+                f"Erreur lors de la lecture du fichier de rétroaction pour le fichier '{json_file}'"
+            ) from e
+
+    validate_rubrics(all_rubrics)
+
+    for i, rubric in enumerate(all_rubrics):
+        try:
+            if rubric.student is None:
+                raise ValueError(f"Aucun étudiant associé à la grille de correction dans le fichier '{json_files[i]}'.")
+            destination = (
+                output_dir / f"{rubric.student.fullname(surname_first=True, include_omnivox=True, separator='_')}.pdf"
+            )
+            export_rubric(rubric, destination)
+        except Exception as e:
+            raise RuntimeError(
+                f"Erreur lors de la génération du fichier de rétroaction pour le fichier '{json_files[i]}'"
+            ) from e
 
     return all_rubrics
 
 
-def generate_xl_for_omnivox(
-    rubrics: list[Rubric],
-    output_dir: Path | str
-) -> None:
+def generate_xl_for_omnivox(rubrics: list[Rubric], output_dir: Path | str) -> None:
     """
     Génère un fichier Excel pour charger les notes dans Omnivox.
     """
@@ -83,6 +89,7 @@ def generate_xl_for_omnivox(
     # Sauvegarde le fichier Excel
     wb.save(omnivox_path)
 
+
 def populate_omnivox_sheet(rubrics: list[Rubric], omnivox_worksheet: Worksheet) -> None:
     omnivox_worksheet.title = "Notes pour Omnivox"
     omnivox_worksheet.sheet_view.showGridLines = False  # Disable gridlines
@@ -94,7 +101,9 @@ def populate_omnivox_sheet(rubrics: list[Rubric], omnivox_worksheet: Worksheet) 
     for rubric in rubrics:
         if rubric.student is None:
             raise ValueError("L'étudiant associé à la grille de correction est manquant.")
-        omnivox_worksheet.append([rubric.student.omnivox_id, rubric.final_grade(), rubric.comment, rubric.student.fullname()])
+        omnivox_worksheet.append(
+            [rubric.student.omnivox_id, rubric.final_grade(), rubric.comment, rubric.student.fullname()]
+        )
 
     # Format
     _insert_table(omnivox_worksheet, "NotesOmnivox", "A1:D" + str(omnivox_worksheet.max_row))
@@ -103,6 +112,7 @@ def populate_omnivox_sheet(rubrics: list[Rubric], omnivox_worksheet: Worksheet) 
     omnivox_worksheet.column_dimensions["C"].width = 70
     omnivox_worksheet.column_dimensions["D"].width = 40
 
+
 def _insert_table(ws: Worksheet, display_name: str, ref: str) -> None:
     table = Table(displayName=display_name, ref=ref)
     table.tableStyleInfo = TableStyleInfo(
@@ -110,6 +120,6 @@ def _insert_table(ws: Worksheet, display_name: str, ref: str) -> None:
         showFirstColumn=False,
         showLastColumn=False,
         showRowStripes=True,
-        showColumnStripes=False
+        showColumnStripes=False,
     )
     ws.add_table(table)
