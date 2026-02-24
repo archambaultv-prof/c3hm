@@ -1,3 +1,9 @@
+from c3hm.data import (
+    JSON_KEY_CRITERIA,
+    JSON_KEY_LEVELS,
+    JSON_KEY_SHOW_CRITERIA_POINTS,
+    JSON_KEY_SHOW_LEVELS_PERCENTAGE,
+)
 from c3hm.data.criterion import Criterion
 from c3hm.data.level import DEFAULT_LEVELS, Level
 
@@ -29,19 +35,19 @@ class Grid:
 
     def to_dict(self, include_graded_level: bool = False) -> dict:
         d = {
-            "afficher les points des critères": self.show_criteria_points,
-            "afficher les pourcentages des niveaux": self.show_levels_percentage,
-            "niveaux": [level.to_dict() for level in self.levels],
-            "critères": [criterion.to_dict(include_graded_level) for criterion in self.criteria],
+            JSON_KEY_SHOW_CRITERIA_POINTS: self.show_criteria_points,
+            JSON_KEY_SHOW_LEVELS_PERCENTAGE: self.show_levels_percentage,
+            JSON_KEY_LEVELS: [level.to_dict() for level in self.levels],
+            JSON_KEY_CRITERIA: [criterion.to_dict(include_graded_level) for criterion in self.criteria],
         }
         return d
 
     @classmethod
     def from_dict(cls, data: dict) -> "Grid":
-        criteria = [Criterion.from_dict(crit_data) for crit_data in data["critères"]]
-        levels = [Level.from_dict(level_data) for level_data in data["niveaux"]]
-        show_criteria_points = data.get("afficher les points des critères", True)
-        show_levels_percentage = data.get("afficher les pourcentages des niveaux", True)
+        criteria = [Criterion.from_dict(crit_data) for crit_data in data[JSON_KEY_CRITERIA]]
+        levels = [Level.from_dict(level_data) for level_data in data[JSON_KEY_LEVELS]]
+        show_criteria_points = data.get(JSON_KEY_SHOW_CRITERIA_POINTS, True)
+        show_levels_percentage = data.get(JSON_KEY_SHOW_LEVELS_PERCENTAGE, True)
         return cls(
             criteria=criteria,
             levels=levels,

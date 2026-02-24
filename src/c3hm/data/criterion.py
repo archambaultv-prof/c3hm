@@ -1,5 +1,10 @@
 from typing import Any
 
+from c3hm.data import (
+    JSON_KEY_CRITERION_LABEL,
+    JSON_KEY_GRADE_OVERRIDE,
+    JSON_KEY_INDICATORS,
+)
 from c3hm.data.indicator import HasLevelToPercentage, Indicator
 from c3hm.data.utils import assert_non_empty_string
 
@@ -27,22 +32,22 @@ class Criterion:
 
     def to_dict(self, include_graded_level: bool = False) -> dict:
         d: dict[str, Any] = {
-            "critère": self.label,
+            JSON_KEY_CRITERION_LABEL: self.label,
         }
         if include_graded_level:
-            d["note ajustée"] = self.grade_override
-        d["indicateurs"] = [indicator.to_dict(include_graded_level) for indicator in self.indicators]
+            d[JSON_KEY_GRADE_OVERRIDE] = self.grade_override
+        d[JSON_KEY_INDICATORS] = [indicator.to_dict(include_graded_level) for indicator in self.indicators]
         return d
 
     @classmethod
     def from_dict(cls, data: dict) -> "Criterion":
-        label = data["critère"]
-        indicators = [Indicator.from_dict(ind_data) for ind_data in data["indicateurs"]]
-        grade_override = data.get("note ajustée")
+        label = data[JSON_KEY_CRITERION_LABEL]
+        indicators = [Indicator.from_dict(ind_data) for ind_data in data[JSON_KEY_INDICATORS]]
+        grade_override = data.get(JSON_KEY_GRADE_OVERRIDE)
         return cls(label=label, indicators=indicators, grade_override=grade_override)
 
     def validate(self) -> None:
-        assert_non_empty_string(self.label, field_name="critère")
+        assert_non_empty_string(self.label, field_name=JSON_KEY_CRITERION_LABEL)
         if not self.indicators or not isinstance(self.indicators, list):
             raise ValueError(f"Le critère '{self.label}' doit contenir une liste d'indicateurs non vide.")
         for indicator in self.indicators:

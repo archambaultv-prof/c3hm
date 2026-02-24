@@ -599,8 +599,14 @@
         currentRubric.criteria[critIdx].indicators[indIdx].graded_level = levelLabel;
         currentRubric.criteria[critIdx].indicators[indIdx].graded_level_idx = levelIdx;
 
+        // Sauvegarder le commentaire local avant le re-rendu
+        const savedComment = document.getElementById("comment-text").value;
+
         // Re-rendre la grille
         renderRubric();
+
+        // Restaurer le commentaire après le re-rendu
+        document.getElementById("comment-text").value = savedComment;
 
         // Afficher une indication visuelle que des modifications ont été faites
         setSaveStatus("⚠️ Modifications non sauvegardées", "save-status unsaved");

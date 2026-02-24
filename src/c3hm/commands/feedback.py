@@ -48,6 +48,7 @@ def process_json_files(gradebook_path: Path, output_dir: Path | str) -> list[Rub
             with open(json_file, encoding="utf-8") as f:
                 data = json.load(f)
             rubric = Rubric.from_dict(data)
+            all_rubrics.append(rubric)
         except Exception as e:
             raise RuntimeError(
                 f"Erreur lors de la lecture du fichier de rétroaction pour le fichier '{json_file}'"
@@ -63,7 +64,6 @@ def process_json_files(gradebook_path: Path, output_dir: Path | str) -> list[Rub
                 output_dir / f"{rubric.student.fullname(surname_first=True, include_omnivox=True, separator='_')}.pdf"
             )
             export_rubric(rubric, destination)
-            all_rubrics.append(rubric)
         except Exception as e:
             raise RuntimeError(
                 f"Erreur lors de la génération du fichier de rétroaction pour le fichier '{json_files[i]}'"

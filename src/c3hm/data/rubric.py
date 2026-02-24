@@ -1,5 +1,18 @@
 from datetime import date
 
+from c3hm.data import (
+    JSON_KEY_COMMENT,
+    JSON_KEY_COURSE,
+    JSON_KEY_EVALUATION,
+    JSON_KEY_FIRSTNAME,
+    JSON_KEY_GRADE_OVERRIDE,
+    JSON_KEY_GRID,
+    JSON_KEY_LASTNAME,
+    JSON_KEY_OMNIVOX_ID,
+    JSON_KEY_SESSION,
+    JSON_KEY_STUDENT,
+    JSON_KEY_TEAMMATES,
+)
 from c3hm.data.criterion import Criterion
 from c3hm.data.grid import Grid
 from c3hm.data.indicator import Indicator
@@ -53,38 +66,38 @@ class Rubric:
     def to_dict(self) -> dict:
         d = {}
         if self.student:
-            d["étudiant"] = {
-                "prénom": self.student.firstname,
-                "nom": self.student.surname,
-                "matricule": self.student.omnivox_id,
+            d[JSON_KEY_STUDENT] = {
+                JSON_KEY_FIRSTNAME: self.student.firstname,
+                JSON_KEY_LASTNAME: self.student.surname,
+                JSON_KEY_OMNIVOX_ID: self.student.omnivox_id,
             }
-            d["coéquipiers"] = [tm.to_dict() for tm in self.teammates]
-            d["note ajustée"] = self.grade_override
-            d["commentaire"] = self.comment if self.comment is not None else ""
+            d[JSON_KEY_TEAMMATES] = [tm.to_dict() for tm in self.teammates]
+            d[JSON_KEY_GRADE_OVERRIDE] = self.grade_override
+            d[JSON_KEY_COMMENT] = self.comment if self.comment is not None else ""
         d.update(
             {
-                "cours": self.course,
-                "session": self.session,
-                "évaluation": self.evaluation,
-                "grille": self.grid.to_dict(include_graded_level=self.student is not None),
+                JSON_KEY_COURSE: self.course,
+                JSON_KEY_SESSION: self.session,
+                JSON_KEY_EVALUATION: self.evaluation,
+                JSON_KEY_GRID: self.grid.to_dict(include_graded_level=self.student is not None),
             }
         )
         return d
 
     @classmethod
     def from_dict(cls, data: dict) -> "Rubric":
-        course = data["cours"]
-        session = data["session"]
-        evaluation = data["évaluation"]
-        grid = Grid.from_dict(data["grille"])
-        if "étudiant" in data:
-            student = Student.from_dict(data["étudiant"])
-            teammates = [Student.from_dict(tm_data) for tm_data in data.get("coéquipiers", [])]
+        course = data[JSON_KEY_COURSE]
+        session = data[JSON_KEY_SESSION]
+        evaluation = data[JSON_KEY_EVALUATION]
+        grid = Grid.from_dict(data[JSON_KEY_GRID])
+        if JSON_KEY_STUDENT in data:
+            student = Student.from_dict(data[JSON_KEY_STUDENT])
+            teammates = [Student.from_dict(tm_data) for tm_data in data.get(JSON_KEY_TEAMMATES, [])]
         else:
             student = None
             teammates = None
-        grade = data.get("note ajustée")
-        comment = data.get("commentaire")
+        grade = data.get(JSON_KEY_GRADE_OVERRIDE)
+        comment = data.get(JSON_KEY_COMMENT)
         if comment == "":
             comment = None
         return cls(
