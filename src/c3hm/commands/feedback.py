@@ -7,7 +7,7 @@ from openpyxl.worksheet.table import Table, TableStyleInfo
 from openpyxl.worksheet.worksheet import Worksheet
 
 from c3hm.commands.rubric import export_rubric
-from c3hm.data.rubric import Rubric, validate_rubrics
+from c3hm.data.rubric import Rubric, validate_rubrics, validate_teammates
 
 
 def generate_feedback(gradebook_path: Path, output_dir: Path):
@@ -48,13 +48,14 @@ def process_json_files(gradebook_path: Path, output_dir: Path | str) -> list[Rub
             with open(json_file, encoding="utf-8") as f:
                 data = json.load(f)
             rubric = Rubric.from_dict(data)
+            rubric.validate()
             all_rubrics.append(rubric)
         except Exception as e:
             raise RuntimeError(
                 f"Erreur lors de la lecture du fichier de rétroaction pour le fichier '{json_file}'"
             ) from e
 
-    validate_rubrics(all_rubrics)
+    validate_teammates(all_rubrics)
 
     for i, rubric in enumerate(all_rubrics):
         try:
