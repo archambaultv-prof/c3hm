@@ -7,7 +7,7 @@ from openpyxl.worksheet.table import Table, TableStyleInfo
 from openpyxl.worksheet.worksheet import Worksheet
 
 from c3hm.commands.rubric import export_rubric
-from c3hm.data.rubric import Rubric, validate_rubrics, validate_teammates
+from c3hm.data.rubric import Rubric, validate_teammates
 
 
 def generate_feedback(gradebook_path: Path, output_dir: Path):

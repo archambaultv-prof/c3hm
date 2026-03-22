@@ -25,7 +25,8 @@ from c3hm.commands.feedback import generate_feedback
     "--force",
     "-f",
     is_flag=True,
-    help="Force la régénération des fichiers de rétroaction en supprimant les fichiers existants dans le répertoire de sortie",
+    help="Force la régénération des fichiers de rétroaction en supprimant "
+         "les fichiers existants dans le répertoire de sortie",
 )
 
 def feedback_command(gradebook_dir: Path, output_dir: Path, force: bool) -> None:
