@@ -58,7 +58,10 @@ def read_omnivox_students_file(students_file: Path) -> list[Student]:
     students = []
 
     def strip_field(field: str) -> str:
-        return field[2:-1]
+        field = field.strip()
+        if field.startswith('="') and field.endswith('"'):
+            return field[2:-1]
+        return field
 
     with open(students_file, encoding="ISO-8859-1", newline="") as f:
         reader = csv.DictReader(f)
