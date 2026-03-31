@@ -28,8 +28,14 @@ from c3hm.commands.feedback import generate_feedback
     help="Force la régénération des fichiers de rétroaction en supprimant "
          "les fichiers existants dans le répertoire de sortie",
 )
+@click.option(
+    "--skip-empty",
+    "-s",
+    is_flag=True,
+    help="Ignore les fichiers de correction sans notes ou commentaires",
+)
 
-def feedback_command(gradebook_dir: Path, output_dir: Path, force: bool) -> None:
+def feedback_command(gradebook_dir: Path, output_dir: Path, force: bool, skip_empty: bool) -> None:
     """
     Génère un document rétroaction pour les étudiants à partir d’une fichier de correction.
     """
@@ -49,4 +55,5 @@ def feedback_command(gradebook_dir: Path, output_dir: Path, force: bool) -> None
     generate_feedback(
         gradebook_path=gradebook_dir,
         output_dir=output_dir,
+        skip_empty=skip_empty,
     )

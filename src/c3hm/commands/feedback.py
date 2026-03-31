@@ -10,14 +10,14 @@ from c3hm.commands.rubric import export_rubric
 from c3hm.data.rubric import Rubric, fill_grades_from_team_reference, validate_teammates
 
 
-def generate_feedback(gradebook_path: Path, output_dir: Path):
+def generate_feedback(gradebook_path: Path, output_dir: Path, skip_empty: bool = False) -> None:
     """
     Génère un document Excel de rétroaction pour les étudiants à partir d’une fichier de correction
     et un résumé des notes en format Excel.
     """
 
     # Génère le fichier Excel pour charger les notes dans Omnivox
-    rubrics = process_json_files(gradebook_path, output_dir)
+    rubrics = process_json_files(gradebook_path, output_dir, skip_empty=skip_empty)
     generate_xl_for_omnivox(rubrics, output_dir)
     zip_pdfs(output_dir)
 
@@ -33,7 +33,7 @@ def zip_pdfs(dir: Path) -> None:
             zipf.write(pdf_file, pdf_file.name)
 
 
-def process_json_files(gradebook_path: Path, output_dir: Path | str) -> list[Rubric]:
+def process_json_files(gradebook_path: Path, output_dir: Path | str, skip_empty: bool = False) -> list[Rubric]:
     """
     Pour chaque fichier de correction dans le répertoire, génère un fichier PDF
     """
@@ -57,10 +57,15 @@ def process_json_files(gradebook_path: Path, output_dir: Path | str) -> list[Rub
 
     validate_teammates(all_rubrics)
     fill_grades_from_team_reference(all_rubrics)
-    for rubric in all_rubrics:
-        rubric.validate()
-
+    non_empty_rubrics: list[Rubric] = []
     for i, rubric in enumerate(all_rubrics):
+        if skip_empty and not rubric.grid.is_graded():
+            print(f"Le fichier '{json_files[i]}' est ignoré car il n'est pas noté complètement.")
+            continue
+        rubric.validate()
+        non_empty_rubrics.append(rubric)
+
+    for i, rubric in enumerate(non_empty_rubrics):
         try:
             destination = (
                 output_dir / f"{rubric.student.fullname(surname_first=True, include_omnivox=True, separator='_')}.pdf" # type: ignore
@@ -71,7 +76,7 @@ def process_json_files(gradebook_path: Path, output_dir: Path | str) -> list[Rub
                 f"Erreur lors de la génération du fichier de rétroaction pour le fichier '{json_files[i]}'"
             ) from e
 
-    return all_rubrics
+    return non_empty_rubrics
 
 
 def generate_xl_for_omnivox(rubrics: list[Rubric], output_dir: Path | str) -> None:
