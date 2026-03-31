@@ -50,8 +50,12 @@ class Student:
         surname = data.get(JSON_KEY_LASTNAME, "")
         return cls(omnivox_id=omnivox_id, firstname=firstname, surname=surname)
 
+class CsvStudent(Student):
+    def __init__(self, omnivox_id: str, firstname: str, surname: str, team: str | None = None):
+        super().__init__(omnivox_id, firstname, surname)
+        self.team = team
 
-def read_omnivox_students_file(students_file: Path) -> list[Student]:
+def read_omnivox_students_file(students_file: Path) -> list[CsvStudent]:
     """
     Lit le fichier d'élèves exporté d'Omnivox.
     """
@@ -69,10 +73,12 @@ def read_omnivox_students_file(students_file: Path) -> list[Student]:
             omnivox_id = row["No de dossier"]
             first_name = row["Prénom de l'étudiant"]
             last_name = row["Nom de l'étudiant"]
-            student = Student(
+            team = row.get("Équipe")
+            student = CsvStudent(
                 omnivox_id=strip_field(omnivox_id),
                 firstname=strip_field(first_name),
                 surname=strip_field(last_name),
+                team=team
             )
             students.append(student)
     return students

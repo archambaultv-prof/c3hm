@@ -1,8 +1,8 @@
 import json
 from pathlib import Path
 
-from c3hm.data.rubric import Rubric
-from c3hm.data.student import Student, read_omnivox_students_file
+from c3hm.data.rubric import Rubric, validate_teammates
+from c3hm.data.student import CsvStudent, Student, read_omnivox_students_file
 
 
 def generate_gradebook(rubric: Path, output_dir: Path, students_file: Path | None) -> None:
@@ -30,13 +30,34 @@ def generate_gradebook(rubric: Path, output_dir: Path, students_file: Path | Non
 
 
 def generate_gradebook_from_students_file(rubric: Rubric, students_file: Path, output_dir: Path) -> None:
-    students = read_omnivox_students_file(students_file)
+    students: list[CsvStudent] = read_omnivox_students_file(students_file)
+    rubrics: list[tuple[Rubric, Path]] = []
+    teammates: dict[str, list[CsvStudent]] = {}
+    # One rubric per student
     for student in students:
         student.validate()
         new_rubric = rubric.copy()
         new_rubric.student = student
         stem = f"{student.fullname(surname_first=True, include_omnivox=True, separator='_')}.json"
         destination = output_dir / stem
+        rubrics.append((new_rubric, destination))
+
+        # Check for teammates
+        if student.team:
+            if student.team not in teammates:
+                teammates[student.team] = []
+            teammates[student.team].append(student)
+
+    # Add the students' teammates to their rubric
+    for new_rubric, _ in rubrics:
+        student: CsvStudent = new_rubric.student # type: ignore
+        if student and student.team:
+            new_rubric.teammates = [s for s in teammates[student.team] if s.omnivox_id != student.omnivox_id] # type: ignore
+
+    validate_teammates([new_rubric for new_rubric, _ in rubrics])
+
+    # Write the gradebooks
+    for new_rubric, destination in rubrics:
         write_gradebook(new_rubric, destination)
 
 
