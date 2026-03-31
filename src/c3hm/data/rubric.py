@@ -190,6 +190,7 @@ def validate_teammates(rubrics: list[Rubric]) -> None:
     """
     student_to_teammates: dict[str, set[str]] = {}
     student_to_teamname: dict[str, str | None] = {}
+    student_to_teamref: dict[str, bool] = {}
     for rubric in rubrics:
         if rubric.student is None:
             raise ValueError("Toutes les grilles doivent être associées à un étudiant pour valider les coéquipiers.")
@@ -197,6 +198,7 @@ def validate_teammates(rubrics: list[Rubric]) -> None:
         teammates_ids = set(tm.omnivox_id for tm in rubric.teammates)
         student_to_teammates[student_id] = teammates_ids
         student_to_teamname[student_id] = rubric.student.team
+        student_to_teamref[student_id] = rubric.student.team_reference
 
     # Vérifier les relations bidirectionnelles et construire les groupes
     visited = set()
@@ -210,6 +212,8 @@ def validate_teammates(rubrics: list[Rubric]) -> None:
         visited.update(group)
 
         # Vérifier que tous les étudiants du groupe ont exactement les mêmes coéquipiers (le groupe moins eux-mêmes)
+        team_ref = None
+        team_name = student_to_teamname[student_id]
         for member_id in group:
             expected_teammates = group - {member_id}
             actual_teammates = student_to_teammates.get(member_id, set())
@@ -219,9 +223,16 @@ def validate_teammates(rubrics: list[Rubric]) -> None:
                     f"Coéquipiers attendus: {expected_teammates}, coéquipiers trouvés: {actual_teammates}"
                 )
             if (student_to_teamname[member_id] is not None
-                and student_to_teamname[member_id] != student_to_teamname[student_id]):
+                and student_to_teamname[member_id] != team_name):
                 raise ValueError(
                     f"Incohérence dans les noms d'équipe pour l'étudiant {member_id}. "
-                    f"Nom d'équipe attendu: {student_to_teamname[student_id]}, "
+                    f"Nom d'équipe attendu: {team_name}, "
                     f"nom d'équipe trouvé: {student_to_teamname[member_id]}"
                 )
+            if student_to_teamref[member_id]:
+                if team_ref is None:
+                    team_ref = member_id
+                else:
+                    raise ValueError(
+                        f"Il y a deux références d'équipe dans l'équipe {team_name}"
+                    )
