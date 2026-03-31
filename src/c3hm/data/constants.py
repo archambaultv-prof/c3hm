@@ -18,6 +18,7 @@ JSON_KEY_TEAMMATES = "coéquipiers"
 JSON_KEY_FIRSTNAME = "prénom"
 JSON_KEY_LASTNAME = "nom"
 JSON_KEY_OMNIVOX_ID = "matricule"
+JSON_KEY_STUDENT_TEAM = "équipe"
 
 # Rubric-level keys
 JSON_KEY_COURSE = "cours"

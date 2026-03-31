@@ -3,13 +3,15 @@ import re
 from pathlib import Path
 
 from c3hm.data import JSON_KEY_FIRSTNAME, JSON_KEY_LASTNAME, JSON_KEY_OMNIVOX_ID
+from c3hm.data.constants import JSON_KEY_STUDENT_TEAM
 
 
 class Student:
-    def __init__(self, omnivox_id: str, firstname: str, surname: str):
+    def __init__(self, omnivox_id: str, firstname: str, surname: str, team: str | None = None):
         self.omnivox_id = omnivox_id
         self.firstname = firstname
         self.surname = surname
+        self.team = team
 
     def fullname(
         self,
@@ -34,13 +36,14 @@ class Student:
             raise ValueError("Le nom de famille de l'étudiant ne peut pas être vide.")
 
     def copy(self) -> "Student":
-        return Student(omnivox_id=self.omnivox_id, firstname=self.firstname, surname=self.surname)
+        return Student(omnivox_id=self.omnivox_id, firstname=self.firstname, surname=self.surname, team=self.team)
 
     def to_dict(self) -> dict:
         return {
             JSON_KEY_OMNIVOX_ID: self.omnivox_id,
             JSON_KEY_FIRSTNAME: self.firstname,
             JSON_KEY_LASTNAME: self.surname,
+            JSON_KEY_STUDENT_TEAM: self.team,
         }
 
     @classmethod
@@ -48,14 +51,10 @@ class Student:
         omnivox_id = data.get(JSON_KEY_OMNIVOX_ID, "")
         firstname = data.get(JSON_KEY_FIRSTNAME, "")
         surname = data.get(JSON_KEY_LASTNAME, "")
-        return cls(omnivox_id=omnivox_id, firstname=firstname, surname=surname)
+        team = data.get(JSON_KEY_STUDENT_TEAM)
+        return cls(omnivox_id=omnivox_id, firstname=firstname, surname=surname, team=team)
 
-class CsvStudent(Student):
-    def __init__(self, omnivox_id: str, firstname: str, surname: str, team: str | None = None):
-        super().__init__(omnivox_id, firstname, surname)
-        self.team = team
-
-def read_omnivox_students_file(students_file: Path) -> list[CsvStudent]:
+def read_omnivox_students_file(students_file: Path) -> list[Student]:
     """
     Lit le fichier d'élèves exporté d'Omnivox.
     """
@@ -74,7 +73,7 @@ def read_omnivox_students_file(students_file: Path) -> list[CsvStudent]:
             first_name = row["Prénom de l'étudiant"]
             last_name = row["Nom de l'étudiant"]
             team = row.get("Équipe")
-            student = CsvStudent(
+            student = Student(
                 omnivox_id=strip_field(omnivox_id),
                 firstname=strip_field(first_name),
                 surname=strip_field(last_name),

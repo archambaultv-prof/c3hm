@@ -66,11 +66,7 @@ class Rubric:
     def to_dict(self) -> dict:
         d = {}
         if self.student:
-            d[JSON_KEY_STUDENT] = {
-                JSON_KEY_FIRSTNAME: self.student.firstname,
-                JSON_KEY_LASTNAME: self.student.surname,
-                JSON_KEY_OMNIVOX_ID: self.student.omnivox_id,
-            }
+            d[JSON_KEY_STUDENT] = self.student.to_dict()
             d[JSON_KEY_TEAMMATES] = [tm.to_dict() for tm in self.teammates]
             d[JSON_KEY_GRADE_OVERRIDE] = self.grade_override
             d[JSON_KEY_COMMENT] = self.comment if self.comment is not None else ""
@@ -196,12 +192,14 @@ def validate_teammates(rubrics: list[Rubric]) -> None:
     groupe)
     """
     student_to_teammates: dict[str, set[str]] = {}
+    student_to_teamname: dict[str, str | None] = {}
     for rubric in rubrics:
         if rubric.student is None:
             raise ValueError("Toutes les grilles doivent être associées à un étudiant pour valider les coéquipiers.")
         student_id = rubric.student.omnivox_id
         teammates_ids = set(tm.omnivox_id for tm in rubric.teammates)
         student_to_teammates[student_id] = teammates_ids
+        student_to_teamname[student_id] = rubric.student.team
 
     # Vérifier les relations bidirectionnelles et construire les groupes
     visited = set()
@@ -222,4 +220,11 @@ def validate_teammates(rubrics: list[Rubric]) -> None:
                 raise ValueError(
                     f"Incohérence dans les coéquipiers pour l'étudiant {member_id}. "
                     f"Coéquipiers attendus: {expected_teammates}, coéquipiers trouvés: {actual_teammates}"
+                )
+            if (student_to_teamname[member_id] is not None
+                and student_to_teamname[member_id] != student_to_teamname[student_id]):
+                raise ValueError(
+                    f"Incohérence dans les noms d'équipe pour l'étudiant {member_id}. "
+                    f"Nom d'équipe attendu: {student_to_teamname[student_id]}, "
+                    f"nom d'équipe trouvé: {student_to_teamname[member_id]}"
                 )

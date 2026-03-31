@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 from c3hm.data.rubric import Rubric, validate_teammates
-from c3hm.data.student import CsvStudent, Student, read_omnivox_students_file
+from c3hm.data.student import Student, read_omnivox_students_file
 
 
 def generate_gradebook(rubric: Path, output_dir: Path, students_file: Path | None) -> None:
@@ -30,9 +30,9 @@ def generate_gradebook(rubric: Path, output_dir: Path, students_file: Path | Non
 
 
 def generate_gradebook_from_students_file(rubric: Rubric, students_file: Path, output_dir: Path) -> None:
-    students: list[CsvStudent] = read_omnivox_students_file(students_file)
+    students: list[Student] = read_omnivox_students_file(students_file)
     rubrics: list[tuple[Rubric, Path]] = []
-    teammates: dict[str, list[CsvStudent]] = {}
+    teammates: dict[str, list[Student]] = {}
     # One rubric per student
     for student in students:
         student.validate()
@@ -50,7 +50,7 @@ def generate_gradebook_from_students_file(rubric: Rubric, students_file: Path, o
 
     # Add the students' teammates to their rubric
     for new_rubric, _ in rubrics:
-        student: CsvStudent = new_rubric.student # type: ignore
+        student = new_rubric.student # type: ignore
         if student and student.team:
             new_rubric.teammates = [s for s in teammates[student.team] if s.omnivox_id != student.omnivox_id] # type: ignore
 
