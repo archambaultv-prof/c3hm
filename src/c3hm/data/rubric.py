@@ -236,3 +236,36 @@ def validate_teammates(rubrics: list[Rubric]) -> None:
                     raise ValueError(
                         f"Il y a deux références d'équipe dans l'équipe {team_name}"
                     )
+
+def fill_grades_from_team_reference(rubrics: list[Rubric]) -> None:
+    """
+    Remplit les notes des étudiants à partir de la référence d'équipe. Si un étudiant est une référence d'équipe,
+    sa note est utilisée pour remplir les notes de tous les autres membres de son équipe si elles sont absentes.
+
+    Ne copie pas les grade_override.
+
+    Assume que les grilles ont déjà été validées et que les coéquipiers forment des cliques valides.
+    """
+    team_ref_rubric: dict[str, Rubric] = {}
+    for rubric in rubrics:
+        if rubric.student and rubric.student.team_reference:
+            team_ref_rubric[rubric.student.omnivox_id] = rubric
+
+    for rubric in rubrics:
+        if rubric.student and rubric.student.team_reference:
+            continue
+        # Find the team reference for this student if any
+        team_ref = None
+        for teammate in rubric.teammates:
+            if teammate.omnivox_id in team_ref_rubric:
+                team_ref = team_ref_rubric[teammate.omnivox_id]
+                break
+        if team_ref is None:
+            continue
+        # Fill the grade from the team reference if it's missing
+        for criterion, team_ref_criterion in zip(rubric.grid.criteria, team_ref.grid.criteria, strict=True):
+            for indicator, team_ref_indicator in zip(criterion.indicators, team_ref_criterion.indicators, strict=True):
+                if indicator.graded_level is None and team_ref_indicator.graded_level is not None:
+                    indicator.graded_level = team_ref_indicator.graded_level
+        if rubric.comment is None and team_ref.comment is not None:
+            rubric.comment = team_ref.comment

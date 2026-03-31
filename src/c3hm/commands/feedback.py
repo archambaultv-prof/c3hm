@@ -7,7 +7,7 @@ from openpyxl.worksheet.table import Table, TableStyleInfo
 from openpyxl.worksheet.worksheet import Worksheet
 
 from c3hm.commands.rubric import export_rubric
-from c3hm.data.rubric import Rubric, validate_teammates
+from c3hm.data.rubric import Rubric, fill_grades_from_team_reference, validate_teammates
 
 
 def generate_feedback(gradebook_path: Path, output_dir: Path):
@@ -41,6 +41,7 @@ def process_json_files(gradebook_path: Path, output_dir: Path | str) -> list[Rub
     if not output_dir.exists():
         output_dir.mkdir(parents=True, exist_ok=True)
 
+    # Parse tous les fichiers JSON du répertoire de correction
     json_files = list(gradebook_path.glob("*.json"))
     all_rubrics: list[Rubric] = []
     for json_file in json_files:
@@ -48,7 +49,6 @@ def process_json_files(gradebook_path: Path, output_dir: Path | str) -> list[Rub
             with open(json_file, encoding="utf-8") as f:
                 data = json.load(f)
             rubric = Rubric.from_dict(data)
-            rubric.validate()
             all_rubrics.append(rubric)
         except Exception as e:
             raise RuntimeError(
@@ -56,13 +56,14 @@ def process_json_files(gradebook_path: Path, output_dir: Path | str) -> list[Rub
             ) from e
 
     validate_teammates(all_rubrics)
+    fill_grades_from_team_reference(all_rubrics)
+    for rubric in all_rubrics:
+        rubric.validate()
 
     for i, rubric in enumerate(all_rubrics):
         try:
-            if rubric.student is None:
-                raise ValueError(f"Aucun étudiant associé à la grille de correction dans le fichier '{json_files[i]}'.")
             destination = (
-                output_dir / f"{rubric.student.fullname(surname_first=True, include_omnivox=True, separator='_')}.pdf"
+                output_dir / f"{rubric.student.fullname(surname_first=True, include_omnivox=True, separator='_')}.pdf" # type: ignore
             )
             export_rubric(rubric, destination)
         except Exception as e:
