@@ -4,11 +4,8 @@ from c3hm.data import (
     JSON_KEY_COMMENT,
     JSON_KEY_COURSE,
     JSON_KEY_EVALUATION,
-    JSON_KEY_FIRSTNAME,
     JSON_KEY_GRADE_OVERRIDE,
     JSON_KEY_GRID,
-    JSON_KEY_LASTNAME,
-    JSON_KEY_OMNIVOX_ID,
     JSON_KEY_SESSION,
     JSON_KEY_STUDENT,
     JSON_KEY_TEAMMATES,
@@ -66,11 +63,7 @@ class Rubric:
     def to_dict(self) -> dict:
         d = {}
         if self.student:
-            d[JSON_KEY_STUDENT] = {
-                JSON_KEY_FIRSTNAME: self.student.firstname,
-                JSON_KEY_LASTNAME: self.student.surname,
-                JSON_KEY_OMNIVOX_ID: self.student.omnivox_id,
-            }
+            d[JSON_KEY_STUDENT] = self.student.to_dict()
             d[JSON_KEY_TEAMMATES] = [tm.to_dict() for tm in self.teammates]
             d[JSON_KEY_GRADE_OVERRIDE] = self.grade_override
             d[JSON_KEY_COMMENT] = self.comment if self.comment is not None else ""
@@ -196,12 +189,16 @@ def validate_teammates(rubrics: list[Rubric]) -> None:
     groupe)
     """
     student_to_teammates: dict[str, set[str]] = {}
+    student_to_teamname: dict[str, str | None] = {}
+    student_to_teamref: dict[str, bool] = {}
     for rubric in rubrics:
         if rubric.student is None:
             raise ValueError("Toutes les grilles doivent être associées à un étudiant pour valider les coéquipiers.")
         student_id = rubric.student.omnivox_id
         teammates_ids = set(tm.omnivox_id for tm in rubric.teammates)
         student_to_teammates[student_id] = teammates_ids
+        student_to_teamname[student_id] = rubric.student.team
+        student_to_teamref[student_id] = rubric.student.team_reference
 
     # Vérifier les relations bidirectionnelles et construire les groupes
     visited = set()
@@ -215,6 +212,8 @@ def validate_teammates(rubrics: list[Rubric]) -> None:
         visited.update(group)
 
         # Vérifier que tous les étudiants du groupe ont exactement les mêmes coéquipiers (le groupe moins eux-mêmes)
+        team_ref = None
+        team_name = student_to_teamname[student_id]
         for member_id in group:
             expected_teammates = group - {member_id}
             actual_teammates = student_to_teammates.get(member_id, set())
@@ -223,3 +222,50 @@ def validate_teammates(rubrics: list[Rubric]) -> None:
                     f"Incohérence dans les coéquipiers pour l'étudiant {member_id}. "
                     f"Coéquipiers attendus: {expected_teammates}, coéquipiers trouvés: {actual_teammates}"
                 )
+            if (student_to_teamname[member_id] is not None
+                and student_to_teamname[member_id] != team_name):
+                raise ValueError(
+                    f"Incohérence dans les noms d'équipe pour l'étudiant {member_id}. "
+                    f"Nom d'équipe attendu: {team_name}, "
+                    f"nom d'équipe trouvé: {student_to_teamname[member_id]}"
+                )
+            if student_to_teamref[member_id]:
+                if team_ref is None:
+                    team_ref = member_id
+                else:
+                    raise ValueError(
+                        f"Il y a deux références d'équipe dans l'équipe {team_name}"
+                    )
+
+def fill_grades_from_team_reference(rubrics: list[Rubric]) -> None:
+    """
+    Remplit les notes des étudiants à partir de la référence d'équipe. Si un étudiant est une référence d'équipe,
+    sa note est utilisée pour remplir les notes de tous les autres membres de son équipe si elles sont absentes.
+
+    Ne copie pas les grade_override.
+
+    Assume que les grilles ont déjà été validées et que les coéquipiers forment des cliques valides.
+    """
+    team_ref_rubric: dict[str, Rubric] = {}
+    for rubric in rubrics:
+        if rubric.student and rubric.student.team_reference:
+            team_ref_rubric[rubric.student.omnivox_id] = rubric
+
+    for rubric in rubrics:
+        if rubric.student and rubric.student.team_reference:
+            continue
+        # Find the team reference for this student if any
+        team_ref = None
+        for teammate in rubric.teammates:
+            if teammate.omnivox_id in team_ref_rubric:
+                team_ref = team_ref_rubric[teammate.omnivox_id]
+                break
+        if team_ref is None:
+            continue
+        # Fill the grade from the team reference if it's missing
+        for criterion, team_ref_criterion in zip(rubric.grid.criteria, team_ref.grid.criteria, strict=True):
+            for indicator, team_ref_indicator in zip(criterion.indicators, team_ref_criterion.indicators, strict=True):
+                if indicator.graded_level is None and team_ref_indicator.graded_level is not None:
+                    indicator.graded_level = team_ref_indicator.graded_level
+        if rubric.comment is None and team_ref.comment is not None:
+            rubric.comment = team_ref.comment
