@@ -41,7 +41,7 @@ def process_json_files(gradebook_path: Path, output_dir: Path | str) -> list[Rub
     if not output_dir.exists():
         output_dir.mkdir(parents=True, exist_ok=True)
 
-    json_files = list(gradebook_path.glob("*.json"))
+    json_files = [gradebook_path] if gradebook_path.is_file() else list(gradebook_path.glob("*.json"))
     all_rubrics: list[Rubric] = []
     for json_file in json_files:
         try:

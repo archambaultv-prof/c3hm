@@ -11,7 +11,7 @@ from c3hm.commands.feedback import generate_feedback
     help=("Génère un document PDF de rétroaction pour les étudiants à partir des fichiers de correction."),
 )
 @click.argument(
-    "gradebook_dir", type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path), required=True
+    "gradebook", type=click.Path(exists=True, file_okay=True, dir_okay=True, path_type=Path), required=True
 )
 @click.option(
     "--output",
@@ -28,15 +28,25 @@ from c3hm.commands.feedback import generate_feedback
     help="Force la régénération des fichiers de rétroaction en supprimant "
          "les fichiers existants dans le répertoire de sortie",
 )
+@click.option(
+    "--replace",
+    "-r",
+    is_flag=True,
+    help="Remplace les fichiers de rétroaction existants sans supprimer "
+         "les autres fichiers dans le répertoire de sortie",
+)
 
-def feedback_command(gradebook_dir: Path, output_dir: Path, force: bool) -> None:
+def feedback_command(gradebook: Path, output_dir: Path, force: bool, replace: bool) -> None:
     """
     Génère un document rétroaction pour les étudiants à partir d’une fichier de correction.
     """
-    if not gradebook_dir.is_absolute():
-        gradebook_dir = Path.cwd() / gradebook_dir
+    if force and replace:
+        raise ValueError("Les options --force et --replace ne peuvent pas être utilisées ensemble.")
+    if not gradebook.is_absolute():
+        gradebook = Path.cwd() / gradebook
     if output_dir is None:
-        output_dir = gradebook_dir / Path("rétroaction")
+        parent = gradebook.parent if gradebook.is_file() else gradebook
+        output_dir = parent / Path("rétroaction")
     if output_dir.exists():
         if force:
             for item in output_dir.iterdir():
@@ -44,9 +54,11 @@ def feedback_command(gradebook_dir: Path, output_dir: Path, force: bool) -> None
                     item.unlink()
                 elif item.is_dir():
                     shutil.rmtree(item)
+        elif replace:
+            pass # Nothing to do, we will overwrite existing files as needed
         else:
             raise FileExistsError(f"Le répertoire {output_dir} existe déjà.")
     generate_feedback(
-        gradebook_path=gradebook_dir,
+        gradebook_path=gradebook,
         output_dir=output_dir,
     )
