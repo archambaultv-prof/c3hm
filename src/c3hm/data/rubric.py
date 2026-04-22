@@ -27,7 +27,7 @@ class Rubric:
         grid: Grid,
         student: Student | None = None,
         teammates: list[Student] | None = None,
-        grade_override: float | None = None,
+        grade_override: float | str | None = None,
         comment: str | None = None,
     ):
         self.course = course
@@ -40,7 +40,7 @@ class Rubric:
         self.comment = comment
 
     def final_grade(self) -> float:
-        if self.grade_override is not None:
+        if self.grade_override is not None and isinstance(self.grade_override, int | float):
             return self.grade_override
         return self.grid.grade()
 
@@ -108,13 +108,27 @@ class Rubric:
         assert_non_empty_string(self.course, field_name="cours")
         assert_non_empty_string(self.session, field_name="session")
         assert_non_empty_string(self.evaluation, field_name="évaluation")
+        if isinstance(self.grade_override, str):
+            self._process_grade_override_as_level()
         self.grid.validate()
         if self.student:
             self.student.validate()
-        if self.grade_override is not None and (
-            not isinstance(self.grade_override, int | float) or self.grade_override < 0 or self.grade_override > 100
-        ):
+        if isinstance(self.grade_override, int | float) and (self.grade_override < 0 or self.grade_override > 100):
             raise ValueError("La note doit être un nombre entre 0 et 100.")
+        elif isinstance(self.grade_override, str):
+            pass # Ce cas a été géré plus haut
+        elif self.grade_override is not None:
+            raise ValueError("La note doit être un nombre ou une chaîne de caractères représentant"
+                             "un niveau de performance.")
+
+    def _process_grade_override_as_level(self) -> None:
+        """
+        Si la grade_override est une chaîne de caractères, on le propage à travers la grille.
+        """
+        if isinstance(self.grade_override, str):
+            self.grid._process_grade_override_as_level(self.grade_override)
+        else:
+            raise TypeError(f"Type de grade_override inattendu: {type(self.grade_override)}")
 
     @classmethod
     def template(cls) -> "Rubric":
@@ -156,6 +170,14 @@ class Rubric:
         )
         return r
 
+
+    def is_graded(self) -> bool:
+        """
+        Vérifie si la grille a été notée (tous les indicateurs ont un niveau de performance assigné).
+        """
+        if self.grade_override is not None and isinstance(self.grade_override, str):
+            return True  # Si la grille a une grade_override en niveau, on considère qu'elle est notée
+        return self.grid.is_graded()
 
 def _get_current_semester() -> str:
     """

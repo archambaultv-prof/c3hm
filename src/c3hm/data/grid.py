@@ -110,7 +110,16 @@ class Grid:
         Vérifie si tous les indicateurs de la grille ont été notés.
         """
         for criterion in self.criteria:
+            if criterion.grade_override is not None and isinstance(criterion.grade_override, str):
+                continue  # Si le critère a une grade_override en niveau, on considère qu'il est noté
             for indicator in criterion.indicators:
                 if indicator.graded_level is None or indicator.graded_level.strip() == "":
                     return False
         return True
+
+    def _process_grade_override_as_level(self, grade_override: str) -> None:
+        """
+        Si la grade_override est une chaîne de caractères, on le propage à travers la grille.
+        """
+        for criterion in self.criteria:
+            criterion._process_grade_override_as_level(grade_override)

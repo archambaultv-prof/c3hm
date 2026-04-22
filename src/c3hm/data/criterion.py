@@ -10,13 +10,13 @@ from c3hm.data.utils import assert_non_empty_string
 
 
 class Criterion:
-    def __init__(self, label: str, indicators: list[Indicator], grade_override: float | None = None):
+    def __init__(self, label: str, indicators: list[Indicator], grade_override: float | str | None = None):
         self.label = label
         self.indicators = indicators
         self.grade_override = grade_override
 
     def grade(self, grid: HasLevelToPercentage) -> float:
-        if self.grade_override is not None:
+        if self.grade_override is not None and isinstance(self.grade_override, int | float):
             return self.grade_override
         return sum(indicator.grade(grid) for indicator in self.indicators)
 
@@ -57,3 +57,12 @@ class Criterion:
                 raise ValueError(f"La note du critère '{self.label}' doit être un nombre.")
             if self.grade_override < 0 or self.grade_override > self.points():
                 raise ValueError(f"La note du critère '{self.label}' doit être entre 0 et {self.points()} points.")
+
+    def _process_grade_override_as_level(self, grade_override: str) -> None:
+        """
+        Si la grade_override est une chaîne de caractères, on le propage à travers les indicateurs.
+        Priorise la grade_override du critère sur celle passer en paramètre.
+        """
+        value = self.grade_override if isinstance(self.grade_override, str) else grade_override
+        for indicator in self.indicators:
+            indicator.graded_level = value
