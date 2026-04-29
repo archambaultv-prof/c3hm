@@ -58,11 +58,16 @@ def process_json_files(gradebook_path: Path, output_dir: Path | str, skip_empty:
     fill_grades_from_team_reference(all_rubrics)
     non_empty_rubrics: list[Rubric] = []
     for i, rubric in enumerate(all_rubrics):
-        if skip_empty and not rubric.is_graded():
-            print(f"Le fichier '{json_files[i]}' est ignoré car il n'est pas noté complètement.")
-            continue
-        rubric.validate()
-        non_empty_rubrics.append(rubric)
+        try:
+            if skip_empty and not rubric.is_graded():
+                print(f"Le fichier '{json_files[i]}' est ignoré car il n'est pas noté complètement.")
+                continue
+            rubric.validate()
+            non_empty_rubrics.append(rubric)
+        except Exception as e:
+            raise RuntimeError(
+                f"Erreur lors de la validation du fichier de rétroaction pour le fichier '{json_files[i]}'"
+            ) from e
 
     for i, rubric in enumerate(non_empty_rubrics):
         try:
