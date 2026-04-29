@@ -113,13 +113,14 @@ class Rubric:
         self.grid.validate()
         if self.student:
             self.student.validate()
-        if isinstance(self.grade_override, int | float) and (self.grade_override < 0 or self.grade_override > 100):
-            raise ValueError("La note doit être un nombre entre 0 et 100.")
+        if isinstance(self.grade_override, int | float):
+            if self.grade_override < 0 or self.grade_override > 100:
+                raise ValueError("La note doit être un nombre entre 0 et 100.")
         elif isinstance(self.grade_override, str):
             pass # Ce cas a été géré plus haut
         elif self.grade_override is not None:
-            raise ValueError("La note doit être un nombre ou une chaîne de caractères représentant"
-                             "un niveau de performance.")
+            raise ValueError(f"La note {self.grade_override} doit être un nombre ou une chaîne de caractères "
+                             f"représentant un niveau de performance. Type : {type(self.grade_override)}")
 
     def _process_grade_override_as_level(self) -> None:
         """
